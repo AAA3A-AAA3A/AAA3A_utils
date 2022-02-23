@@ -16,9 +16,9 @@ TimestampFormat = typing.Literal["f", "F", "d", "D", "t", "T", "R"]
 class CogsUtils(commands.Cog):
     """Tools for AAA3A-cogs!"""
 
-    def __init__(self, cog: typing.Union[commands.Cog, Red]):
-        if isinstance(cog, Red):
-            self.bot = cog
+    def __init__(self, cog: typing.Optional[commands.Cog]=None, bot: typing.Optional[Red]=None):
+        if cog is None and bot is not None:
+            self.bot = bot
         else:
             self.cog = cog
             self.bot = self.cog.bot
