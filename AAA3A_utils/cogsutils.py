@@ -123,7 +123,7 @@ class CogsUtils(commands.Cog):
         new_dict = self.to_id(original_dict)
         return new_dict
 
-    def to_id(self, original_dict):
+    def to_id(self, original_dict: typing.Dict):
         new_dict = {}
         for e in original_dict.values():
             if isinstance(e, dict):
