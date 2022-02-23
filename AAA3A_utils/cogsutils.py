@@ -302,3 +302,12 @@ class CogsUtils(commands.Cog):
         except discord.errors.NotFound:  # Probably user deleted the hook
             hook = await channel.create_webhook(name="red_bot_hook_" + str(channel.id))
         return hook
+    
+    def all_dev_values(self):
+        cogs = self.get_all_repo_cogs_objects()
+        for cog in cogs:
+            if cogs[cog] is not None:
+                try:
+                    CogsUtils(cogs[cog]).add_dev_values()
+                except Exception:
+                    pass
