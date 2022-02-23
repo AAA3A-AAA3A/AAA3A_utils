@@ -23,8 +23,8 @@ class CogsUtils(commands.Cog):
             self.cog = cog
             self.bot = self.cog.bot
             self.__version__ = self.cog.__version__
+            self.DataPath = cog_data_path(raw_name=self.cog.__class__.__name__.lower())
         self.__author__ = "AAA3A"
-        self.DataPath = cog_data_path(raw_name=self.cog.__class__.__name__.lower())
         self.repo_name = "AAA3A-cogs"
         self.all_cogs = [
                             "AntiNuke",
