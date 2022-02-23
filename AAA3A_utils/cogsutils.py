@@ -273,7 +273,7 @@ class CogsUtils(commands.Cog):
             cogs[f"{cog}"] = object
         return cogs
     
-    def check_permissions_for(self, channel: discord.Channel, member: discord.Member, check: typing.Dict):
+    def check_permissions_for(self, channel: typing.Union[discord.TextChannel, discord.VoiceChannel], member: discord.Member, check: typing.Dict):
         permissions = channel.permissions_for(member)
         for p in check:
             if getattr(permissions, f'{p}'):
@@ -285,7 +285,7 @@ class CogsUtils(commands.Cog):
                         return False
         return True
 
-    async def get_hook(self, channel: discord.channel):
+    async def get_hook(self, channel: discord.TextChannel):
         try:
             for i in await channel.webhooks():
                 if i.user.id == self.bot.user.id:
