@@ -9,9 +9,10 @@ from redbot.core.utils.predicates import MessagePredicate
 from redbot.core.utils.menus import start_adding_reactions
 from redbot.core.data_manager import cog_data_path
 
+__all__ = ["CogsUtils"]
 TimestampFormat = typing.Literal["f", "F", "d", "D", "t", "T", "R"]
 
-class CogUtils(commands.Cog):
+class CogsUtils(commands.Cog):
     """Tools for AAA3A-cogs!"""
 
     def __init__(self, cog: commands.Cog):
