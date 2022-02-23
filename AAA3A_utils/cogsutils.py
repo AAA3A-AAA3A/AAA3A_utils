@@ -4,7 +4,8 @@ import typing
 import datetime
 import asyncio
 from copy import copy
-from redbot.core import commands, Config
+from redbot.core import commands
+from redbot.core.bot import Red
 from redbot.core.utils.predicates import MessagePredicate
 from redbot.core.utils.menus import start_adding_reactions
 from redbot.core.data_manager import cog_data_path
@@ -15,11 +16,14 @@ TimestampFormat = typing.Literal["f", "F", "d", "D", "t", "T", "R"]
 class CogsUtils(commands.Cog):
     """Tools for AAA3A-cogs!"""
 
-    def __init__(self, cog: commands.Cog):
-        self.bot = cog.bot
-        self.cog = cog
+    def __init__(self, cog: typing.Union[commands.Cog, Red]):
+        if isinstance(cog, Red):
+            self.bot = cog
+        else:
+            self.cog = cog
+            self.bot = self.cog.bot
+            self.__version__ = self.cog.__version__
         self.__author__ = "AAA3A"
-        self.__version__ = self.cog.__version__
         self.DataPath = cog_data_path(raw_name=self.cog.__class__.__name__.lower())
         self.repo_name = "AAA3A-cogs"
         self.all_cogs = [
