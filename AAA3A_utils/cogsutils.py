@@ -92,7 +92,7 @@ class CogsUtils(commands.Cog):
             except Exception:
                 pass
 
-    def datetime_to_timestamp(dt: datetime.datetime, format: TimestampFormat = "f") -> str:
+    def datetime_to_timestamp(self, dt: datetime.datetime, format: TimestampFormat = "f") -> str:
         """Generate a Discord timestamp from a datetime object.
         <t:TIMESTAMP:FORMAT>
         Parameters
@@ -125,9 +125,9 @@ class CogsUtils(commands.Cog):
 
     def to_id(self, original_dict):
         new_dict = {}
-        for e in original_dict:
+        for e in original_dict.values():
             if isinstance(e, dict):
-                new_dict[e] = self.to_id[e]
+                new_dict[e] = self.to_id(e)
             elif hasattr(e, 'id'):
                 new_dict[e] = int(e.id)
             elif isinstance(e, datetime.datetime):
@@ -137,9 +137,9 @@ class CogsUtils(commands.Cog):
         return new_dict
 
     async def from_id(self, id: int, who, type: str):
-        instance = eval(f"who.get_{type}({id})")
+        instance = eval(f"{who}.get_{type}({id})")
         if instance is None:
-            instance = await eval(f"await who.fetch_{type}({id})")
+            instance = await eval(f"await {who}.fetch_{type}({id})")
         return instance
 
     _ReactableEmoji = typing.Union[str, discord.Emoji]
