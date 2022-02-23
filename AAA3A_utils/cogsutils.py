@@ -3,8 +3,8 @@ import logging
 import typing
 import datetime
 import asyncio
-from redbot import commands, Config
 from copy import copy
+from redbot.core import commands, Config
 from redbot.core.utils.predicates import MessagePredicate
 from redbot.core.utils.menus import start_adding_reactions
 from redbot.core.data_manager import cog_data_path
