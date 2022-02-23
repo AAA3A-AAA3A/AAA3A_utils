@@ -239,7 +239,7 @@ class CogsUtils(commands.Cog):
                         await ctx.send(timeout_message)
                     return None
 
-    def get_embed(self, embed_dict: typing.Dict) -> dict(discord.Embed, str):
+    def get_embed(self, embed_dict: typing.Dict) -> typing.Dict[discord.Embed, str]:
         data = embed_dict
         if data.get("embed"):
             data = data["embed"]
