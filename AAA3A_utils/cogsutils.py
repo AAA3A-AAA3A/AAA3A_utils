@@ -137,9 +137,9 @@ class CogsUtils(commands.Cog):
         return new_dict
 
     async def from_id(self, id: int, who, type: str):
-        instance = eval(f"{who}.get_{type}({id})")
+        instance = eval(f"who.get_{type}({id})")
         if instance is None:
-            instance = await eval(f"await {who}.fetch_{type}({id})")
+            instance = await eval(f"await who.fetch_{type}({id})")
         return instance
 
     _ReactableEmoji = typing.Union[str, discord.Emoji]
