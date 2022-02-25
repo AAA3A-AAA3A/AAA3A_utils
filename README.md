@@ -1,4 +1,4 @@
-# AAA3A-utils - Shared tools
+# AAA3A_utils - Shared tools
 
 This is a Python package made for [AAA3A-cogs](https://github.com/AAA3A-AAA3A/AAA3A-cogs).
 
@@ -11,5 +11,5 @@ For more info (docs, contributing, contact), please check the AAA3A-cogs reposit
 Type the following command in your console:
 
 ```
-python -m pip install git+https://github.com/AAA3A-AAA3A/AAA3A-utils.git
+python -m pip install git+https://github.com/AAA3A-AAA3A/AAA3A_utils.git
 ```
