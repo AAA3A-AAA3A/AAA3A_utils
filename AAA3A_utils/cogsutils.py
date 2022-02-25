@@ -3,12 +3,14 @@ import logging
 import typing
 import datetime
 import asyncio
+import contextlib
 from copy import copy
 from redbot.core import commands
 from redbot.core.bot import Red
 from redbot.core.utils.predicates import MessagePredicate
 from redbot.core.utils.menus import start_adding_reactions
 from redbot.core.data_manager import cog_data_path
+from redbot.core.utils.chat_formatting import *
 
 __all__ = ["CogsUtils"]
 TimestampFormat = typing.Literal["f", "F", "d", "D", "t", "T", "R"]
@@ -18,13 +20,24 @@ class CogsUtils(commands.Cog):
 
     def __init__(self, cog: typing.Optional[commands.Cog]=None, bot: typing.Optional[Red]=None):
         if cog is None and bot is not None:
+            self.cog = None
             self.bot = bot
         else:
             self.cog = cog
             self.bot = self.cog.bot
-            self.__version__ = self.cog.__version__
             self.DataPath = cog_data_path(raw_name=self.cog.__class__.__name__.lower())
-        self.__author__ = "AAA3A"
+        self.__authors__ = ["AAA3A"]
+        self.__version__ = 1.0
+        if self.cog is not None:
+            if hasattr(self.cog, '__authors__'):
+                if isinstance(self.cog.__authors__, typing.List):
+                    self.__authors__ = self.cog.__authors__
+            elif hasattr(self.cog, '__author__'):
+                if isinstance(self.cog.__author__, typing.List):
+                    self.__authors__ = self.cog.__author__
+            if hasattr(self.cog, '__version__'):
+                if isinstance(self.cog.__version__, typing.List):
+                    self.__version__ = self.cog.__version__
         self.repo_name = "AAA3A-cogs"
         self.all_cogs = [
                             "AntiNuke",
@@ -45,30 +58,39 @@ class CogsUtils(commands.Cog):
     def format_help_for_context(self, ctx):
         """Thanks Simbad!"""
         context = super().format_help_for_context(ctx)
-        return f"{context}\n\nAuthor: {self.__author__}\nVersion: {self.__version__}"
+        s = "s" if len(self.__authors__) > 1 else ""
+        return f"{context}\n\n**Author{s}**: {', '.join(self.__authors__)}\n**Version**: {self.__version__}"
 
     async def red_delete_data_for_user(self, **kwargs):
         """Nothing to delete"""
         return
 
+    async def red_get_data_for_user(self, *args, **kwargs) -> typing.Dict[typing.Any, typing.Any]:
+        return {}
+
     def _setup(self):
         self.cog.log = logging.getLogger(f"red.{self.repo_name}.{self.cog.__class__.__name__}")
-        self.add_dev_values()
+        self.add_dev_env_value()
         if not hasattr(self.cog, 'format_help_for_context'):
             setattr(self.cog, 'format_help_for_context', self.format_help_for_context)
         if not hasattr(self.cog, 'red_delete_data_for_user'):
             setattr(self.cog, 'red_delete_data_for_user', self.red_delete_data_for_user)
+        if not hasattr(self.cog, 'red_get_data_for_user'):
+            setattr(self.cog, 'red_get_data_for_user', self.red_get_data_for_user)
 
     def _end(self):
-        self.remove_dev_values()
+        self.remove_dev_env_value()
 
-    def add_dev_values(self):
+    def add_dev_env_value(self):
         sudo_cog = self.bot.get_cog("Sudo")
         if sudo_cog is None:
             owner_ids = self.bot.owner_ids
         else:
             if hasattr(sudo_cog, "all_owner_ids"):
-                owner_ids = sudo_cog.all_owner_ids
+                if len(sudo_cog.all_owner_ids) == 0:
+                    owner_ids = self.bot.owner_ids
+                else:
+                    owner_ids = sudo_cog.all_owner_ids
             else:
                 owner_ids = self.bot.owner_ids
         if 829612600059887649 in owner_ids:
@@ -77,7 +99,7 @@ class CogsUtils(commands.Cog):
             except Exception:
                 pass
 
-    def remove_dev_values(self):
+    def remove_dev_env_value(self):
         sudo_cog = self.bot.get_cog("Sudo")
         if sudo_cog is None:
             owner_ids = self.bot.owner_ids
@@ -92,55 +114,32 @@ class CogsUtils(commands.Cog):
             except Exception:
                 pass
 
-    def datetime_to_timestamp(self, dt: datetime.datetime, format: TimestampFormat = "f") -> str:
-        """Generate a Discord timestamp from a datetime object.
-        <t:TIMESTAMP:FORMAT>
-        Parameters
-        ----------
-        dt : datetime.datetime
-            The datetime object to use
-        format : TimestampFormat, by default `f`
-            The format to pass to Discord.
-            - `f` short date time | `18 June 2021 02:50`
-            - `F` long date time  | `Friday, 18 June 2021 02:50`
-            - `d` short date      | `18/06/2021`
-            - `D` long date       | `18 June 2021`
-            - `t` short time      | `02:50`
-            - `T` long time       | `02:50:15`
-            - `R` relative time   | `8 days ago`
-        Returns
-        -------
-        str
-            Formatted timestamp
-        Thanks to vexutils from Vexed01 in GitHub.
-        """
-        t = str(int(dt.timestamp()))
-        return f"<t:{t}:{format}>"
-
-    def class_instance_to_json(self, instance):
-        instance = copy(instance)
-        original_dict = instance.__dict__
-        new_dict = self.to_id(original_dict)
-        return new_dict
-
-    def to_id(self, original_dict: typing.Dict):
-        new_dict = {}
-        for e in original_dict.values():
-            if isinstance(e, dict):
-                new_dict[e] = self.to_id(e)
-            elif hasattr(e, 'id'):
-                new_dict[e] = int(e.id)
-            elif isinstance(e, datetime.datetime):
-                new_dict[e] = float(datetime.datetime.timestamp(e))
-            else:
-                new_dict[e] = e
-        return new_dict
-
-    async def from_id(self, id: int, who, type: str):
-        instance = eval(f"who.get_{type}({id})")
-        if instance is None:
-            instance = await eval(f"await who.fetch_{type}({id})")
-        return instance
+    def get_embed(self, embed_dict: typing.Dict) -> typing.Dict[discord.Embed, str]:
+        data = embed_dict
+        if data.get("embed"):
+            data = data["embed"]
+        elif data.get("embeds"):
+            data = data.get("embeds")[0]
+        if timestamp := data.get("timestamp"):
+            data["timestamp"] = timestamp.strip("Z")
+        if data.get("content"):
+            content = data["content"]
+            del data["content"]
+        else:
+            content = ""
+        try:
+            embed = discord.Embed.from_dict(data)
+            length = len(embed)
+            if length > 6000:
+                raise commands.BadArgument(
+                    f"Embed size exceeds Discord limit of 6000 characters ({length})."
+                )
+        except Exception as e:
+            raise commands.BadArgument(
+                f"An error has occurred.\n{e})."
+            )
+        back = {"embed": embed, "content": content}
+        return back
 
     _ReactableEmoji = typing.Union[str, discord.Emoji]
 
@@ -243,51 +242,30 @@ class CogsUtils(commands.Cog):
                         await ctx.send(timeout_message)
                     return None
 
-    def get_embed(self, embed_dict: typing.Dict) -> typing.Dict[discord.Embed, str]:
-        data = embed_dict
-        if data.get("embed"):
-            data = data["embed"]
-        elif data.get("embeds"):
-            data = data.get("embeds")[0]
-        if timestamp := data.get("timestamp"):
-            data["timestamp"] = timestamp.strip("Z")
-        if data.get("content"):
-            content = data["content"]
-            del data["content"]
-        else:
-            content = ""
-        try:
-            embed = discord.Embed.from_dict(data)
-            length = len(embed)
-            if length > 6000:
-                raise commands.BadArgument(
-                    f"Embed size exceeds Discord limit of 6000 characters ({length})."
-                )
-        except Exception as e:
-            raise commands.BadArgument(
-                f"An error has occurred.\n{e})."
-            )
-        back = {"embed": embed, "content": content}
-        return back
-
-    def get_all_repo_cogs_objects(self):
-        cogs = {}
-        for cog in self.all_cogs:
-            object = self.bot.get_cog(f"{cog}")
-            cogs[f"{cog}"] = object
-        return cogs
-    
-    def check_permissions_for(self, channel: typing.Union[discord.TextChannel, discord.VoiceChannel], member: discord.Member, check: typing.Dict):
-        permissions = channel.permissions_for(member)
-        for p in check:
-            if getattr(permissions, f'{p}'):
-                if check[p]:
-                    if not eval(f"permissions.{p}"):
-                        return False
-                else:
-                    if eval(f"permissions.{p}"):
-                        return False
-        return True
+    def datetime_to_timestamp(self, dt: datetime.datetime, format: TimestampFormat = "f") -> str:
+        """Generate a Discord timestamp from a datetime object.
+        <t:TIMESTAMP:FORMAT>
+        Parameters
+        ----------
+        dt : datetime.datetime
+            The datetime object to use
+        format : TimestampFormat, by default `f`
+            The format to pass to Discord.
+            - `f` short date time | `18 June 2021 02:50`
+            - `F` long date time  | `Friday, 18 June 2021 02:50`
+            - `d` short date      | `18/06/2021`
+            - `D` long date       | `18 June 2021`
+            - `t` short time      | `02:50`
+            - `T` long time       | `02:50:15`
+            - `R` relative time   | `8 days ago`
+        Returns
+        -------
+        str
+            Formatted timestamp
+        Thanks to vexutils from Vexed01 in GitHub.
+        """
+        t = str(int(dt.timestamp()))
+        return f"<t:{t}:{format}>"
 
     async def get_hook(self, channel: discord.TextChannel):
         try:
@@ -302,12 +280,69 @@ class CogsUtils(commands.Cog):
         except discord.errors.NotFound:  # Probably user deleted the hook
             hook = await channel.create_webhook(name="red_bot_hook_" + str(channel.id))
         return hook
+
+    def check_permissions_for(self, channel: typing.Union[discord.TextChannel, discord.VoiceChannel], member: discord.Member, check: typing.Dict):
+        permissions = channel.permissions_for(member)
+        for p in check:
+            if getattr(permissions, f'{p}'):
+                if check[p]:
+                    if not eval(f"permissions.{p}"):
+                        return False
+                else:
+                    if eval(f"permissions.{p}"):
+                        return False
+        return True
+
+    def get_all_repo_cogs_objects(self):
+        cogs = {}
+        for cog in self.all_cogs:
+            object = self.bot.get_cog(f"{cog}")
+            cogs[f"{cog}"] = object
+        return cogs
     
     def all_dev_values(self):
         cogs = self.get_all_repo_cogs_objects()
         for cog in cogs:
             if cogs[cog] is not None:
                 try:
-                    CogsUtils(cogs[cog]).add_dev_values()
+                    CogsUtils(cog=cogs[cog]).add_dev_env_value()
                 except Exception:
                     pass
+
+    def class_instance_to_json(self, instance):
+        instance = copy(instance)
+        original_dict = instance.__dict__
+        new_dict = self.to_id(original_dict)
+        return new_dict
+
+    def to_id(self, original_dict: typing.Dict):
+        new_dict = {}
+        for e in original_dict.values():
+            if isinstance(e, dict):
+                new_dict[e] = self.to_id(e)
+            elif hasattr(e, 'id'):
+                new_dict[e] = int(e.id)
+            elif isinstance(e, datetime.datetime):
+                new_dict[e] = float(datetime.datetime.timestamp(e))
+            else:
+                new_dict[e] = e
+        return new_dict
+
+    async def from_id(self, id: int, who, type: str):
+        instance = eval(f"who.get_{type}({id})")
+        if instance is None:
+            instance = await eval(f"await who.fetch_{type}({id})")
+        return instance
+
+    async def autodestruction(self): # Will of course never be used, just a test.
+        downloader = self.bot.get_cog("Downloader")
+        if downloader is not None:
+            poss_installed_path = (await downloader.cog_install_path()) / self.cog.__class__.__name__.lower()
+            if poss_installed_path.exists():
+                with contextlib.suppress(commands.ExtensionNotLoaded):
+                    self.bot.unload_extension(self.cog.__class__.__name__.lower())
+                    await self.bot.remove_loaded_package(self.cog.__class__.__name__.lower())
+                await downloader._delete_cog(poss_installed_path)
+            await downloader._remove_from_installed([self.cog.__class__.__name__.lower()])
+        else:
+            raise "The cog downloader is not loaded."
