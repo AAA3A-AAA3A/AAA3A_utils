@@ -1,4 +1,3 @@
-from symtable import Function
 import discord
 import logging
 import typing
@@ -400,7 +399,7 @@ class Loop():
         self.name: str = name
         self.interval: float = interval
         self.cogsutils: CogsUtils = cogsutils
-        self.function: Function = function
+        self.function = function
         self.function_args: typing.Dict = function_args
         self.loop = self.cogsutils.bot.loop.create_task(self.loop())
 
