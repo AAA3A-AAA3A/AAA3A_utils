@@ -4,7 +4,6 @@ import typing
 import datetime
 import asyncio
 import contextlib
-from copy import copy
 from redbot.core import commands
 from redbot.core.bot import Red
 from redbot.core.utils.predicates import MessagePredicate
@@ -14,6 +13,7 @@ from redbot.core.utils.chat_formatting import *
 import traceback
 import math
 from rich.table import Table
+from rich.console import Console
 from io import StringIO
 
 def no_colour_rich_markup(*objects: typing.Any, lang: str = "") -> str:
@@ -406,6 +406,7 @@ class Loop():
         self.expected_interval = datetime.timedelta(seconds=self.interval)
         self.iter_count: int = 0
         self.currently_running: bool = False  # whether the loop is running or sleeping
+        self.last_result = None
         self.last_exc: str = "No exception has occurred yet."
         self.last_exc_raw: typing.Optional[BaseException] = None
         self.last_iter: typing.Optional[datetime.datetime] = None
@@ -424,16 +425,34 @@ class Loop():
         await self.cogsutils.bot.wait_until_red_ready()
         await asyncio.sleep(1)
         self.cogsutils.cog.log.debug(f"{self.name} loop has started.")
+        if float(self.interval) == float(3600):
+            try:
+                self.iter_start()
+                self.last_result = await self.function(**self.function_args)
+                self.iter_finish()
+                self.cogsutils.cog.log.debug(f"{self.name} initial loop finished")
+            except Exception as e:
+                self.cogsutils.cog.log.exception(f"Something went wrong in the {self.cog.name} loop.", exc_info=e)
+                self.iter_error(e)
+            # both iter_finish and iter_error set next_iter as not None
+            assert self.next_iter is not None
+            self.next_iter = self.next_iter.replace(
+                minute=0
+            )  # ensure further iterations are on the hour
+            await self.sleep_until_next()
         while True:
             try:
                 self.iter_start()
-                await self.function(**self.function_args)
+                self.last_result = await self.function(**self.function_args)
                 self.iter_finish()
                 self.cogsutils.cog.log.debug(f"{self.name} iteration finished")
             except Exception as e:
                 self.cogsutils.cog.log.exception(f"Something went wrong in the {self.cog.name} loop.", exc_info=e)
                 self.iter_error(e)
-            await self.wait_until_iter()
+            if float(self.interval) == float(3600):
+                await self.sleep_until_next()
+            else:
+                await self.wait_until_iter()
     
     def stop_all(self):
         self.loop.cancel()
@@ -519,7 +538,7 @@ class Loop():
         else:
             processed_table_str = "Loop hasn't started yet."
 
-        emoji = "\N{HEAVY CHECK MARK}\N{VARIATION SELECTOR-16}" if self.integrity else "\N{CROSS MARK}"
+        emoji = "✅" if self.integrity else "❌"
         embed = discord.Embed(title=f"{self.name}: `{emoji}`")
         embed.add_field(name="Raw data", value=raw_table_str, inline=False)
         embed.add_field(
