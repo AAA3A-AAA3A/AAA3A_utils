@@ -330,7 +330,7 @@ class CogsUtils(commands.Cog):
     
     def create_loop(self, function, name: typing.Optional[str]=None, interval: typing.Optional[float]=None, function_args: typing.Optional[typing.Dict]={}):
         if name is None:
-            name = f"{self.cog.__class__.__name__}_loop"
+            name = f"{self.cog.__class__.__name__}"
         if interval is None:
             interval = 900 # 15 minutes
         loop = Loop(name=name, cogsutils=self, interval=interval, function=function, function_args=function_args)
@@ -423,15 +423,15 @@ class Loop():
     async def loop(self) -> None:
         await self.cogsutils.bot.wait_until_red_ready()
         await asyncio.sleep(1)
-        self.cogsutils.cog.log.debug(f"{self.cog.__class__.__name__} loop has started.")
+        self.cogsutils.cog.log.debug(f"{self.name} loop has started.")
         while True:
             try:
                 self.iter_start()
                 await self.function(**self.function_args)
                 self.iter_finish()
-                self.cogsutils.cog.log.debug(f"{self.cog.__class__.__name__} iteration finished")
+                self.cogsutils.cog.log.debug(f"{self.name} iteration finished")
             except Exception as e:
-                self.cogsutils.cog.log.exception(f"Something went wrong in the {self.cog.__class__.__name__} loop.", exc_info=e)
+                self.cogsutils.cog.log.exception(f"Something went wrong in the {self.cog.name} loop.", exc_info=e)
                 self.iter_error(e)
             await self.wait_until_iter()
     
