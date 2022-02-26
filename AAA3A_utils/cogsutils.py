@@ -490,7 +490,7 @@ class Loop():
         # now this is accurate. imo its better to have something than nothing
 
     def iter_error(self, error: BaseException) -> None:
-        """Register an iteration's exception."""
+        """Register an iteration's error."""
         self.currently_running = False
         self.last_exc_raw = error
         self.last_exc = "".join(
@@ -515,7 +515,7 @@ class Loop():
             table = Table("Key", "Value")
             table.add_row("Seconds until next", str((self.next_iter - now).total_seconds()))
             table.add_row("Seconds since last", str((now - self.last_iter).total_seconds()))
-
+            processed_table_str = no_colour_rich_markup(table)
         else:
             processed_table_str = "Loop hasn't started yet."
 
