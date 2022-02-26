@@ -1,3 +1,4 @@
+from symtable import Function
 import discord
 import logging
 import typing
@@ -11,8 +12,26 @@ from redbot.core.utils.predicates import MessagePredicate
 from redbot.core.utils.menus import start_adding_reactions
 from redbot.core.data_manager import cog_data_path
 from redbot.core.utils.chat_formatting import *
+import traceback
+import math
+from rich.table import Table
+from io import StringIO
 
-__all__ = ["CogsUtils"]
+def no_colour_rich_markup(*objects: typing.Any, lang: str = "") -> str:
+    """
+    Slimmed down version of rich_markup which ensure no colours (/ANSI) can exist
+    https://github.com/Cog-Creators/Red-DiscordBot/pull/5538/files (Kowlin)
+    """
+    temp_console = Console(  # Prevent messing with STDOUT's console
+        color_system=None,
+        file=StringIO(),
+        force_terminal=True,
+        width=80,
+    )
+    temp_console.print(*objects)
+    return box(temp_console.file.getvalue(), lang=lang)  # type: ignore
+
+__all__ = ["CogsUtils", "Loop"]
 TimestampFormat = typing.Literal["f", "F", "d", "D", "t", "T", "R"]
 
 class CogsUtils(commands.Cog):
@@ -23,6 +42,8 @@ class CogsUtils(commands.Cog):
             self.cog = None
             self.bot = bot
         else:
+            if isinstance(cog, str):
+                cog = self.bot.get_cog(cog)
             self.cog = cog
             self.bot = self.cog.bot
             self.DataPath = cog_data_path(raw_name=self.cog.__class__.__name__.lower())
@@ -38,6 +59,12 @@ class CogsUtils(commands.Cog):
             if hasattr(self.cog, '__version__'):
                 if isinstance(self.cog.__version__, typing.List):
                     self.__version__ = self.cog.__version__
+            if hasattr(self.cog, '__func_red__'):
+                if not isinstance(self.cog.__func_red__, typing.List):
+                    self.cog.__func_red__ = []
+            else:
+                self.cog.__func_red__ = []
+        self.loops = {}
         self.repo_name = "AAA3A-cogs"
         self.all_cogs = [
                             "AntiNuke",
@@ -49,6 +76,7 @@ class CogsUtils(commands.Cog):
                             "Ip",
                             "MemberPrefix",
                             "ReactToCommand",
+                            "RolesButtons",
                             "SimpleSanction",
                             "Sudo",
                             "TicketTool",
@@ -67,19 +95,27 @@ class CogsUtils(commands.Cog):
 
     async def red_get_data_for_user(self, *args, **kwargs) -> typing.Dict[typing.Any, typing.Any]:
         return {}
+    
+    def cog_unload(self):
+        self.cogsutils._end()
 
     def _setup(self):
+        self.cog.cogsutils = self
         self.cog.log = logging.getLogger(f"red.{self.repo_name}.{self.cog.__class__.__name__}")
         self.add_dev_env_value()
-        if not hasattr(self.cog, 'format_help_for_context'):
+        if not "format_help_for_context" in self.cog.__func_red__:
             setattr(self.cog, 'format_help_for_context', self.format_help_for_context)
-        if not hasattr(self.cog, 'red_delete_data_for_user'):
+        if not "red_delete_data_for_user" in self.cog.__func_red__:
             setattr(self.cog, 'red_delete_data_for_user', self.red_delete_data_for_user)
-        if not hasattr(self.cog, 'red_get_data_for_user'):
+        if not "red_get_data_for_user" in self.cog.__func_red__:
             setattr(self.cog, 'red_get_data_for_user', self.red_get_data_for_user)
+        if not "cog_unload" in self.cog.__func_red__:
+            setattr(self.cog, 'cog_unload', self.cog_unload)
 
     def _end(self):
         self.remove_dev_env_value()
+        for loop in self.loops.values():
+            loop.end_all()
 
     def add_dev_env_value(self):
         sudo_cog = self.bot.get_cog("Sudo")
@@ -292,6 +328,17 @@ class CogsUtils(commands.Cog):
                     if eval(f"permissions.{p}"):
                         return False
         return True
+    
+    def create_loop(self, function, name: typing.Optional[str]=None, interval: typing.Optional[float]=None, function_args: typing.Optional[typing.Dict]={}):
+        if name is None:
+            name = f"{self.cog.__class__.__name__}_loop"
+        if interval is None:
+            interval = 900 # 15 minutes
+        loop = Loop(name=name, cogsutils=self, interval=interval, function=function, function_args=function_args)
+        if f"{loop.name}" in self.loops:
+            self.loops[f"{loop.name}"].stop_all()
+        self.loops[f"{loop.name}"] = loop
+        return loop
 
     def get_all_repo_cogs_objects(self):
         cogs = {}
@@ -300,7 +347,7 @@ class CogsUtils(commands.Cog):
             cogs[f"{cog}"] = object
         return cogs
     
-    def all_dev_values(self):
+    def add_all_dev_env_values(self):
         cogs = self.get_all_repo_cogs_objects()
         for cog in cogs:
             if cogs[cog] is not None:
@@ -310,22 +357,21 @@ class CogsUtils(commands.Cog):
                     pass
 
     def class_instance_to_json(self, instance):
-        instance = copy(instance)
         original_dict = instance.__dict__
         new_dict = self.to_id(original_dict)
         return new_dict
 
     def to_id(self, original_dict: typing.Dict):
         new_dict = {}
-        for e in original_dict.values():
-            if isinstance(e, dict):
-                new_dict[e] = self.to_id(e)
-            elif hasattr(e, 'id'):
-                new_dict[e] = int(e.id)
-            elif isinstance(e, datetime.datetime):
-                new_dict[e] = float(datetime.datetime.timestamp(e))
+        for e in original_dict:
+            if isinstance(original_dict[e], typing.Dict):
+                new_dict[e] = self.to_id(original_dict[e])
+            elif hasattr(original_dict[e], 'id'):
+                new_dict[e] = int(original_dict[e].id)
+            elif isinstance(original_dict[e], datetime.datetime):
+                new_dict[e] = float(datetime.datetime.timestamp(original_dict[e]))
             else:
-                new_dict[e] = e
+                new_dict[e] = original_dict[e]
         return new_dict
 
     async def from_id(self, id: int, who, type: str):
@@ -346,3 +392,145 @@ class CogsUtils(commands.Cog):
             await downloader._remove_from_installed([self.cog.__class__.__name__.lower()])
         else:
             raise "The cog downloader is not loaded."
+
+class Loop():
+    """Thanks to Vexed01 on GitHub! (https://github.com/Vexed01/Vex-Cogs/blob/master/timechannel/loop.py)
+    """
+    def __init__(self, name: str, cogsutils: CogsUtils, interval: float, function, function_args: typing.Optional[typing.Dict]={}) -> None:
+        self.name: str = name
+        self.interval: float = interval
+        self.cogsutils: CogsUtils = cogsutils
+        self.function: Function = function
+        self.function_args: typing.Dict = function_args
+        self.loop = self.cogsutils.bot.loop.create_task(self.loop())
+
+        self.expected_interval = datetime.timedelta(seconds=self.interval)
+        self.iter_count: int = 0
+        self.currently_running: bool = False  # whether the loop is running or sleeping
+        self.last_exc: str = "No exception has occurred yet."
+        self.last_exc_raw: typing.Optional[BaseException] = None
+        self.last_iter: typing.Optional[datetime.datetime] = None
+        self.next_iter: typing.Optional[datetime.datetime] = None
+
+    async def wait_until_iter(self) -> None:
+        now = datetime.datetime.utcnow()
+        time = now.timestamp()
+        time = math.ceil(time / self.interval) * self.interval
+        next_iter = datetime.datetime.fromtimestamp(time) - now
+        seconds_to_sleep = (next_iter).total_seconds()
+        self.cogsutils.cog.log.debug(f"Sleeping for {seconds_to_sleep} seconds until next iter...")
+        await asyncio.sleep(seconds_to_sleep)
+
+    async def loop(self) -> None:
+        await self.cogsutils.bot.wait_until_red_ready()
+        await asyncio.sleep(1)
+        self.cogsutils.cog.log.debug(f"{self.cog.__class__.__name__} loop has started.")
+        while True:
+            try:
+                self.iter_start()
+                await self.function(**self.function_args)
+                self.iter_finish()
+                self.cogsutils.cog.log.debug(f"{self.cog.__class__.__name__} iteration finished")
+            except Exception as e:
+                self.cogsutils.cog.log.exception(f"Something went wrong in the {self.cog.__class__.__name__} loop.", exc_info=e)
+                self.iter_error(e)
+            await self.wait_until_iter()
+    
+    def stop_all(self):
+        self.loop.cancel()
+
+    def __repr__(self) -> str:
+        return (
+            f"<friendly_name={self.name} iter_count={self.iter_count} "
+            f"currently_running={self.currently_running} last_iter={self.last_iter} "
+            f"next_iter={self.next_iter} integrity={self.integrity}>"
+        )
+
+    @property
+    def integrity(self) -> bool:
+        """
+        If the loop is running on time (whether or not next expected iteration is in the future)
+        """
+        if self.next_iter is None:  # not started yet
+            return False
+        return self.next_iter > datetime.datetime.utcnow()
+
+    @property
+    def until_next(self) -> float:
+        """
+        Positive float with the seconds until the next iteration, based off the last
+        iteration and the interval.
+        If the expected time of the next iteration is in the past, this will return `0.0`
+        """
+        if self.next_iter is None:  # not started yet
+            return 0.0
+
+        raw_until_next = (self.next_iter - datetime.datetime.utcnow()).total_seconds()
+        if raw_until_next > self.expected_interval.total_seconds():  # should never happen
+            return self.expected_interval.total_seconds()
+        elif raw_until_next > 0.0:
+            return raw_until_next
+        else:
+            return 0.0
+
+    async def sleep_until_next(self) -> None:
+        """Sleep until the next iteration. Basically an "all-in-one" version of `until_next`."""
+        await asyncio.sleep(self.until_next)
+
+    def iter_start(self) -> None:
+        """Register an iteration as starting."""
+        self.iter_count += 1
+        self.currently_running = True
+        self.last_iter = datetime.datetime.utcnow()
+        self.next_iter = datetime.datetime.utcnow() + self.expected_interval
+        # this isn't accurate, it will be "corrected" when finishing is called
+
+    def iter_finish(self) -> None:
+        """Register an iteration as finished successfully."""
+        self.currently_running = False
+        # now this is accurate. imo its better to have something than nothing
+
+    def iter_error(self, error: BaseException) -> None:
+        """Register an iteration's exception."""
+        self.currently_running = False
+        self.last_exc_raw = error
+        self.last_exc = "".join(
+            traceback.format_exception(type(error), error, error.__traceback__)
+        )
+
+    def get_debug_embed(self) -> discord.Embed:
+        """Get an embed with infomation on this loop."""
+        table = Table("Key", "Value")
+
+        table.add_row("expected_interval", str(self.expected_interval))
+        table.add_row("iter_count", str(self.iter_count))
+        table.add_row("currently_running", str(self.currently_running))
+        table.add_row("last_iterstr", str(self.last_iter) or "Loop not started")
+        table.add_row("next_iterstr", str(self.next_iter) or "Loop not started")
+
+        raw_table_str = no_colour_rich_markup(table)
+
+        now = datetime.datetime.utcnow()
+
+        if self.next_iter and self.last_iter:
+            table = Table("Key", "Value")
+            table.add_row("Seconds until next", str((self.next_iter - now).total_seconds()))
+            table.add_row("Seconds since last", str((now - self.last_iter).total_seconds()))
+
+        else:
+            processed_table_str = "Loop hasn't started yet."
+
+        emoji = "\N{HEAVY CHECK MARK}\N{VARIATION SELECTOR-16}" if self.integrity else "\N{CROSS MARK}"
+        embed = discord.Embed(title=f"{self.name}: `{emoji}`")
+        embed.add_field(name="Raw data", value=raw_table_str, inline=False)
+        embed.add_field(
+            name="Processed data",
+            value=processed_table_str,
+            inline=False,
+        )
+        exc = self.last_exc
+        if len(exc) > 1024:
+            exc = list(pagify(exc, page_length=1024))[0] + "\n..."
+        embed.add_field(name="Exception", value=box(exc), inline=False)
+
+        return embed
