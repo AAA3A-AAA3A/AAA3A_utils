@@ -15,6 +15,8 @@ import math
 from rich.table import Table
 from rich.console import Console
 from io import StringIO
+import string
+from random import choice
 
 def no_colour_rich_markup(*objects: typing.Any, lang: str = "") -> str:
     """
@@ -42,7 +44,7 @@ class CogsUtils(commands.Cog):
             self.bot = bot
         else:
             if isinstance(cog, str):
-                cog = self.bot.get_cog(cog)
+                cog = bot.get_cog(cog)
             self.cog = cog
             self.bot = self.cog.bot
             self.DataPath = cog_data_path(raw_name=self.cog.__class__.__name__.lower())
@@ -379,6 +381,23 @@ class CogsUtils(commands.Cog):
             instance = await eval(f"await who.fetch_{type}({id})")
         return instance
 
+    def generate_key(self, number: typing.Optional[int]=15, existing_keys: typing.Optional[typing.List]=[]):
+        while True:
+            # This probably won't turn into an endless loop
+            key = "".join(choice(string.ascii_lowercase + "0123456789") for i in range(number))
+            if not key in existing_keys:
+                return key
+
+    def await_function(self, function, function_args: typing.Optional[typing.Dict]={}):
+        task = asyncio.create_task(self.do_await_function(function=function, function_args=function_args))
+        return task
+
+    async def do_await_function(self, function, function_args: typing.Optional[typing.Dict]={}):
+        try:
+            await function(**function_args)
+        except Exception as e:
+            self.cog.log.exception(traceback.format_exception(type(e), e, e.__traceback__))
+
     async def autodestruction(self): # Will of course never be used, just a test.
         downloader = self.bot.get_cog("Downloader")
         if downloader is not None:
@@ -424,7 +443,8 @@ class Loop():
     async def loop(self) -> None:
         await self.cogsutils.bot.wait_until_red_ready()
         await asyncio.sleep(1)
-        self.cogsutils.cog.log.debug(f"{self.name} loop has started.")
+        if not self.interval <= 60:
+            self.cogsutils.cog.log.debug(f"{self.name} loop has started.")
         if float(self.interval) == float(3600):
             try:
                 self.iter_start()
@@ -445,17 +465,23 @@ class Loop():
                 self.iter_start()
                 self.last_result = await self.function(**self.function_args)
                 self.iter_finish()
-                self.cogsutils.cog.log.debug(f"{self.name} iteration finished")
+                if not self.interval <= 60:
+                    self.cogsutils.cog.log.debug(f"{self.name} iteration finished")
             except Exception as e:
                 self.cogsutils.cog.log.exception(f"Something went wrong in the {self.cog.name} loop.", exc_info=e)
                 self.iter_error(e)
             if float(self.interval) == float(3600):
                 await self.sleep_until_next()
             else:
-                await self.wait_until_iter()
+                if not self.interval == 0:
+                    await self.wait_until_iter()
     
     def stop_all(self):
         self.loop.cancel()
+        if f"{self.name}" in self.cogsutils.loops:
+            if self.cogsutils.loops[f"{self.name}"] == self:
+                del self.cogsutils.loops[f"{self.name}"]
+        return self
 
     def __repr__(self) -> str:
         return (
