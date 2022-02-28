@@ -1,3 +1,3 @@
-from .cogsutils import CogsUtils
+from .cogsutils import CogsUtils, Loop
 
 __author__ = "AAA3A"
