@@ -18,6 +18,8 @@ from io import StringIO
 import string
 from random import choice
 
+# TEST
+
 def no_colour_rich_markup(*objects: typing.Any, lang: str = "") -> str:
     """
     Slimmed down version of rich_markup which ensure no colours (/ANSI) can exist
