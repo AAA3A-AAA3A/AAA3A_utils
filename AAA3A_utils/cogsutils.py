@@ -299,16 +299,16 @@ class CogsUtils(commands.Cog):
         -------
         str
             Formatted timestamp
-        Thanks to vexutils from Vexed01 in GitHub.
+        Thanks to vexutils from Vexed01 in GitHub! (https://github.com/Vexed01/Vex-Cogs/blob/master/timechannel/vexutils/chat.py)
         """
         t = str(int(dt.timestamp()))
         return f"<t:{t}:{format}>"
 
     async def get_hook(self, channel: discord.TextChannel):
         try:
-            for i in await channel.webhooks():
-                if i.user.id == self.bot.user.id:
-                    hook = i
+            for webhook in await channel.webhooks():
+                if webhook.user.id == self.bot.user.id:
+                    hook = webhook
                     break
             else:
                 hook = await channel.create_webhook(
