@@ -1,3 +1,4 @@
+from xml.dom.expatbuilder import parseFragmentString
 import discord
 import logging
 import typing
@@ -6,7 +7,7 @@ import asyncio
 import contextlib
 from redbot.core import commands
 from redbot.core.bot import Red
-from redbot.core.utils.predicates import MessagePredicate
+from redbot.core.utils.predicates import MessagePredicate, ReactionPredicate
 from redbot.core.utils.menus import start_adding_reactions
 from redbot.core.data_manager import cog_data_path
 from redbot.core.utils.chat_formatting import *
@@ -17,8 +18,8 @@ from rich.console import Console
 from io import StringIO
 import string
 from random import choice
-
-# TEST
+from pathlib import Path
+from time import monotonic
 
 def no_colour_rich_markup(*objects: typing.Any, lang: str = "") -> str:
     """
@@ -37,19 +38,19 @@ def no_colour_rich_markup(*objects: typing.Any, lang: str = "") -> str:
 __all__ = ["CogsUtils", "Loop"]
 TimestampFormat = typing.Literal["f", "F", "d", "D", "t", "T", "R"]
 
-class CogsUtils(commands.Cog):
+class CogsUtils():
     """Tools for AAA3A-cogs!"""
 
     def __init__(self, cog: typing.Optional[commands.Cog]=None, bot: typing.Optional[Red]=None):
         if cog is None and bot is not None:
-            self.cog = None
-            self.bot = bot
+            self.cog: commands.Cog = None
+            self.bot: Red = bot
         else:
             if isinstance(cog, str):
                 cog = bot.get_cog(cog)
-            self.cog = cog
-            self.bot = self.cog.bot
-            self.DataPath = cog_data_path(raw_name=self.cog.__class__.__name__.lower())
+            self.cog: commands.Cog = cog
+            self.bot: Red = self.cog.bot
+            self.DataPath: Path = cog_data_path(raw_name=self.cog.__class__.__name__.lower())
         self.__authors__ = ["AAA3A"]
         self.__version__ = 1.0
         if self.cog is not None:
@@ -67,28 +68,28 @@ class CogsUtils(commands.Cog):
                     self.cog.__func_red__ = []
             else:
                 self.cog.__func_red__ = []
-        self.loops = {}
-        self.repo_name = "AAA3A-cogs"
-        self.all_cogs = [
-                            "AntiNuke",
-                            "Calculator",
-                            "ClearChannel",
-                            "CmdChannel",
-                            "CtxVar",
-                            "EditFile",
-                            "Ip",
-                            "MemberPrefix",
-                            "ReactToCommand",
-                            "RolesButtons",
-                            "SimpleSanction",
-                            "Sudo",
-                            "TicketTool",
-                            "TransferChannel"
-                        ]
+        self.loops: typing.Dict = {}
+        self.repo_name: str = "AAA3A-cogs"
+        self.all_cogs: typing.List = [
+                                        "AntiNuke",
+                                        "Calculator",
+                                        "ClearChannel",
+                                        "CmdChannel",
+                                        "CtxVar",
+                                        "EditFile",
+                                        "Ip",
+                                        "MemberPrefix",
+                                        "ReactToCommand",
+                                        "RolesButtons",
+                                        "SimpleSanction",
+                                        "Sudo",
+                                        "TicketTool",
+                                        "TransferChannel"
+                                    ]
 
     def format_help_for_context(self, ctx):
         """Thanks Simbad!"""
-        context = super().format_help_for_context(ctx)
+        context = super(type(self.cog), self.cog).format_help_for_context(ctx)
         s = "s" if len(self.__authors__) > 1 else ""
         return f"{context}\n\n**Author{s}**: {', '.join(self.__authors__)}\n**Version**: {self.__version__}"
 
@@ -166,6 +167,13 @@ class CogsUtils(commands.Cog):
             del data["content"]
         else:
             content = ""
+        for x in data:
+            if data[x] is None:
+                del data[x]
+            elif isinstance(data[x], typing.Dict):
+                for y in data[x]:
+                    if data[x][y] is None:
+                        del data[x][y]
         try:
             embed = discord.Embed.from_dict(data)
             length = len(embed)
@@ -332,16 +340,19 @@ class CogsUtils(commands.Cog):
                         return False
         return True
     
-    def create_loop(self, function, name: typing.Optional[str]=None, interval: typing.Optional[float]=None, function_args: typing.Optional[typing.Dict]={}):
+    def create_loop(self, function, name: typing.Optional[str]=None, days: typing.Optional[int]=0, hours: typing.Optional[int]=0, minutes: typing.Optional[int]=0, seconds: typing.Optional[int]=0, function_args: typing.Optional[typing.Dict]={}, limit_count: typing.Optional[int]=None, limit_date: typing.Optional[datetime.datetime]=None):
         if name is None:
             name = f"{self.cog.__class__.__name__}"
-        if interval is None:
-            interval = 900 # 15 minutes
-        loop = Loop(name=name, cogsutils=self, interval=interval, function=function, function_args=function_args)
+        if datetime.timedelta(days=days, hours=hours, minutes=minutes, seconds=seconds).total_seconds() == 0:
+            seconds = 900 # 15 minutes
+        loop = Loop(cogsutils=self, name=name, function=function, days=days, hours=hours, minutes=minutes, seconds=seconds, function_args=function_args, limit_count=limit_count, limit_date=limit_date)
         if f"{loop.name}" in self.loops:
             self.loops[f"{loop.name}"].stop_all()
         self.loops[f"{loop.name}"] = loop
         return loop
+    
+    async def captcha(self, member: discord.Member, channel: discord.TextChannel, limit: typing.Optional[int]=3, timeout: typing.Optional[int]=60, why: typing.Optional[str]=""):
+        return await Captcha(cogsutils=self, member=member, channel=channel, limit=limit, timeout=timeout, why=why).realize_challenge()
 
     def get_all_repo_cogs_objects(self):
         cogs = {}
@@ -383,10 +394,23 @@ class CogsUtils(commands.Cog):
             instance = await eval(f"await who.fetch_{type}({id})")
         return instance
 
-    def generate_key(self, number: typing.Optional[int]=15, existing_keys: typing.Optional[typing.List]=[]):
+    def generate_key(self, number: typing.Optional[int]=15, existing_keys: typing.Optional[typing.List]=[], strings_used: typing.Optional[typing.List]={"ascii_lowercase": True, "ascii_uppercase": False, "digits": True, "punctuation": False}):
+        strings = []
+        if "ascii_lowercase" in strings_used:
+            if strings_used["ascii_lowercase"]:
+                strings += string.ascii_lowercase
+        if "ascii_uppercase" in strings_used:
+            if strings_used["ascii_uppercase"]:
+                strings += string.ascii_uppercase
+        if "digits" in strings_used:
+            if strings_used["digits"]:
+                strings += string.digits
+        if "punctuation" in strings_used:
+            if strings_used["punctuation"]:
+                strings += string.punctuation
         while True:
             # This probably won't turn into an endless loop
-            key = "".join(choice(string.ascii_lowercase + "0123456789") for i in range(number))
+            key = "".join(choice(strings) for i in range(number))
             if not key in existing_keys:
                 return key
 
@@ -398,7 +422,8 @@ class CogsUtils(commands.Cog):
         try:
             await function(**function_args)
         except Exception as e:
-            self.cog.log.exception(traceback.format_exception(type(e), e, e.__traceback__))
+            if hasattr(self.cogsutils.cog, 'log'):
+                self.cog.log.error(f"An error occurred with the {function.__name__} function.", exc_info=e)
 
     async def autodestruction(self): # Will of course never be used, just a test.
         downloader = self.bot.get_cog("Downloader")
@@ -416,13 +441,18 @@ class CogsUtils(commands.Cog):
 class Loop():
     """Thanks to Vexed01 on GitHub! (https://github.com/Vexed01/Vex-Cogs/blob/master/timechannel/loop.py)
     """
-    def __init__(self, name: str, cogsutils: CogsUtils, interval: float, function, function_args: typing.Optional[typing.Dict]={}) -> None:
-        self.name: str = name
-        self.interval: float = interval
+    def __init__(self, cogsutils: CogsUtils, name: str, function, days: typing.Optional[int]=0, hours: typing.Optional[int]=0, minutes: typing.Optional[int]=0, seconds: typing.Optional[int]=0, function_args: typing.Optional[typing.Dict]={}, limit_count: typing.Optional[int]=None, limit_date: typing.Optional[datetime.datetime]=None) -> None:
         self.cogsutils: CogsUtils = cogsutils
+
+        self.name: str = name
         self.function = function
-        self.function_args: typing.Dict = function_args
+        self.function_args = function_args
+        self.interval: float = datetime.timedelta(days=days, hours=hours, minutes=minutes, seconds=seconds).total_seconds()
+        self.limit_count: int = limit_count
+        self.limit_date: datetime.datetime = limit_date
         self.loop = self.cogsutils.bot.loop.create_task(self.loop())
+        self.stop_manually: bool = False
+        self.stop: bool = False
 
         self.expected_interval = datetime.timedelta(seconds=self.interval)
         self.iter_count: int = 0
@@ -439,46 +469,76 @@ class Loop():
         time = math.ceil(time / self.interval) * self.interval
         next_iter = datetime.datetime.fromtimestamp(time) - now
         seconds_to_sleep = (next_iter).total_seconds()
-        self.cogsutils.cog.log.debug(f"Sleeping for {seconds_to_sleep} seconds until next iter...")
+        if hasattr(self.cogsutils.cog, 'log'):
+            self.cogsutils.cog.log.debug(f"Sleeping for {seconds_to_sleep} seconds until next iter...")
         await asyncio.sleep(seconds_to_sleep)
 
     async def loop(self) -> None:
         await self.cogsutils.bot.wait_until_red_ready()
         await asyncio.sleep(1)
         if not self.interval <= 60:
-            self.cogsutils.cog.log.debug(f"{self.name} loop has started.")
-        if float(self.interval) == float(3600):
+            if hasattr(self.cogsutils.cog, 'log'):
+                self.cogsutils.cog.log.debug(f"{self.name} loop has started.")
+        if float(self.interval)%float(3600) == 0:
             try:
+                start = monotonic()
                 self.iter_start()
                 self.last_result = await self.function(**self.function_args)
                 self.iter_finish()
-                self.cogsutils.cog.log.debug(f"{self.name} initial loop finished")
+                end = monotonic()
+                total = round(end - start, 1)
+                if hasattr(self.cogsutils.cog, 'log'):
+                    self.cogsutils.cog.log.debug(f"{self.name} initial loop finished in {total}s.")
             except Exception as e:
-                self.cogsutils.cog.log.exception(f"Something went wrong in the {self.cog.name} loop.", exc_info=e)
+                if hasattr(self.cogsutils.cog, 'log'):
+                    self.cogsutils.cog.log.exception(f"Something went wrong in the {self.cog.name} loop.", exc_info=e)
                 self.iter_error(e)
             # both iter_finish and iter_error set next_iter as not None
             assert self.next_iter is not None
             self.next_iter = self.next_iter.replace(
                 minute=0
             )  # ensure further iterations are on the hour
+            if await self.maybe_stop():
+                return
             await self.sleep_until_next()
         while True:
             try:
+                start = monotonic()
                 self.iter_start()
                 self.last_result = await self.function(**self.function_args)
                 self.iter_finish()
+                end = monotonic()
+                total = round(end - start, 1)
                 if not self.interval <= 60:
-                    self.cogsutils.cog.log.debug(f"{self.name} iteration finished")
+                    if hasattr(self.cogsutils.cog, 'log'):
+                        self.cogsutils.cog.log.debug(f"{self.name} iteration finished in {total}s.")
             except Exception as e:
-                self.cogsutils.cog.log.exception(f"Something went wrong in the {self.cog.name} loop.", exc_info=e)
+                if hasattr(self.cogsutils.cog, 'log'):
+                    self.cogsutils.cog.log.exception(f"Something went wrong in the {self.cog.name} loop.", exc_info=e)
                 self.iter_error(e)
-            if float(self.interval) == float(3600):
+            if await self.maybe_stop():
+                return
+            if float(self.interval)%float(3600) == 0:
                 await self.sleep_until_next()
             else:
                 if not self.interval == 0:
                     await self.wait_until_iter()
     
+    async def maybe_stop(self):
+        if self.stop_manually:
+            self.stop_all()
+        if self.limit_count is not None:
+            if self.iter_count >= self.limit_count:
+                self.stop_all()
+        if self.limit_date is not None:
+            if datetime.datetime.timestamp(datetime.datetime.now()) >= datetime.datetime.timestamp(self.limit_date):
+                self.stop_all()
+        if self.stop:
+            return True
+        return False
+    
     def stop_all(self):
+        self.stop = True
         self.loop.cancel()
         if f"{self.name}" in self.cogsutils.loops:
             if self.cogsutils.loops[f"{self.name}"] == self:
@@ -580,3 +640,232 @@ class Loop():
         embed.add_field(name="Exception", value=box(exc), inline=False)
 
         return embed
+
+class Captcha():
+    """Representation of a captcha an user is doing.
+    Thanks to Kreusada for this code! (https://github.com/Kreusada/Kreusada-Cogs/blob/master/captcha/)
+    """
+
+    def __init__(self, cogsutils: CogsUtils, member: discord.Member, channel: discord.TextChannel, limit: typing.Optional[int]=3, timeout: typing.Optional[int]=60, why: typing.Optional[str]=""):
+        self.cogsutils: CogsUtils = cogsutils
+
+        self.member: discord.Member = member
+        self.guild: discord.Guild = member.guild
+        self.channel: discord.TextChannel = channel
+        self.why: str = why
+
+        self.limit: int = limit
+        self.timeout: int = timeout
+
+        self.message: discord.Message = None
+        self.code: str = None
+        self.running: bool = False
+        self.tasks: list = []
+        self.trynum: int = 0
+        self.escape_char = "\u200B"
+
+    async def realize_challenge(self) -> None:
+        is_ok = None
+        timeout = False
+        try:
+            while is_ok is not True:
+                if self.trynum > self.limit:
+                    break
+                try:
+                    self.code = self.generate_code()
+                    await self.send_message()
+                    this = await self.try_challenging()
+                except TimeoutError:
+                    timeout = True
+                    break
+                except self.AskedForReload:
+                    self.trynum += 1
+                    continue
+                except TypeError:
+                    continue
+                except self.LeftGuildError:
+                    leave_guild = True
+                    break
+                if this is False:
+                    self.trynum += 1
+                    is_ok = False
+                else:
+                    is_ok = True
+            if self.message is not None:
+                try:
+                    await self.message.delete()
+                except discord.HTTPException:
+                    pass
+            failed = self.trynum > self.limit
+        except self.MissingPermissions as e:
+            raise self.MissingPermissions(e)
+        except Exception as e:
+            if hasattr(self.cogsutils.cog, 'log'):
+                self.cogsutils.cog.log.error(f"An unsupported error occurred during the captcha.", exc_info=e)
+            raise self.OtherException(e)
+        finally:
+            if timeout:
+                raise TimeoutError
+            if failed:
+                return False
+            if leave_guild:
+                raise self.LeftGuildError("User has left guild.")
+            return True
+
+    async def try_challenging(self) -> bool:
+        """Do challenging in one function!
+        """
+        self.running = True
+        try:
+            received = await self.wait_for_action()
+            if received is None:
+                raise self.LeftGuildError("User has left guild.")
+            if hasattr(received, "content"):
+                # It's a message!
+                try:
+                    await received.delete()
+                except discord.HTTPException:
+                    pass
+                error_message = ""
+                try:
+                    state = await self.verify(received.content)
+                except self.SameCodeError:
+                    error_message += error(bold("Code invalid. Do not copy and paste."))
+                    state = False
+                else:
+                    if not state:
+                        error_message += warning("Code invalid.")
+                if error_message:
+                    await self.channel.send(error_message, delete_after=3)
+                return state
+            else:
+                raise self.AskedForReload("User want to reload Captcha.")
+        except TimeoutError:
+            raise TimeoutError
+        finally:
+            self.running = False
+
+    def generate_code(self, put_fake_espace: typing.Optional[bool]=True):
+        code = self.cogsutils.generate_key(number=8, existing_keys=[], strings_used={"ascii_lowercase": False, "ascii_uppercase": True, "digits": True, "punctuation": False})
+        if put_fake_espace:
+            code = self.escape_char.join(list(code))
+        return code
+
+    def get_embed(self) -> discord.Embed:
+        """
+        Get the embed containing the captcha code.
+        """
+        embed_dict = {
+                        "embeds": [
+                            {
+                                "title": "Captcha" +  f" for {self.why}" if not self.why == "" else "",
+                                "description": f"Please return me the following code:\n{box(str(self.code))}\nDo not copy and paste.",
+                                "author": {
+                                    "name": f"{self.member.display_name}",
+                                    "icon_url": f"{self.member.avatar_url}"
+                                },
+                                "footer": {
+                                    "text": f"Tries: {self.trynum} / Limit: {self.limit}"
+                                }
+                            }
+                        ]
+                    }
+        embed = self.cogsutils.get_embed(embed_dict)["embed"]
+        return embed
+
+    async def send_message(self) -> None:
+        """
+        Send a message with new code.
+        """
+        if self.message is not None:
+            try:
+                await self.message.delete()
+            except discord.HTTPException:
+                pass
+        embed = self.get_embed()
+        try:
+            self.message = await self.channel.send(
+                            embed=embed,
+                            delete_after=900,  # Delete after 15 minutes.
+                        )
+        except discord.HTTPException:
+            raise self.MissingPermissions("Cannot send message in verification channel.")
+        try:
+            await self.message.add_reaction("🔁")
+        except discord.HTTPException:
+            raise self.MissingPermissions("Cannot react in verification channel.")
+
+    async def verify(self, code_input: str) -> bool:
+        """Verify a code."""
+        if self.escape_char in code_input:
+            raise self.SameCodeError
+        if code_input.lower() == self.code.replace(self.escape_char, "").lower():
+            return True
+        else:
+            return False
+
+    async def wait_for_action(self) -> Union[discord.Reaction, discord.Message, None]:
+        """Wait for an action from the user.
+        It will return an object of discord.Message or discord.Reaction depending what the user
+        did.
+        """
+        self.cancel_tasks()  # Just in case...
+        self.tasks = self._give_me_tasks()
+        done, pending = await asyncio.wait(
+            self.tasks,
+            timeout=self.timeout,
+            return_when=asyncio.FIRST_COMPLETED,
+        )
+        self.cancel_tasks()
+        if len(done) == 0:
+            raise TimeoutError("User didn't answer.")
+        try:  # An error is raised if we return the result and when the task got cancelled.
+            return done.pop().result()
+        except asyncio.CancelledError:
+            return None
+
+    def cancel_tasks(self) -> None:
+        """Cancel the ongoing tasks."""
+        for task in self.tasks:
+            task: asyncio.Task
+            if not task.done():
+                task.cancel()
+
+    def _give_me_tasks(self) -> typing.List:
+        def leave_check(u):
+            return u.id == self.member.id
+        return [
+            asyncio.create_task(
+                 self.cogsutils.bot.wait_for(
+                    "reaction_add",
+                    check=ReactionPredicate.with_emojis(
+                        "🔁", message=self.message, user=self.member
+                    ),
+                )
+            ),
+            asyncio.create_task(
+                self.cogsutils.bot.wait_for(
+                    "message",
+                    check=MessagePredicate.same_context(
+                        channel=self.channel,
+                        user=self.member,
+                    ),
+                )
+            ),
+            asyncio.create_task(self.cogsutils.bot.wait_for("user_remove", check=leave_check)),
+        ]
+    
+    class MissingPermissions(Exception):
+        pass
+
+    class AskedForReload(Exception):
+        pass
+
+    class SameCodeError(Exception):
+        pass
+
+    class LeftGuildError(Exception):
+        pass
+
+    class OtherException(Exception):
+        pass
