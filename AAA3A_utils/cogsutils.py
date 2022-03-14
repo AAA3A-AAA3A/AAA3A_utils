@@ -44,21 +44,25 @@ def no_colour_rich_markup(*objects: typing.Any, lang: str = "") -> str:
 __all__ = ["CogsUtils", "Loop", "Captcha"]
 TimestampFormat = typing.Literal["f", "F", "d", "D", "t", "T", "R"]
 
-class CogsUtils():
+class CogsUtils(commands.Cog):
     """Tools for AAA3A-cogs!"""
 
     def __init__(self, cog: typing.Optional[commands.Cog]=None, bot: typing.Optional[Red]=None):
-        if cog is None and bot is not None:
-            self.cog: commands.Cog = None
-            self.bot: Red = bot
-        else:
+        if cog is not None:
             if isinstance(cog, str):
                 cog = bot.get_cog(cog)
             self.cog: commands.Cog = cog
             self.bot: Red = self.cog.bot
             self.DataPath: Path = cog_data_path(raw_name=self.cog.__class__.__name__.lower())
+        elif bot is not None:
+            self.cog: commands.Cog = None
+            self.bot: Red = bot
+        else:
+            self.cog: commands.Cog = None
+            self.bot: Red = None
         self.__authors__ = ["AAA3A"]
         self.__version__ = 1.0
+        self.interactions = {"slash": {}, "buttons": {}, "dropdowns": {}, "added": False, "removed": False}
         if self.cog is not None:
             if hasattr(self.cog, '__authors__'):
                 if isinstance(self.cog.__authors__, typing.List):
@@ -78,6 +82,9 @@ class CogsUtils():
                     self.cog.__func_red__ = []
             else:
                 self.cog.__func_red__ = []
+            if hasattr(self.cog, 'interactions'):
+                if isinstance(self.cog.interactions, typing.Dict):
+                    self.interactions = self.cog.interactions
         self.loops: typing.Dict = {}
         self.repo_name: str = "AAA3A-cogs"
         self.all_cogs: typing.List = [
@@ -98,10 +105,23 @@ class CogsUtils():
                                         "TransferChannel"
                                     ]
         self.all_cogs_dpy2: typing.List = [
+                                        "AntiNuke",
+                                        "AutoTraceback",
+                                        "Calculator",
+                                        "ClearChannel",
+                                        "CmdChannel",
+                                        "CtxVar",
+                                        "EditFile",
+                                        "Ip",
+                                        "MemberPrefix",
+                                        "ReactToCommand",
+                                        "Sudo",
+                                        "TransferChannel"
                                     ]
-        if not self.cog.__class__.__name__ in self.all_cogs_dpy2:
-            if self.is_dpy2 or redbot.version_info >= redbot.VersionInfo.from_str("3.5.0"):
-                raise RuntimeError(f"{self.cog.__class__.__name__} needs to be updated to run on dpy2/Red 3.5.0. It's best to use `[p]cog update` with no arguments to update all your cogs, which may be using new dpy2-specific methods.")
+        if self.cog is not None:
+            if not self.cog.__class__.__name__ in self.all_cogs_dpy2:
+                if self.is_dpy2 or redbot.version_info >= redbot.VersionInfo.from_str("3.5.0"):
+                    raise RuntimeError(f"{self.cog.__class__.__name__} needs to be updated to run on dpy2/Red 3.5.0. It's best to use `[p]cog update` with no arguments to update all your cogs, which may be using new dpy2-specific methods.")
 
     @property
     def is_dpy2(self) -> bool:
@@ -138,16 +158,59 @@ class CogsUtils():
         if not "cog_unload" in self.cog.__func_red__:
             setattr(self.cog, 'cog_unload', self.cog_unload)
         asyncio.create_task(self._await_setup())
+        # self.bot.remove_command("getallerrorsfor")
         # self.bot.add_command(self.getallerrorsfor)
     
     async def _await_setup(self):
         await self.bot.wait_until_red_ready()
         self.add_dev_env_value()
+        if self.is_dpy2:
+            if not hasattr(self.bot, "tree"):
+                self.bot.tree = discord.app_commands.CommandTree(self.bot)
+            if not self.interactions == {}:
+                if "added" in self.interactions:
+                    if not self.interactions["added"]:
+                        if "slash" in self.interactions:
+                            for slash in self.interactions["slash"]:
+                                try:
+                                    self.bot.tree.add_command(slash, guild=None)
+                                except Exception as e:
+                                    if hasattr(self.cog, 'log'):
+                                        self.cog.log.error(f"The slash command `{slash.name}` could not be added correctly.", exc_info=e)
+                        if "button" in self.interactions:
+                            for button in self.interactions["button"]:
+                                try:
+                                    self.bot.add_view(button, guild=None)
+                                except Exception:
+                                    pass
+                        self.interactions["removed"] = False
+                        self.interactions["added"] = True
+            await self.bot.tree.sync(guild=None)
 
     def _end(self):
         self.remove_dev_env_value()
         for loop in self.loops:
             self.loops[loop].end_all()
+        if self.is_dpy2:
+            if not self.interactions == {}:
+                if "removed" in self.interactions:
+                    if not self.interactions["removed"]:
+                        if "slash" in self.interactions:
+                            for slash in self.interactions["slash"]:
+                                try:
+                                    self.bot.tree.remove_command(slash, guild=None)
+                                except Exception as e:
+                                    if hasattr(self.cog, 'log'):
+                                        self.cog.log.error(f"The slash command `{slash.name}` could not be removed correctly.", exc_info=e)
+                        if "button" in self.interactions:
+                            for button in self.interactions["button"]:
+                                try:
+                                    self.bot.remove_view(button, guild=None)
+                                except Exception:
+                                    pass
+                        self.interactions["added"] = False
+                        self.interactions["removed"] = True
+            asyncio.get_event_loop().call_later(2, asyncio.create_task, self.bot.tree.sync(guild=None))
 
     def add_dev_env_value(self):
         sudo_cog = self.bot.get_cog("Sudo")
@@ -238,131 +301,6 @@ class CogsUtils():
         if not ctx.command in self.bot.last_exceptions_cogs[ctx.cog]:
             self.bot.last_exceptions_cogs[ctx.cog][ctx.command] = []
         self.bot.last_exceptions_cogs[ctx.cog][ctx.command].append(traceback_error)
-    
-    @commands.command(hidden=True)
-    async def getallerrorsfor(ctx: commands.Context, repo: typing.Optional[Repo]=None, string: typing.Optional[str]=None):
-        if repo is None and string is None:
-            await ctx.send_help()
-            return
-        downloader = ctx.bot.get_cog("Downloader")
-        if downloader is None:
-            if CogsUtils(bot=ctx.bot).ConfirmationAsk(ctx, "The cog downloader is not loaded. I can't continue. Do you want me to do it?"):
-                await ctx.invoke(ctx.bot.get_command("load"), "downloader")
-            else:
-                return
-        if repo is None and string is not None:
-            if "AAA3A".lower() in string.lower():
-                found = False
-                for r in await downloader.config.installed_cogs():
-                    if "AAA3A".lower() in str(r).lower():
-                        repo = await Repo.convert(ctx, str(r))
-                        found = True
-                        break
-                if not found:
-                    raise commands.BadArgument(_("Repo by the name `{string}` does not exist.").format(**locals()))
-            else:
-                raise commands.BadArgument(_("Repo by the name `{string}` does not exist.").format(**locals()))
-        await ctx.send(repo.name)
-
-        IS_WINDOWS = os.name == "nt"
-        IS_MAC = sys.platform == "darwin"
-        IS_LINUX = sys.platform == "linux"
-        from redbot import version_info as red_version_info
-        from redbot.core.data_manager import storage_type
-        from redbot.core.data_manager import basic_config, config_file
-        from redbot.core.data_manager import instance_name
-        import pip
-        import platform
-        if IS_LINUX:
-            import distro  # pylint: disable=import-error
-        python_executable = sys.executable
-        python_version = ".".join(map(str, sys.version_info[:3]))
-        pyver = f"{python_version} ({platform.architecture()[0]})"
-        pipver = pip.__version__
-        redver = red_version_info
-        dpy_version = discord.__version__
-        if IS_WINDOWS:
-            os_info = platform.uname()
-            osver = f"{os_info.system} {os_info.release} (version {os_info.version})"
-        elif IS_MAC:
-            os_info = platform.mac_ver()
-            osver = f"Mac OSX {os_info[0]} {os_info[2]}"
-        elif IS_LINUX:
-            osver = f"{distro.name()} {distro.version()}".strip()
-        else:
-            osver = "Could not parse OS, report this on Github."
-        driver = storage_type()
-        data_path = Path(basic_config["DATA_PATH"])
-        if "USERPROFILE" in os.environ:
-            data_path = Path(str(data_path).replace(os.environ["USERPROFILE"], "{USERPROFILE}"))
-            config_file = Path(str(config_file).replace(os.environ["USERPROFILE"], "{USERPROFILE}"))
-            python_executable = Path(str(python_executable).replace(os.environ["USERPROFILE"], "{USERPROFILE}"))
-        if "HOME" in os.environ:
-            data_path = Path(str(data_path).replace(os.environ["HOME"], "{HOME}"))
-            config_file = Path(str(config_file).replace(os.environ["HOME"], "{HOME}"))
-            python_executable = Path(str(python_executable).replace(os.environ["HOME"], "{HOME}"))
-        disabled_intents = (
-            ", ".join(
-                intent_name.replace("_", " ").title()
-                for intent_name, enabled in ctx.bot.intents
-                if not enabled
-            )
-            or "None"
-        )
-        os_var = (
-            f"OS version: {osver}\n"
-            f"Python executable: {python_executable}\n"
-            f"Python version: {pyver}\n"
-            f"Pip version: {pipver}\n"
-        )
-        red_var = (
-            f"Red version: {redver}\nDiscord.py version: {dpy_version}\n"
-            f"Instance name: {instance_name}\n"
-            f"Storage type: {driver}\n"
-            f"Disabled intents: {disabled_intents}\n"
-            f"Data path: {data_path}\n"
-            f"Metadata file: {config_file}"
-        )
-        response = (
-            box(os_var),
-            "\n",
-            box(red_var),
-        )
-        await ctx.send("".join(response))
-
-    def get_embed(self, embed_dict: typing.Dict) -> typing.Dict[discord.Embed, str]:
-        data = embed_dict
-        if data.get("embed"):
-            data = data["embed"]
-        elif data.get("embeds"):
-            data = data.get("embeds")[0]
-        if timestamp := data.get("timestamp"):
-            data["timestamp"] = timestamp.strip("Z")
-        if data.get("content"):
-            content = data["content"]
-            del data["content"]
-        else:
-            content = ""
-        for x in data:
-            if data[x] is None:
-                del data[x]
-            elif isinstance(data[x], typing.Dict):
-                for y in data[x]:
-                    if data[x][y] is None:
-                        del data[x][y]
-        try:
-            embed = discord.Embed.from_dict(data)
-            length = len(embed)
-            if length > 6000:
-                raise commands.BadArgument(
-                    f"Embed size exceeds Discord limit of 6000 characters ({length})."
-                )
-        except Exception as e:
-            raise commands.BadArgument(
-                f"An error has occurred.\n{e})."
-            )
-        back = {"embed": embed, "content": content}
-        return back
 
     _ReactableEmoji = typing.Union[str, discord.Emoji]
 
@@ -374,38 +312,83 @@ class CogsUtils():
             file: typing.Optional[discord.File]=None,
             timeout: typing.Optional[int]=60,
             timeout_message: typing.Optional[str]=_("Timed out, please try again").format(**locals()),
-            use_reactions: typing.Optional[bool]=True,
+            way: typing.Optional[typing.Literal["buttons", "dropdown", "reactions", "message"]]="buttons",
             message: typing.Optional[discord.Message]=None,
             put_reactions: typing.Optional[bool]=True,
             delete_message: typing.Optional[bool]=True,
             reactions: typing.Optional[typing.Iterable[_ReactableEmoji]]=["✅", "❌"],
             check_owner: typing.Optional[bool]=True,
             members_authored: typing.Optional[typing.Iterable[discord.Member]]=[]):
+        if not self.is_dpy2 and way == "buttons" or not self.is_dpy2 and way == "dropdown":
+            way = "reactions"
         if message is None:
             if not text and not embed and not file:
-                if use_reactions:
-                    text = _("To confirm the current action, please use the feedback below this message.").format(**locals())
-                else:
+                if way == "button":
+                    text = _("To confirm the current action, please use the buttons below this message.").format(**locals())
+                if way == "dropdown":
+                    text = _("To confirm the current action, please use the dropdown below this message.").format(**locals())
+                if way == "reactions":
+                    text = _("To confirm the current action, please use the reactions below this message.").format(**locals())
+                if way == "message":
                     text = _("To confirm the current action, please send yes/no in this channel.").format(**locals())
-            message = await ctx.send(content=text, embed=embed, file=file)
-        if use_reactions:
+            if not way == "buttons" or way == "dropdown":
+                message = await ctx.send(content=text, embed=embed, file=file)
+        if way == "reactions":
             if put_reactions:
                 try:
                     start_adding_reactions(message, reactions)
                 except discord.HTTPException:
-                    use_reactions = False
+                    way = "message"
         async def delete_message(message: discord.Message):
             try:
                 return await message.delete()
             except discord.HTTPException:
                 pass
-        if use_reactions:
+        if way == "buttons":
+            view = Buttons(timeout=timeout, buttons=[{"style": 3,"label": "Yes", "emoji": reactions[0], "custom_id": "ConfirmationAsk_Yes"}, {"style": 4,"label": "No", "emoji": reactions[1], "custom_id": "ConfirmationAsk_No"}], members=[ctx.author.id] + list(ctx.bot.owner_ids)if check_owner else [] + [x.id for x in members_authored])
+            message = await ctx.send(content=text, embed=embed, file=file, view=view)
+            try:
+                interaction, function_result = await view.wait_result()
+                if str(interaction.data["custom_id"]) == "ConfirmationAsk_Yes":
+                    if delete_message:
+                        await delete_message(message)
+                    return True
+                elif str(interaction.data["custom_id"]) == "ConfirmationAsk_No":
+                    if delete_message:
+                        await delete_message(message)
+                    return False
+            except TimeoutError:
+                if delete_message:
+                    await delete_message(message)
+                if timeout_message is not None:
+                    await ctx.send(timeout_message)
+                return None
+        if way == "dropdown":
+            view = Dropdown(timeout=timeout, options=[{"label": "Yes", "emoji": reactions[0], "value": "ConfirmationAsk_Yes"}, {"label": "No", "emoji": reactions[1], "value": "ConfirmationAsk_No"}], members=[ctx.author.id] + list(ctx.bot.owner_ids)if check_owner else [] + [x.id for x in members_authored])
+            message = await ctx.send(content=text, embed=embed, file=file, view=view)
+            try:
+                interaction, values, function_result = await view.wait_result()
+                if str(values[0]) == "ConfirmationAsk_Yes":
+                    if delete_message:
+                        await delete_message(message)
+                    return True
+                elif str(values[0]) == "ConfirmationAsk_No":
+                    if delete_message:
+                        await delete_message(message)
+                    return False
+            except TimeoutError:
+                if delete_message:
+                    await delete_message(message)
+                if timeout_message is not None:
+                    await ctx.send(timeout_message)
+                return None
+        if way == "reactions":
             end_reaction = False
             def check(reaction, user):
                 if check_owner:
-                    return user == ctx.author or user.id in ctx.bot.owner_ids or user in members_authored and str(reaction.emoji) in reactions
+                    return user.id == ctx.author.id or user.id in ctx.bot.owner_ids or user in [x.id for x in members_authored] and str(reaction.emoji) in reactions
                 else:
-                    return user == ctx.author or user in members_authored and str(reaction.emoji) in reactions
+                    return user.id == ctx.author.id or user.id in [x.id for x in members_authored] and str(reaction.emoji) in reactions
                 # This makes sure nobody except the command sender can interact with the "menu"
             while True:
                 try:
@@ -433,12 +416,12 @@ class CogsUtils():
                         if timeout_message is not None:
                             await ctx.send(timeout_message)
                         return None
-        if not use_reactions:
+        if way == "message":
             def check(msg):
                 if check_owner:
-                    return msg.author == ctx.author or msg.author.id in ctx.bot.owner_ids or msg.author in members_authored and msg.channel is ctx.channel
+                    return msg.author.id == ctx.author.id or msg.author.id in ctx.bot.owner_ids or msg.author.id in [x.id for x in members_authored] and msg.channel is ctx.channel
                 else:
-                    return msg.author == ctx.author or msg.author in members_authored and msg.channel is ctx.channel
+                    return msg.author.id == ctx.author.id or msg.author.id in [x.id for x in members_authored] and msg.channel is ctx.channel
                 # This makes sure nobody except the command sender can interact with the "menu"
             try:
                 end_reaction = False
@@ -1062,3 +1045,117 @@ class Captcha():
 
     class OtherException(Exception):
         pass
+
+if CogsUtils().is_dpy2:
+
+    class Buttons(discord.ui.View):
+        """Create buttons easily."""
+
+        def __init__(self, timeout: typing.Optional[float]=180, buttons: typing.Optional[typing.List]=[], members: typing.Optional[typing.List]=None, check: typing.Optional[typing.Any]=None, function: typing.Optional[typing.Any]=None, function_args: typing.Optional[typing.Dict]={}):
+            super().__init__(timeout=timeout)
+            self.interaction_result = None
+            self.function_result = None
+            self.members = members
+            self.check = check
+            self.function = function
+            self.function_args = function_args
+            self.clear_items()
+            self.buttons = []
+            self.buttons_dict = []
+            self.done = asyncio.Event()
+            for button_dict in buttons:
+                if not "style" in button_dict:
+                    button_dict["style"] = int(discord.ButtonStyle(2))
+                if not "label" in button_dict:
+                    button_dict["label"] = "Test"
+                button = discord.ui.Button(**button_dict)
+                self.add_item(button)
+                self.buttons.append(button)
+                self.buttons_dict.append(button_dict)
+
+        async def interaction_check(self, interaction: discord.Interaction):
+            if self.check is not None:
+                if not self.check(interaction):
+                    await interaction.response.send_message("You are not allowed to use this interaction.", ephemeral=True)
+                    return True
+            if self.members is not None:
+                if not interaction.user.id in self.members:
+                    await interaction.response.send_message("You are not allowed to use this interaction.", ephemeral=True)
+                    return True
+            if self.function is not None:
+                self.function_result = await self.function(interaction, **self.function_args)
+            self.interaction_result = interaction
+            self.done.set()
+            self.stop()
+            return True
+        
+        async def on_timeout(self):
+            self.done.set()
+            self.stop()
+        
+        async def wait_result(self):
+            await self.done.wait()
+            interaction, function_result = self.get_result()
+            if interaction is None:
+                raise TimeoutError
+            return interaction, function_result
+
+        def get_result(self):
+            return self.interaction_result, self.function_result
+
+    class Dropdown(discord.ui.View):
+        """Create dropdowns easily."""
+
+        def __init__(self, timeout: typing.Optional[float]=180, placeholder: typing.Optional[str]="Choose a option.", min_values: typing.Optional[int]=1, max_values: typing.Optional[int]=1, *, options: typing.Optional[typing.List]=[], members: typing.Optional[typing.List]=None, check: typing.Optional[typing.Any]=None, function: typing.Optional[typing.Any]=None, function_args: typing.Optional[typing.Dict]={}):
+            super().__init__(timeout=timeout)
+            self.dropdown = self.Dropdown(placeholder=placeholder, min_values=min_values, max_values=max_values, options=options, members=members, check=check, function=function, function_args=function_args)
+            self.add_item(self.dropdown)
+
+        async def on_timeout(self):
+            self.done.set()
+            self.stop()
+        
+        async def wait_result(self):
+            await self.wait()
+            interaction, values, function_result = self.get_result()
+            if interaction is None:
+                raise TimeoutError
+            return interaction, values, function_result
+
+        def get_result(self):
+            return self.dropdown.interaction_result, self.dropdown.values_result, self.dropdown.function_result
+
+        class Dropdown(discord.ui.Select):
+
+            def __init__(self, placeholder: typing.Optional[str]="Choose a option.", min_values: typing.Optional[int]=1, max_values: typing.Optional[int]=1, *, options: typing.Optional[typing.List]=[], members: typing.Optional[typing.List]=None, check: typing.Optional[typing.Any]=None, function: typing.Optional[typing.Any]=None, function_args: typing.Optional[typing.Dict]={}):
+                self.interaction_result = None
+                self.values_result = None
+                self.function_result = None
+                self.members = members
+                self.check = check
+                self.function = function
+                self.function_args = function_args
+                self._options = []
+                self.options_dict = []
+                for option_dict in options:
+                    if not "label" in option_dict:
+                        option_dict["label"] = "Test"
+                    option = discord.SelectOption(**option_dict)
+                    self._options.append(option)
+                    self.options_dict.append(option_dict)
+                super().__init__(placeholder=placeholder, min_values=min_values, max_values=max_values, options=self._options)
+
+            async def callback(self, interaction: discord.Interaction):
+                if self.check is not None:
+                    if not self.check(interaction):
+                        await interaction.response.send_message("You are not allowed to use this interaction.", ephemeral=True)
+                        return True
+                if self.members is not None:
+                    if not interaction.user.id in self.members:
+                        await interaction.response.send_message("You are not allowed to use this interaction.", ephemeral=True)
+                        return True
+                if self.function is not None:
+                    self.function_result = await self.function(interaction, **self.function_args)
+                self.interaction_result = interaction
+                self.values_result = self.values
+                self.view.stop()
