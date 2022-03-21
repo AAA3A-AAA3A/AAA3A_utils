@@ -1294,6 +1294,7 @@ if CogsUtils().is_dpy2:
         class Dropdown(discord.ui.Select):
 
             def __init__(self, placeholder: typing.Optional[str]="Choose a option.", min_values: typing.Optional[int]=1, max_values: typing.Optional[int]=1, *, options: typing.Optional[typing.List]=[], members: typing.Optional[typing.List]=None, check: typing.Optional[typing.Any]=None, function: typing.Optional[typing.Any]=None, function_args: typing.Optional[typing.Dict]={}, infinity: typing.Optional[bool]=False):
+                self.infinity = infinity
                 self.interaction_result = None
                 self.values_result = None
                 self.function_result = None
