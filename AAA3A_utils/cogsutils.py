@@ -98,6 +98,7 @@ class CogsUtils(commands.Cog):
                                         "ClearChannel",
                                         "CmdChannel",
                                         "CtxVar",
+                                        "DiscordModals",
                                         "EditFile",
                                         "Ip",
                                         "MemberPrefix",
@@ -115,6 +116,7 @@ class CogsUtils(commands.Cog):
                                         "ClearChannel",
                                         "CmdChannel",
                                         "CtxVar",
+                                        "DiscordModals",
                                         "EditFile",
                                         "Ip",
                                         "MemberPrefix",
@@ -159,9 +161,12 @@ class CogsUtils(commands.Cog):
         """
         value = bot.add_cog(cog)
         if inspect.isawaitable(value):
-            return await value
+            cog = await value
         else:
-            return value
+            cog = value
+        if hasattr(cog, 'initialize'):
+            await bot.initialize()
+        return cog
 
     def _setup(self):
         """
@@ -743,7 +748,7 @@ class CogsUtils(commands.Cog):
                     self.bot.unload_extension(self.cog.__class__.__name__.lower())
                     await self.bot.remove_loaded_package(self.cog.__class__.__name__.lower())
                 await downloader._delete_cog(poss_installed_path)
-            await downloader._remove_from_installed([self.cog.__class__.__name__.lower()])
+            await downloader._remove_from_installed([discord.utils.get(await downloader.installed_cogs(), name=self.cog.__class__.__name__.lower())])
         else:
             raise self.DownloaderNotLoaded(_("The cog downloader is not loaded.").format(**locals()))
 
@@ -778,6 +783,13 @@ class Loop():
         self.last_exc_raw: typing.Optional[BaseException] = None
         self.last_iter: typing.Optional[datetime.datetime] = None
         self.next_iter: typing.Optional[datetime.datetime] = None
+    
+    async def start(self):
+        if self.cogsutils.is_dpy2:
+            async with self.cogsutils.bot:
+                self.cogsutils.bot.loop.create_task(self.loop())
+        else:
+            self.cogsutils.bot.loop.create_task(self.loop())
 
     async def wait_until_iter(self) -> None:
         now = datetime.datetime.utcnow()
@@ -1198,8 +1210,11 @@ if CogsUtils().is_dpy2:
     class Buttons(discord.ui.View):
         """Create buttons easily."""
 
-        def __init__(self, timeout: typing.Optional[float]=180, buttons: typing.Optional[typing.List]=[], members: typing.Optional[typing.List]=None, check: typing.Optional[typing.Any]=None, function: typing.Optional[typing.Any]=None, function_args: typing.Optional[typing.Dict]={}):
+        def __init__(self, timeout: typing.Optional[float]=180, buttons: typing.Optional[typing.List]=[], members: typing.Optional[typing.List]=None, check: typing.Optional[typing.Any]=None, function: typing.Optional[typing.Any]=None, function_args: typing.Optional[typing.Dict]={}, infinity: typing.Optional[bool]=False):
+            if infinity:
+                timeout = None
             super().__init__(timeout=timeout)
+            self.infinity = infinity
             self.interaction_result = None
             self.function_result = None
             self.members = members
@@ -1233,7 +1248,8 @@ if CogsUtils().is_dpy2:
                 self.function_result = await self.function(interaction, **self.function_args)
             self.interaction_result = interaction
             self.done.set()
-            self.stop()
+            if not self.infinity:
+                self.stop()
             return True
         
         async def on_timeout(self):
@@ -1253,17 +1269,20 @@ if CogsUtils().is_dpy2:
     class Dropdown(discord.ui.View):
         """Create dropdowns easily."""
 
-        def __init__(self, timeout: typing.Optional[float]=180, placeholder: typing.Optional[str]="Choose a option.", min_values: typing.Optional[int]=1, max_values: typing.Optional[int]=1, *, options: typing.Optional[typing.List]=[], members: typing.Optional[typing.List]=None, check: typing.Optional[typing.Any]=None, function: typing.Optional[typing.Any]=None, function_args: typing.Optional[typing.Dict]={}):
+        def __init__(self, timeout: typing.Optional[float]=180, placeholder: typing.Optional[str]="Choose a option.", min_values: typing.Optional[int]=1, max_values: typing.Optional[int]=1, *, options: typing.Optional[typing.List]=[], members: typing.Optional[typing.List]=None, check: typing.Optional[typing.Any]=None, function: typing.Optional[typing.Any]=None, function_args: typing.Optional[typing.Dict]={}, infinity: typing.Optional[bool]=False):
+            if infinity:
+                timeout = None
             super().__init__(timeout=timeout)
-            self.dropdown = self.Dropdown(placeholder=placeholder, min_values=min_values, max_values=max_values, options=options, members=members, check=check, function=function, function_args=function_args)
+            self.infinity = infinity
+            self.dropdown = self.Dropdown(placeholder=placeholder, min_values=min_values, max_values=max_values, options=options, members=members, check=check, function=function, function_args=function_args, infinity=self.infinity)
             self.add_item(self.dropdown)
 
         async def on_timeout(self):
-            self.done.set()
+            self.dropdown.done.set()
             self.stop()
         
         async def wait_result(self):
-            await self.wait()
+            await self.dropdown.done.wait()
             interaction, values, function_result = self.get_result()
             if interaction is None:
                 raise TimeoutError
@@ -1274,7 +1293,7 @@ if CogsUtils().is_dpy2:
 
         class Dropdown(discord.ui.Select):
 
-            def __init__(self, placeholder: typing.Optional[str]="Choose a option.", min_values: typing.Optional[int]=1, max_values: typing.Optional[int]=1, *, options: typing.Optional[typing.List]=[], members: typing.Optional[typing.List]=None, check: typing.Optional[typing.Any]=None, function: typing.Optional[typing.Any]=None, function_args: typing.Optional[typing.Dict]={}):
+            def __init__(self, placeholder: typing.Optional[str]="Choose a option.", min_values: typing.Optional[int]=1, max_values: typing.Optional[int]=1, *, options: typing.Optional[typing.List]=[], members: typing.Optional[typing.List]=None, check: typing.Optional[typing.Any]=None, function: typing.Optional[typing.Any]=None, function_args: typing.Optional[typing.Dict]={}, infinity: typing.Optional[bool]=False):
                 self.interaction_result = None
                 self.values_result = None
                 self.function_result = None
@@ -1284,6 +1303,7 @@ if CogsUtils().is_dpy2:
                 self.function_args = function_args
                 self._options = []
                 self.options_dict = []
+                self.done = asyncio.Event()
                 for option_dict in options:
                     if not "label" in option_dict:
                         option_dict["label"] = "Test"
@@ -1305,20 +1325,9 @@ if CogsUtils().is_dpy2:
                     self.function_result = await self.function(interaction, **self.function_args)
                 self.interaction_result = interaction
                 self.values_result = self.values
-                self.view.stop()
-
-def _(string):
-    return string
-
-def no_colour_rich_markup(*objects: typing.Any, lang: str = "") -> str:
-    temp_console = Console(  # Prevent messing with STDOUT's console
-        color_system=None,
-        file=StringIO(),
-        force_terminal=True,
-        width=80,
-    )
-    temp_console.print(*objects)
-    return box(temp_console.file.getvalue(), lang=lang)  # type: ignore
+                self.done.set()
+                if not self.infinity:
+                    self.view.stop()
 
 @commands.is_owner()
 @commands.command(hidden=True)
