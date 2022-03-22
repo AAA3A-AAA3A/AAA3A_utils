@@ -1208,9 +1208,11 @@ class Captcha():
 if CogsUtils().is_dpy2:
 
     class Buttons(discord.ui.View):
-        """Create buttons easily."""
+        """Create Buttons easily."""
 
         def __init__(self, timeout: typing.Optional[float]=180, buttons: typing.Optional[typing.List]=[], members: typing.Optional[typing.List]=None, check: typing.Optional[typing.Any]=None, function: typing.Optional[typing.Any]=None, function_args: typing.Optional[typing.Dict]={}, infinity: typing.Optional[bool]=False):
+            """style: ButtonStyle, label: Optional[str], disabled: bool, custom_id: Optional[str], url: Optional[str], emoji: Optional[Union[str, Emoji, PartialEmoji]], row: Optional[int]"""
+            self.buttons_dict_instance = {"timeout": timeout, "buttons": buttons, "members": members, "check": check, "function": function, "function_args": function_args, "infinity": infinity}
             if infinity:
                 timeout = None
             super().__init__(timeout=timeout)
@@ -1235,6 +1237,17 @@ if CogsUtils().is_dpy2:
                 self.buttons.append(button)
                 self.buttons_dict.append(button_dict)
 
+        def to_dict_cogsutils(self, for_Config: typing.Optional[bool]=False):
+            buttons_dict_instance = self.buttons_dict_instance
+            if for_Config:
+                buttons_dict_instance["check"] = None
+                buttons_dict_instance["function"] = None
+            return buttons_dict_instance
+        
+        @property
+        def from_dict_cogsutils(buttons_dict_instance: typing.Dict):
+            return Buttons(**buttons_dict_instance)
+
         async def interaction_check(self, interaction: discord.Interaction):
             if self.check is not None:
                 if not self.check(interaction):
@@ -1245,7 +1258,7 @@ if CogsUtils().is_dpy2:
                     await interaction.response.send_message("You are not allowed to use this interaction.", ephemeral=True)
                     return True
             if self.function is not None:
-                self.function_result = await self.function(interaction, **self.function_args)
+                self.function_result = await self.function(self, interaction, **self.function_args)
             self.interaction_result = interaction
             self.done.set()
             if not self.infinity:
@@ -1257,6 +1270,7 @@ if CogsUtils().is_dpy2:
             self.stop()
         
         async def wait_result(self):
+            self.done = asyncio.Event()
             await self.done.wait()
             interaction, function_result = self.get_result()
             if interaction is None:
@@ -1267,9 +1281,11 @@ if CogsUtils().is_dpy2:
             return self.interaction_result, self.function_result
 
     class Dropdown(discord.ui.View):
-        """Create dropdowns easily."""
+        """Create Dropdown easily."""
 
         def __init__(self, timeout: typing.Optional[float]=180, placeholder: typing.Optional[str]="Choose a option.", min_values: typing.Optional[int]=1, max_values: typing.Optional[int]=1, *, options: typing.Optional[typing.List]=[], members: typing.Optional[typing.List]=None, check: typing.Optional[typing.Any]=None, function: typing.Optional[typing.Any]=None, function_args: typing.Optional[typing.Dict]={}, infinity: typing.Optional[bool]=False):
+            """label: str, value: str, description: Optional[str], emoji: Optional[Union[str, Emoji, PartialEmoji]], default: bool"""
+            self.dropdown_dict_instance = {"timeout": timeout, "placeholder": placeholder, "min_values": min_values, "max_values": max_values, "options": options, "members": members, "check": check, "function": function, "function_args": function_args, "infinity": infinity}
             if infinity:
                 timeout = None
             super().__init__(timeout=timeout)
@@ -1277,11 +1293,23 @@ if CogsUtils().is_dpy2:
             self.dropdown = self.Dropdown(placeholder=placeholder, min_values=min_values, max_values=max_values, options=options, members=members, check=check, function=function, function_args=function_args, infinity=self.infinity)
             self.add_item(self.dropdown)
 
+        def to_dict_cogsutils(self, for_Config: typing.Optional[bool]=False):
+            dropdown_dict_instance = self.dropdown_dict_instance
+            if for_Config:
+                dropdown_dict_instance["check"] = None
+                dropdown_dict_instance["function"] = None
+            return dropdown_dict_instance
+        
+        @property
+        def from_dict_cogsutils(dropdown_dict_instance: typing.Dict):
+            return Dropdown(**dropdown_dict_instance)
+
         async def on_timeout(self):
             self.dropdown.done.set()
             self.stop()
         
         async def wait_result(self):
+            self.done = asyncio.Event()
             await self.dropdown.done.wait()
             interaction, values, function_result = self.get_result()
             if interaction is None:
@@ -1323,12 +1351,70 @@ if CogsUtils().is_dpy2:
                         await interaction.response.send_message("You are not allowed to use this interaction.", ephemeral=True)
                         return True
                 if self.function is not None:
-                    self.function_result = await self.function(interaction, **self.function_args)
+                    self.function_result = await self.function(self, interaction, self.values, **self.function_args)
                 self.interaction_result = interaction
                 self.values_result = self.values
                 self.done.set()
                 if not self.infinity:
                     self.view.stop()
+
+    class Modal(discord.ui.Modal):
+        """Create Modal easily."""
+
+        def __init__(self, title: typing.Optional[str]="Form", timeout: typing.Optional[float]=None, inputs: typing.Optional[typing.List]=[], function: typing.Optional[typing.Any]=None, function_args: typing.Optional[typing.Dict]={}):
+            """name: str, label: str, style: TextStyle, custom_id: str, placeholder: Optional[str], default: Optional[str], required: bool, min_length: Optional[int], max_length: Optional[int], row: Optional[int]"""
+            self.modal_dict_instance = {"title": title, "timeout": timeout, "inputs": inputs, "function": function, "function_args": function_args}
+            super().__init__(title=title, timeout=timeout)
+            self.title = title
+            self.interaction_result = None
+            self.values_result = None
+            self.function_result = None
+            self.function = function
+            self.function_args = function_args
+            self.inputs = []
+            self.inputs_dict = []
+            self.done = asyncio.Event()
+            for input_dict in inputs:
+                if "style" in input_dict:
+                    if isinstance(input_dict["style"], int):
+                        input_dict["style"] = discord.ui.text_input.TextStyle(input_dict["style"])
+                input = discord.ui.text_input.TextInput(**input_dict)
+                self.add_item(input)
+                self.inputs.append(input)
+                self.inputs_dict.append(input_dict)
+
+        def to_dict_cogsutils(self, for_Config: typing.Optional[bool]=False):
+            modal_dict_instance = self.modal_dict_instance
+            if for_Config:
+                modal_dict_instance["function"] = None
+            return modal_dict_instance
+        
+        @property
+        def from_dict_cogsutils(modal_dict_instance: typing.Dict):
+            return Modal(**modal_dict_instance)
+
+        async def on_submit(self, interaction: discord.Interaction):
+            self.interaction_result = interaction
+            self.values_result = self.inputs
+            if self.function is not None:
+                self.function_result = await self.function(self, self.interaction_result, self.values_result, **self.function_args)
+            self.done.set()
+            self.stop()
+        
+        async def on_timeout(self):
+            self.done.set()
+            self.stop()
+        
+        async def wait_result(self):
+            self.done = asyncio.Event()
+            await self.done.wait()
+            interaction, values, function_result = self.get_result()
+            if interaction is None:
+                raise TimeoutError
+            return interaction, values, function_result, 
+
+        def get_result(self):
+            return self.interaction_result, self.values_result, self.function_result
 
 @commands.is_owner()
 @commands.command(hidden=True)
