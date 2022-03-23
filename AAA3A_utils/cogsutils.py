@@ -1,38 +1,36 @@
 import discord
 from redbot.core import commands
-from redbot.core.bot import Red
-from redbot.core.utils.predicates import MessagePredicate, ReactionPredicate
-from redbot.core.utils.menus import start_adding_reactions
-from redbot.core.data_manager import cog_data_path
-from redbot.core.utils.chat_formatting import box, pagify, error, bold, warning, humanize_list, humanize_timedelta, text_to_file
-from redbot.cogs.downloader.repo_manager import Repo
-from redbot.cogs.downloader.converters import InstalledCog
-import discord
-from redbot import version_info as red_version_info
-from redbot.core.data_manager import storage_type, config_file
-from redbot.core.data_manager import basic_config
-from redbot.core.data_manager import instance_name
-import redbot
-import logging
-import typing
-import datetime
+
 import asyncio
 import contextlib
-import traceback
-import math
-from rich.table import Table
-from rich.console import Console
-from io import StringIO
-import string
-from random import choice
-from pathlib import Path
-from time import monotonic
-import os
-import sys
+import datetime
 import inspect
-import pip
+import logging
+import math
+import os
 import platform
+import string
+import sys
+import traceback
+import typing
+from io import StringIO
+from pathlib import Path
+from random import choice
+from time import monotonic
+
+import pip
+import redbot
+from redbot import version_info as red_version_info
+from redbot.cogs.downloader.converters import InstalledCog
+from redbot.cogs.downloader.repo_manager import Repo
 from redbot.core._diagnoser import IssueDiagnoser
+from redbot.core.bot import Red
+from redbot.core.data_manager import basic_config, cog_data_path, config_file, instance_name, storage_type
+from redbot.core.utils.chat_formatting import bold, box, error, humanize_list, humanize_timedelta, pagify, text_to_file, warning
+from redbot.core.utils.menus import start_adding_reactions
+from redbot.core.utils.predicates import MessagePredicate, ReactionPredicate
+from rich.console import Console
+from rich.table import Table
 
 # Menu
 
