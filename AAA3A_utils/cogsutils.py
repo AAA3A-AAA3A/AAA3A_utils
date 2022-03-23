@@ -190,9 +190,9 @@ class CogsUtils(commands.Cog):
             setattr(self.cog, 'cog_unload', self.cog_unload)
         self.bot.remove_listener(self.on_command_error)
         self.bot.add_listener(self.on_command_error)
-        asyncio.create_task(self._await_setup())
         self.bot.remove_command("getallfor")
         self.bot.add_command(getallfor)
+        asyncio.create_task(self._await_setup())
 
     async def _await_setup(self):
         """
@@ -230,6 +230,12 @@ class CogsUtils(commands.Cog):
         self.remove_dev_env_value()
         for loop in self.loops:
             self.loops[loop].end_all()
+        if not self.at_least_one_cog_loaded:
+            self.bot.remove_listener(self.on_command_error)
+            self.bot.remove_command("getallfor")
+        asyncio.create_task(self._await_end())
+
+    async def _await_end(self):
         if self.is_dpy2:
             if not self.interactions == {}:
                 if "removed" in self.interactions:
@@ -249,11 +255,8 @@ class CogsUtils(commands.Cog):
                                     pass
                         self.interactions["added"] = False
                         self.interactions["removed"] = True
-            asyncio.create_task(self._teardown())
-
-    async def _teardown(self):
-        await asyncio.sleep(2)
-        await self.bot.tree.sync(guild=None)
+            await asyncio.sleep(2)
+            await self.bot.tree.sync(guild=None)
 
     def add_dev_env_value(self):
         """
@@ -602,8 +605,22 @@ class CogsUtils(commands.Cog):
         cogs = {}
         for cog in self.all_cogs:
             object = self.bot.get_cog(f"{cog}")
-            cogs[f"{cog}"] = object
+            if object is not None:
+                cogs[f"{cog}"] = object if hasattr(object, 'cogsutils') else None
+            else:
+                cogs[f"{cog}"] = None
         return cogs
+
+    def at_least_one_cog_loaded(self):
+        """
+        Return True if at least one cog of all my cogs is loaded.
+        """
+        at_least_one_cog_loaded = False
+        for object in self.get_all_repo_cogs_objects().values:
+            if object is not None:
+                at_least_one_cog_loaded = True
+                break
+        return at_least_one_cog_loaded
 
     def add_all_dev_env_values(self):
         """
