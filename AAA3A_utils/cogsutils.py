@@ -265,7 +265,7 @@ class CogsUtils(commands.Cog):
         self.close_logger()
         self.remove_dev_env_value()
         for loop in self.loops:
-            self.loops[loop].end_all()
+            self.loops[loop].stop_all()
         if not self.at_least_one_cog_loaded:
             self.bot.remove_listener(self.on_command_error)
             self.bot.remove_command("getallfor")
