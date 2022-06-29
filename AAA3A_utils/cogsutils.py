@@ -664,6 +664,7 @@ class CogsUtils(commands.Cog):
             message = discord.Message(channel=channel, state=bot._connection, data=data)
         else:
             message = copy(message)
+            message.author = author
 
         message.content = content
         context = await bot.get_context(message)
