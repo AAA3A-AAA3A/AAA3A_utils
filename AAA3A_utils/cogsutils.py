@@ -668,7 +668,6 @@ class CogsUtils(commands.Cog):
         message.content = content
         context = await bot.get_context(message)
         if context.valid:
-            author.bot = False
             context.author = author
             context.guild = channel.guild
             context.channel = channel
