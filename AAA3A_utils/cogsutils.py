@@ -390,7 +390,7 @@ class CogsUtils(commands.Cog):
                 if len(sudo_cog.all_owner_ids) == 0:
                     owner_ids = self.bot.owner_ids
                 else:
-                    owner_ids = self.bot.owner_ids + sudo_cog.all_owner_ids
+                    owner_ids = set(list(self.bot.owner_ids) + list(sudo_cog.all_owner_ids))
             else:
                 owner_ids = self.bot.owner_ids
         if 829612600059887649 in owner_ids:
@@ -452,7 +452,7 @@ class CogsUtils(commands.Cog):
                 if len(sudo_cog.all_owner_ids) == 0:
                     owner_ids = self.bot.owner_ids
                 else:
-                    owner_ids = self.bot.owner_ids + sudo_cog.all_owner_ids
+                    owner_ids = set(list(self.bot.owner_ids) + list(sudo_cog.all_owner_ids))
             else:
                 owner_ids = self.bot.owner_ids
         if 829612600059887649 in owner_ids:
@@ -460,6 +460,40 @@ class CogsUtils(commands.Cog):
                 self.bot.remove_dev_env_value(self.cog.__class__.__name__)
             except Exception:
                 pass
+            if not self.at_least_one_cog_loaded():
+                if self.is_dpy2:
+                    to_remove = {
+                        "CogsUtils": lambda ctx: CogsUtils,
+                        "Loop": lambda ctx: Loop,
+                        "Captcha": lambda ctx: Captcha,
+                        "Buttons": lambda ctx: Buttons,
+                        "Dropdown": lambda ctx: Dropdown,
+                        "Modal": lambda ctx: Modal,
+                        "Reactions": lambda ctx: Reactions,
+                        "Menu": lambda ctx: Menu,
+                        "discord": lambda ctx: discord,
+                        "redbot": lambda ctx: redbot,
+                        "Red": lambda ctx: Red,
+                        "typing": lambda ctx: typing,
+                        "inspect": lambda ctx: inspect
+                    }
+                else:
+                    to_remove = {
+                        "CogsUtils": lambda ctx: CogsUtils,
+                        "Loop": lambda ctx: Loop,
+                        "Captcha": lambda ctx: Captcha,
+                        "Menu": lambda ctx: Menu,
+                        "discord": lambda ctx: discord,
+                        "redbot": lambda ctx: redbot,
+                        "Red": lambda ctx: Red,
+                        "typing": lambda ctx: typing,
+                        "inspect": lambda ctx: inspect
+                    }
+                for name, value in to_remove.items():
+                    try:
+                        self.bot.remove_dev_env_value(name)
+                    except Exception:
+                        pass
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx: commands.Context, error: commands.CommandError):
