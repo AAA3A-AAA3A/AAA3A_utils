@@ -1588,6 +1588,8 @@ if CogsUtils().is_dpy2:
             for button_dict in buttons:
                 if "style" not in button_dict:
                     button_dict["style"] = int(discord.ButtonStyle(2))
+                if "disabled" not in button_dict:
+                    button_dict["disabled"] = False
                 if "label" not in button_dict and "emoji" not in button_dict:
                     button_dict["label"] = "Test"
                 button = discord.ui.Button(**button_dict)
