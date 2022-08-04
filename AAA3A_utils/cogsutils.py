@@ -765,16 +765,12 @@ class CogsUtils(commands.Cog):
         """
         Create a discord.Webhook object. It tries to retrieve an existing webhook created by the bot or to create it itself.
         """
-        try:
-            for webhook in await channel.webhooks():
-                if webhook.user.id == self.bot.user.id:
-                    hook = webhook
-                    break
-            else:
-                hook = await channel.create_webhook(
-                    name="red_bot_hook_" + str(channel.id)
-                )
-        except discord.errors.NotFound:  # Probably user deleted the hook
+        hook = None
+        for webhook in await channel.webhooks():
+            if webhook.user.id == self.bot.user.id:
+                hook = webhook
+                break
+        if hook is None:
             hook = await channel.create_webhook(name="red_bot_hook_" + str(channel.id))
         return hook
 
@@ -1823,7 +1819,7 @@ if CogsUtils().is_dpy2:
             self.interaction_result = interaction
             self.inputs_result = self.inputs
             if self.function is not None:
-                self.function_result = await self.function(self, self.interaction_result, self.values_result, **self.function_args)
+                self.function_result = await self.function(self, self.interaction_result, self.inputs_result, **self.function_args)
             self.done.set()
             self.stop()
 
@@ -1834,10 +1830,10 @@ if CogsUtils().is_dpy2:
         async def wait_result(self):
             self.done = asyncio.Event()
             await self.done.wait()
-            interaction, inputs, function_result = self.get_result()
+            interaction, inputs_result, function_result = self.get_result()
             if interaction is None:
                 raise TimeoutError()
-            return interaction, inputs, function_result
+            return interaction, inputs_result, function_result
 
         def get_result(self):
             return self.interaction_result, self.inputs_result, self.function_result
