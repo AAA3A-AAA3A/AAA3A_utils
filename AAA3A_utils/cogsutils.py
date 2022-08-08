@@ -179,7 +179,7 @@ class CogsUtils(commands.Cog):
         """Thanks Simbad!"""
         context = super(type(self.cog), self.cog).format_help_for_context(ctx)
         s = "s" if len(self.__authors__) > 1 else ""
-        return f"{context}\n\n**Author{s}**: {humanize_list(self.__authors__)}\n**Cog version**: {self.__version__}\n**Cog documentation**: https://aaa3a-cogs.readthedocs.io/en/latest/cog_{self.cog.__class__.__name__.lower()}.html"
+        return f"{context}\n\n**Author{s}**: {humanize_list(self.__authors__)}\n**Cog version**: {self.__version__}\n**Cog documentation**: https://aaa3a-cogs.readthedocs.io/en/latest/cog_{self.cog.__class__.__name__.lower()}.html\n**Translate my cogs**: https://crowdin.com/project/aaa3a-cogs"
 
     def format_text_for_context(self, ctx: commands.Context, text: str, shortdoc: typing.Optional[bool]=False):
         text = text.replace("        ", "")
@@ -187,7 +187,7 @@ class CogsUtils(commands.Cog):
         if shortdoc:
             return context
         s = "s" if len(self.__authors__) > 1 else ""
-        return f"{context}\n\n**Author{s}**: {humanize_list(self.__authors__)}\n**Cog version**: {self.__version__}\n**Cog documentation**: https://aaa3a-cogs.readthedocs.io/en/latest/cog_{self.cog.__class__.__name__.lower()}.html"
+        return f"{context}\n\n**Author{s}**: {humanize_list(self.__authors__)}\n**Cog version**: {self.__version__}\n**Cog documentation**: https://aaa3a-cogs.readthedocs.io/en/latest/cog_{self.cog.__class__.__name__.lower()}.html\n**Translate my cogs**: https://crowdin.com/project/aaa3a-cogs"
 
     def format_shortdoc_for_context(self, ctx: commands.Context):
         sh = super(type(ctx.command), ctx.command).short_doc
