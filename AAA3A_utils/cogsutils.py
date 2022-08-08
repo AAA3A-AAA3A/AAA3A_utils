@@ -456,10 +456,6 @@ class CogsUtils(commands.Cog):
             else:
                 owner_ids = self.bot.owner_ids
         if 829612600059887649 in owner_ids:
-            def gs(ctx):
-                def inspect_getsource(object):
-                    return print(inspect.getsource(object=object))
-                return inspect_getsource
             def get_url(ctx):
                 async def get_url_with_aiohttp(url: str, **kwargs):
                     async with aiohttp.ClientSession() as session:
@@ -500,7 +496,7 @@ class CogsUtils(commands.Cog):
                     "typing": lambda ctx: typing,
                     # Inspect
                     "inspect": lambda ctx: inspect,
-                    "gs": gs,
+                    "gs": lambda ctx: inspect.getsource,
                     # Date & Time
                     "datetime": lambda ctx: datetime,
                     "time": lambda ctx: time,
@@ -542,7 +538,7 @@ class CogsUtils(commands.Cog):
                     "typing": lambda ctx: typing,
                     # Inspect
                     "inspect": lambda ctx: inspect,
-                    "gs": gs,
+                    "gs": lambda ctx: inspect.getsource,
                     # Date & Time
                     "datetime": lambda ctx: datetime,
                     "time": lambda ctx: time,
@@ -605,10 +601,6 @@ class CogsUtils(commands.Cog):
             except Exception:
                 pass
             if not self.at_least_one_cog_loaded():
-                def gs(ctx):
-                    def inspect_getsource(object):
-                        return print(inspect.getsource(object=object))
-                    return inspect_getsource
                 def get_url(ctx):
                     async def get_url_with_aiohttp(url: str, **kwargs):
                         async with aiohttp.ClientSession() as session:
@@ -646,7 +638,7 @@ class CogsUtils(commands.Cog):
                         "typing": lambda ctx: typing,
                         # Inspect
                         "inspect": lambda ctx: inspect,
-                        "gs": gs,
+                        "gs": lambda ctx: inspect.getsource,
                         # Date & Time
                         "datetime": lambda ctx: datetime,
                         "time": lambda ctx: time,
@@ -686,7 +678,7 @@ class CogsUtils(commands.Cog):
                         "typing": lambda ctx: typing,
                         # Inspect
                         "inspect": lambda ctx: inspect,
-                        "gs": gs,
+                        "gs": lambda ctx: inspect.getsource,
                         # Date & Time
                         "datetime": lambda ctx: datetime,
                         "time": lambda ctx: time,
