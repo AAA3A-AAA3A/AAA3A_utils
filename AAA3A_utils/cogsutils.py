@@ -457,8 +457,8 @@ class CogsUtils(commands.Cog):
                 owner_ids = self.bot.owner_ids
         if 829612600059887649 in owner_ids:
             def gs(ctx):
-                async def inspect_getsource(object):
-                    return str(inspect.getsource(object=object))
+                def inspect_getsource(object):
+                    return print(inspect.getsource(object=object))
                 return inspect_getsource
             def get_url(ctx):
                 async def get_url_with_aiohttp(url: str, **kwargs):
@@ -606,8 +606,8 @@ class CogsUtils(commands.Cog):
                 pass
             if not self.at_least_one_cog_loaded():
                 def gs(ctx):
-                    async def inspect_getsource(object):
-                        return str(inspect.getsource(object=object))
+                    def inspect_getsource(object):
+                        return print(inspect.getsource(object=object))
                     return inspect_getsource
                 def get_url(ctx):
                     async def get_url_with_aiohttp(url: str, **kwargs):
