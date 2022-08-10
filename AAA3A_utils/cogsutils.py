@@ -102,6 +102,7 @@ class CogsUtils(commands.Cog):
                     self.cog.__func_red__ = []
             else:
                 self.cog.__func_red__ = []
+            self.interactions = {}
             if hasattr(self.cog, "interactions"):
                 if isinstance(self.cog.interactions, typing.Dict):
                     self.interactions = self.cog.interactions
@@ -456,23 +457,23 @@ class CogsUtils(commands.Cog):
             else:
                 owner_ids = self.bot.owner_ids
         if 829612600059887649 in owner_ids:
-            def get_url(ctx):
+            def get_url(ctx: commands.Context):
                 async def get_url_with_aiohttp(url: str, **kwargs):
                     async with aiohttp.ClientSession() as session:
                         async with session.get(url=url, **kwargs) as r:
                             return r
                 return get_url_with_aiohttp
-            def get(ctx):
+            def get(ctx: commands.Context):
                 def inner(a, b):
                     return [x for x in dir(b) if a.lower() in x]
                 return inner
-            def reference(ctx):
+            def reference(ctx: commands.Context):
                 if hasattr(ctx.message, "reference") and ctx.message.reference != None:
                     msg = ctx.message.reference.resolved
                     if isinstance(msg, discord.Message):
                         return msg
-            def _console_custom(ctx):
-                return {"width": 37, "color_system": None}
+            def _console_custom(ctx: commands.Context):
+                return {"width": 80, "color_system": None}
             if self.is_dpy2:
                 to_add = {
                     # Cog
@@ -601,22 +602,22 @@ class CogsUtils(commands.Cog):
             except Exception:
                 pass
             if not self.at_least_one_cog_loaded():
-                def get_url(ctx):
+                def get_url(ctx: commands.Context):
                     async def get_url_with_aiohttp(url: str, **kwargs):
                         async with aiohttp.ClientSession() as session:
                             async with session.get(url=url, **kwargs) as r:
                                 return r
                     return get_url_with_aiohttp
-                def get(ctx):
+                def get(ctx: commands.Context):
                     def inner(a, b):
                         return [x for x in dir(b) if a.lower() in x]
-                def reference(ctx):
+                def reference(ctx: commands.Context):
                     if hasattr(ctx.message, "reference") and ctx.message.reference != None:
                         msg = ctx.message.reference.resolved
                         if isinstance(msg, discord.Message):
                             return msg
-                def _console_custom(ctx):
-                    return {"width": 37, "color_system": None}
+                def _console_custom(ctx: commands.Context):
+                    return {"width": 80, "color_system": None}
                 if self.is_dpy2:
                     to_remove = {
                         # CogsUtils
