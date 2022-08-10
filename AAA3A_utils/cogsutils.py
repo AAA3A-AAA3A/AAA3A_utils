@@ -466,7 +466,7 @@ class CogsUtils(commands.Cog):
                 def inner(a, b):
                     return [x for x in dir(b) if a.lower() in x]
                 return inner
-            def reply(ctx):
+            def reference(ctx):
                 if hasattr(ctx.message, "reference") and ctx.message.reference != None:
                     msg = ctx.message.reference.resolved
                     if isinstance(msg, discord.Message):
@@ -509,7 +509,7 @@ class CogsUtils(commands.Cog):
                     # Search attr
                     "get": get,
                     # `reference`
-                    "reply": reply,
+                    "reference": reference,
                     # No color (Dev cog from fluffy-cogs in mobile).
                     "_console_custom": _console_custom,
                     # Dpy get
@@ -551,7 +551,7 @@ class CogsUtils(commands.Cog):
                     # Search attr
                     "get": get,
                     # `reference`
-                    "reply": reply,
+                    "reference": reference,
                     # No color (Dev cog from fluffy-cogs in mobile).
                     "_console_custom": _console_custom,
                     # Dpy get
@@ -610,7 +610,7 @@ class CogsUtils(commands.Cog):
                 def get(ctx):
                     def inner(a, b):
                         return [x for x in dir(b) if a.lower() in x]
-                def reply(ctx):
+                def reference(ctx):
                     if hasattr(ctx.message, "reference") and ctx.message.reference != None:
                         msg = ctx.message.reference.resolved
                         if isinstance(msg, discord.Message):
@@ -651,7 +651,7 @@ class CogsUtils(commands.Cog):
                         # Search attr
                         "get": get,
                         # `reference`
-                        "reply": reply,
+                        "reference": reference,
                         # No color (Dev cog from fluffy-cogs in mobile).
                         "_console_custom": _console_custom,
                         # Dpy get
@@ -691,7 +691,7 @@ class CogsUtils(commands.Cog):
                         # Search attr
                         "get": get,
                         # `reference`
-                        "reply": reply,
+                        "reference": reference,
                         # No color (Dev cog from fluffy-cogs in mobile).
                         "_console_custom": _console_custom,
                         # Dpy get
@@ -1800,7 +1800,10 @@ if CogsUtils().is_dpy2:
             self.done = asyncio.Event()
             for button_dict in buttons:
                 if "style" not in button_dict:
-                    button_dict["style"] = int(discord.ButtonStyle(2))
+                    button_dict["style"] = discord.ButtonStyle(2)
+                else:
+                    if isinstance(button_dict["style"], int):
+                        button_dict["style"] = discord.ButtonStyle(button_dict["style"])
                 if "disabled" not in button_dict:
                     button_dict["disabled"] = False
                 if "label" not in button_dict and "emoji" not in button_dict:
