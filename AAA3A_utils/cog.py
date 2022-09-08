@@ -76,7 +76,7 @@ class Cog():
             exception_log += "".join(traceback.format_exception(type(error), error, error.__traceback__))
             exception_log = self.cog.cogsutils.replace_var_paths(exception_log)
             ctx.bot._last_exception = exception_log
-        elif isinstance(error, getattr(commands, "HybridCommandError", None)):
+        elif self.cog.cogsutils.is_dpy2 and isinstance(error, commands.HybridCommandError):
             _type = "[hybrid|slash]"
             message = f"Error in {_type} command '{ctx.command.qualified_name}'. Check your console or logs for details."
             if ctx.author.id in ctx.bot.owner_ids:
