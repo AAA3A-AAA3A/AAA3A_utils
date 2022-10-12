@@ -6,7 +6,7 @@ import typing  # isort:skip
 import asyncio
 import re
 
-from redbot.core.utils.chat_formatting import text_to_file
+from redbot.core.utils.chat_formatting import text_to_file, box, pagify
 from redbot.core.utils.menus import start_adding_reactions
 from redbot.core.utils.predicates import ReactionPredicate, MessagePredicate
 from redbot.vendored.discord.ext import menus
@@ -138,8 +138,10 @@ class Menu():
         self.members_authored: typing.List = members_authored
         if not discord.version_info.major >= 2 and self.way == "buttons" or not discord.version_info.major >= 2 and self.way == "dropdown":
             self.way = "reactions"
+        if isinstance(self.pages, str):
+            self.pages = [box(page, "py") for page in pagify(self.pages, page_length=2000 - 10)]
         if not isinstance(self.pages[0], (typing.Dict, discord.Embed, str)):
-            raise RuntimeError("Pages must be of type discord.Embed or str.")
+            raise RuntimeError("Pages must be of type typing.Dict, discord.Embed or str.")
 
         self.source = self._SimplePageSource(items=pages)
         if not self.source.is_paginating():
@@ -175,7 +177,7 @@ class Menu():
         self.ctx = ctx
         if self.way == "buttons":
             self.view = Buttons(timeout=self.timeout, buttons=[{"emoji": str(e), "custom_id": str(n), "disabled": False} for e, n in self.controls.items()], members=[self.ctx.author.id] + list(self.ctx.bot.owner_ids) if self.check_owner else [] + [x.id for x in self.members_authored], infinity=True)
-            self.view.add_item(discord.ui.Button(label=f"Page {self.current_page + 1}/{len(self.pages)}", row=1, custom_id="choose_page", disabled=False))
+            self.view.add_item(discord.ui.Button(label=f"Page {self.current_page + 1}/{len(self.pages)}", custom_id="choose_page", disabled=False))
             await self.send_initial_message(self.ctx)
         elif self.way == "reactions":
             await self.send_initial_message(self.ctx)
