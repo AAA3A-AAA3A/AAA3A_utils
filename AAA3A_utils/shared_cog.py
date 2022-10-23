@@ -57,6 +57,8 @@ class StrConverter(commands.Converter):
 
 
 class SharedCog(commands.Cog, name="AAA3A_utils"):
+    """Commands to manage all the cogs in AAA3A-cogs repo!"""
+
     def __init__(self, bot: Red, CogsUtils):
         self.bot: Red = bot
 
@@ -82,13 +84,15 @@ class SharedCog(commands.Cog, name="AAA3A_utils"):
         return cog.qualified_name in await self.config.cogs_with_slash()
 
     @commands.is_owner()
-    @commands.group()
+    @commands.group(hidden=True)
     async def AAA3A_utils(self, ctx: commands.Context):
+        """All commands to manage all the cogs in AAA3A-cogs repo."""
         pass
 
     @commands.is_owner()
     @AAA3A_utils.command()
     async def addslash(self, ctx: commands.Context, cogs: commands.Greedy[StrConverter]):
+        """Add slash commands for repo cogs."""
         if not self.cogsutils.is_dpy2:
             await ctx.send(_("Slash commands do not work under dpy1. Wait for Red 3.5."))
             return
@@ -154,6 +158,7 @@ class SharedCog(commands.Cog, name="AAA3A_utils"):
     @commands.is_owner()
     @AAA3A_utils.command()
     async def removeslash(self, ctx: commands.Context, cogs: commands.Greedy[StrConverter]):
+        """Remove slash commands for repo cogs."""
         if not self.cogsutils.is_dpy2:
             await ctx.send(_("Slash commands do not work under dpy1. Wait for Red 3.5."))
             return
@@ -218,6 +223,7 @@ class SharedCog(commands.Cog, name="AAA3A_utils"):
     @commands.is_owner()
     @AAA3A_utils.command()
     async def clearslash(self, ctx: commands.Context):
+        """Remove slash commands for all repo cogs."""
         if not self.cogsutils.is_dpy2:
             await ctx.send(_("Slash commands do not work under dpy1. Wait for Red 3.5."))
             return
