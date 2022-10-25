@@ -528,7 +528,7 @@ class CogsUtils(commands.Cog):
         if not hasattr(cog, "config"):
             return False
         old_config: Config = Config.get_conf(cog, identifier=cogs_with_old_config_custom_ids[cog.qualified_name], force_registration=True)
-        new_config: Config = Config.get_conf(cog, identifier=int(hashlib.md5((self.repo_name).encode()).hexdigest(), 16), force_registration=True)
+        new_config: Config = Config.get_conf(cog, identifier=205192943327321000143939875896557571750, force_registration=True)
         old_config_all = {}
         new_config_all = {}
         for base_group in [old_config.GLOBAL, old_config.USER, old_config.MEMBER, old_config.ROLE, old_config.CHANNEL, old_config.GUILD]:
