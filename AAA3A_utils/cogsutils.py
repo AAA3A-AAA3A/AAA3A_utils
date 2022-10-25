@@ -539,7 +539,9 @@ class CogsUtils(commands.Cog):
                     del old_config_all[base_group]
                 new_config_all[base_group] = await new_config._get_base_group(base_group).all()
                 if new_config_all[base_group] == {}:
-                    new_config_all[base_group] = new_config.defaults[base_group]
+                    new_config_all[base_group] = new_config._defaults.get(base_group, None)
+                if new_config_all[base_group] is None:
+                    del new_config_all[base_group]
             if old_config_all == old_config._defaults or not new_config_all == new_config._defaults:
                 return False
             for base_group in [old_config.GLOBAL, old_config.USER, old_config.MEMBER, old_config.ROLE, old_config.CHANNEL, old_config.GUILD]:
@@ -554,11 +556,14 @@ class CogsUtils(commands.Cog):
                     del old_config_all[base_group]
                 new_config_all[base_group] = await new_config._get_base_group(base_group).all()
                 if new_config_all[base_group] == {}:
-                    new_config_all[base_group] = new_config._defaults[base_group]
+                    new_config_all[base_group] = new_config._defaults.get(base_group, None)
+                if new_config_all[base_group] is None:
+                    del new_config_all[base_group]
             await old_config.clear_all()
-        except Exception:
+        except Exception as e:
             self.cog.log.error(
-                f"Error in the {self.cog.qualified_name} cog's Config unique identifier change."
+                f"Error in the {self.cog.qualified_name} cog's Config unique identifier change.",
+                exc_info=e
             )
         else:
             self.cog.log.info(
