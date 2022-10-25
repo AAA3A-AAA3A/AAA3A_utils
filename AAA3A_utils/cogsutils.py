@@ -545,9 +545,12 @@ class CogsUtils(commands.Cog):
             if old_config_all == old_config._defaults or not new_config_all == new_config._defaults:
                 return False
             for base_group in [old_config.GLOBAL, old_config.USER, old_config.MEMBER, old_config.ROLE, old_config.CHANNEL, old_config.GUILD]:
-                if old_config_all.get(base_group, {}) == old_config._defaults.get(base_group, {}):
+                data = old_config_all.get(base_group, {})
+                if data == {}:
                     continue
-                await new_config._get_base_group(base_group).set(old_config_all.get(base_group, {}))
+                if data == old_config._defaults.get(base_group, {}):
+                    continue
+                await new_config._get_base_group(base_group).set(data)
             old_config_all = {}
             new_config_all = {}
             for base_group in [old_config.GLOBAL, old_config.USER, old_config.MEMBER, old_config.ROLE, old_config.CHANNEL, old_config.GUILD]:
