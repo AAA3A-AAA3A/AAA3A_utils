@@ -1,5 +1,4 @@
 from redbot.core import commands  # isort:skip
-from .cogsutils import CogsUtils  # isort:skip
 import discord  # isort:skip
 import typing  # isort:skip
 
@@ -96,7 +95,10 @@ class Context(commands.Context):
             __filter = kwargs.pop("filter", None)
             if __filter:
                 content = __filter(content)
-            content = CogsUtils(bot=self.bot).replace_var_paths(content)
+            try:
+                content = self.cog.cogsutils.replace_var_paths(content)
+            except AttributeError:
+                pass
             return content
         kwargs["filter"] = _filter
         await super().send(content=content, **kwargs)
