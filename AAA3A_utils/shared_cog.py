@@ -415,7 +415,7 @@ class SharedCog(commands.Cog, name="AAA3A_utils"):
             await ctx.send(_("This cog is not a cog from AAA3A-cogs.").format(**locals()))
             return
         embeds = []
-        for loop in self.cogsutils.loops.values():
+        for loop in cog.cogsutils.loops.values():
             embeds.append(loop.get_debug_embed())
         await Menu(pages=embeds).start(ctx)
         await ctx.tick()
