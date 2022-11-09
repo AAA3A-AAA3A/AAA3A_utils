@@ -399,7 +399,10 @@ class SharedCog(commands.Cog, name="AAA3A_utils"):
                 await ctx.send(_("This cog does not have any log saved for this level.").format(**locals()))
                 return
         if level == "all":
-            data = list(cog.logs.values())
+            data = []
+            for _level in cog.logs:
+                for log in cog.logs[_level]:
+                    data.append(log)
         else:
             data = list(cog.logs.get(level))
         result = []
