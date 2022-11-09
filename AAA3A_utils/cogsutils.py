@@ -297,7 +297,7 @@ class CogsUtils(commands.Cog):
         if name is None and self.cog is not None:
             self.cog.log = logging.getLogger(f"red.{self.repo_name}.{self.cog.qualified_name}")
 
-            if getattr(getattr(self.cog.log, "_log"), "__func__") == logging.Logger._log:
+            if getattr(getattr(self.cog.log, "_log"), "__func__", getattr(self.cog.log, "_log")) == logging.Logger._log:
                 __log = getattr(self.cog.log, "_log")
                 def _log(level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=1):
                     if self.cog is not None:
