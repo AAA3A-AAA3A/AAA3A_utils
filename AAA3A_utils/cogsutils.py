@@ -302,7 +302,7 @@ class CogsUtils(commands.Cog):
                 style="{",
             )
 
-            if getattr(self.cog.log, "_log") == logging.Logger._log.__func__:
+            if getattr(getattr(self.cog.log, "_log"), "__func__") == logging.Logger._log:
                 __log = getattr(self.cog.log, "_log")
                 def _log(level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=1):
                     if self.cog is not None:
