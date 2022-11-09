@@ -405,12 +405,12 @@ class SharedCog(commands.Cog, name="AAA3A_utils"):
         result = []
         for log in data:
             name = cog.log.name
-            time = data["time"]
+            time = log["time"]
             asctime = time.strftime("%Y-%m-%d %H:%M:%S")
-            levelname = data["levelname"]
-            message = data["message"]
-            args = data["args"]
-            exc_info = data["exc_info"]
+            levelname = log["levelname"]
+            message = log["message"]
+            args = log["args"]
+            exc_info = log["exc_info"]
             result.append(box(f"[{asctime}] {levelname} [{name}] {message}"[:2000 - 10], lang="py"))
         await Menu(pages=result).start(ctx)
         await ctx.tick(message="Done.")
