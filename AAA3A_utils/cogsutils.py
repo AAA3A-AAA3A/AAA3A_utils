@@ -12,6 +12,7 @@ import os
 import re
 import string
 from copy import copy
+from functools import partial
 from pathlib import Path
 from random import choice
 
@@ -297,32 +298,31 @@ class CogsUtils(commands.Cog):
         if name is None and self.cog is not None:
             self.cog.log = logging.getLogger(f"red.{self.repo_name}.{self.cog.qualified_name}")
 
-            if getattr(getattr(self.cog.log, "_log"), "__func__", getattr(self.cog.log, "_log")) == logging.Logger._log:
-                __log = getattr(self.cog.log, "_log")
-                def _log(level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=1):
-                    if self.cog is not None:
-                        if not hasattr(self.cog, "logs") or not isinstance(self.cog.logs, typing.Dict):
-                            self.cog.logs: typing.Dict[typing.Union[str, int], typing.Dict] = {}
-                        from logging import CRITICAL, DEBUG, ERROR, FATAL, INFO, WARN, WARNING
-                        VERBOSE = DEBUG - 3
-                        TRACE = DEBUG - 5
-                        levels = {
-                            CRITICAL: "CRITICAL",
-                            DEBUG: "DEBUG",
-                            ERROR: "ERROR",
-                            FATAL: "FATAL",
-                            INFO: "INFO",
-                            WARN: "WARN",
-                            WARNING: "WARNING",
-                            VERBOSE: "VERBOSE",
-                            TRACE: "TRACE"
-                        }
-                        _level = levels.get(level, str(level))
-                        if _level not in self.cog.logs:
-                            self.cog.logs[_level] = []
-                        self.cog.logs[_level].append({"time": datetime.datetime.now(), "level": level, "message": msg, "args": args, "exc_info": exc_info, "levelname": _level})
-                    __log(level=level, msg=msg, args=args, exc_info=exc_info, extra=extra, stack_info=stack_info, stacklevel=stacklevel)
-                setattr(self.cog.log, "_log", _log)
+            __log = partial(logging.Logger._log, self.cog.log)
+            def _log(level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=1):
+                if self.cog is not None:
+                    if not hasattr(self.cog, "logs") or not isinstance(self.cog.logs, typing.Dict):
+                        self.cog.logs: typing.Dict[typing.Union[str, int], typing.Dict] = {}
+                    from logging import CRITICAL, DEBUG, ERROR, FATAL, INFO, WARN, WARNING
+                    VERBOSE = DEBUG - 3
+                    TRACE = DEBUG - 5
+                    levels = {
+                        CRITICAL: "CRITICAL",
+                        DEBUG: "DEBUG",
+                        ERROR: "ERROR",
+                        FATAL: "FATAL",
+                        INFO: "INFO",
+                        WARN: "WARN",
+                        WARNING: "WARNING",
+                        VERBOSE: "VERBOSE",
+                        TRACE: "TRACE"
+                    }
+                    _level = levels.get(level, str(level))
+                    if _level not in self.cog.logs:
+                        self.cog.logs[_level] = []
+                    self.cog.logs[_level].append({"time": datetime.datetime.now(), "level": level, "message": msg, "args": args, "exc_info": exc_info, "levelname": _level})
+                __log(level=level, msg=msg, args=args, exc_info=exc_info, extra=extra, stack_info=stack_info, stacklevel=stacklevel)
+            setattr(self.cog.log, "_log", _log)
 
             # logging to a log file
             # file is automatically created by the module, if the parent foler exists
