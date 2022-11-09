@@ -404,6 +404,22 @@ class SharedCog(commands.Cog, name="AAA3A_utils"):
 
     @commands.is_owner()
     @AAA3A_utils.command()
+    async def getdebugloopsstatus(self, ctx: commands.Context, cog: str):
+        cog = ctx.bot.get_cog(cog)
+        if cog is None:
+            await ctx.send(_("This cog is not installed or loaded.").format(**locals()))
+            return
+        if cog.qualified_name not in self.cogsutils.get_all_repo_cogs_objects():
+            await ctx.send(_("This cog is not a cog from AAA3A-cogs.").format(**locals()))
+            return
+        embeds = []
+        for loop in self.cogsutils.loops.values():
+            embeds.append(loop.get_debug_embed())
+        await Menu(pages=embeds).start(ctx)
+        await ctx.tick()
+
+    @commands.is_owner()
+    @AAA3A_utils.command()
     async def resetconfig(self, ctx: commands.Context, cog: str, confirmation: typing.Optional[bool]=False):
         cog = ctx.bot.get_cog(cog)
         if cog is None:
