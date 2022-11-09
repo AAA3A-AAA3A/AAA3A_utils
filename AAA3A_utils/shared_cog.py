@@ -358,6 +358,7 @@ class SharedCog(commands.Cog, name="AAA3A_utils"):
     @commands.is_owner()
     @AAA3A_utils.command()
     async def getlogs(self, ctx: commands.Context, cog: str, level: typing.Optional[str]="all"):
+        """Get logs for a cog from AAA3A-cogs"""
         cog = ctx.bot.get_cog(cog)
         if cog is None:
             await ctx.send(_("This cog is not installed or loaded.").format(**locals()))
@@ -405,6 +406,7 @@ class SharedCog(commands.Cog, name="AAA3A_utils"):
     @commands.is_owner()
     @AAA3A_utils.command()
     async def getdebugloopsstatus(self, ctx: commands.Context, cog: str):
+        """Get debug loops status for a cog from AAA3A-cogs."""
         cog = ctx.bot.get_cog(cog)
         if cog is None:
             await ctx.send(_("This cog is not installed or loaded.").format(**locals()))
@@ -421,6 +423,7 @@ class SharedCog(commands.Cog, name="AAA3A_utils"):
     @commands.is_owner()
     @AAA3A_utils.command()
     async def resetconfig(self, ctx: commands.Context, cog: str, confirmation: typing.Optional[bool]=False):
+        """Reset Config for a cog from AAA3A-cogs."""
         cog = ctx.bot.get_cog(cog)
         if cog is None:
             await ctx.send(_("This cog is not installed or loaded.").format(**locals()))
