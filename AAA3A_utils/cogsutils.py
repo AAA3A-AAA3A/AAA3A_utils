@@ -970,7 +970,7 @@ class CogsUtils(commands.Cog):
         prefix: typing.Optional[str] = None,
         message: typing.Optional[discord.Message] = None,
         dispatch_message: typing.Optional[bool] = False,
-        __is_mocked__: typing.Optional[bool] = False,
+        __is_mocked__: typing.Optional[bool] = True,
         message_id: typing.Optional[str] = "".join(choice(string.digits) for i in range(18)),
         timestamp: typing.Optional[datetime.datetime] = datetime.datetime.now(),
     ) -> typing.Union[commands.Context, discord.Message]:

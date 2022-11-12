@@ -64,6 +64,8 @@ class Context(commands.Context):
             message = "Done."
         if not can_user_react_in(self.me, self.channel) and self.len_messages == 0:
             message = "Done."
+        if getattr(self, "__is_mocked__", False):
+            message = None
         return await self.react_quietly(reaction, message=message)
 
     async def send(self, content=None, **kwargs):
