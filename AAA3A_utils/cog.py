@@ -112,6 +112,11 @@ class Cog:
         for index, arg in enumerate(ctx.args.copy()):
             if isinstance(arg, commands.Context):
                 ctx.args[index] = context
+        if getattr(context, "interaction", None) is not None:
+            try:
+                await context.interaction.response.defer(ephemeral=False, thinking=True)
+            except discord.InteractionResponded:
+                pass
         context._typing = context.channel.typing()
         await context._typing.__aenter__()
         return ctx
