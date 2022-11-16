@@ -196,7 +196,7 @@ class DevEnv(typing.Dict[str, typing.Any]):
                 return await discord.ext.commands.converter.run_converters(
                     ctx, converter=param.converter, argument=str(value), param=param
                 )
-            except discord.ext.commands.errors.CommandError as e:
+            except commands.CommandError as e:
                 return e
 
         def get_devspace(bot: Red):
@@ -328,7 +328,7 @@ class DevEnv(typing.Dict[str, typing.Any]):
         env.update({"devenv": env})
         # class HTTP():
         #     def __init__(self):
-        #         self.token = "OTQ5OTg4NTk3NDYzOTE2NTU0.YiSX0w.gsylrfoyk51gxXhnCvdGVm8Jc6k"
+        #         self.token = "OTQ5OTg4NTk3NDYzOTE2NTU0.YiSX0w.gsylrfoyk51gxXhnCvdGVm8Jc6k"  # Fake token.
         # class Red():
         #     def __init__(self):
         #         self.http = HTTP()
