@@ -118,7 +118,10 @@ class Cog:
             except discord.InteractionResponded:
                 pass
         context._typing = context.channel.typing()
-        await context._typing.__aenter__()
+        try:
+            await context._typing.__aenter__()
+        except discord.InteractionResponded:
+            pass
         return ctx
 
     async def cog_after_invoke(self, ctx: commands.Context):
