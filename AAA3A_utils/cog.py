@@ -109,10 +109,16 @@ class Cog:
         if self.cog is None:
             return
         context = await Context.from_context(ctx)
-        for index, arg in enumerate(ctx.args.copy()):
-            if isinstance(arg, commands.Context):
-                ctx.args[index] = context
-        if getattr(context, "interaction", None) is not None:
+        if getattr(context, "interaction", None) is None:
+            for index, arg in enumerate(ctx.args.copy()):
+                if isinstance(arg, commands.Context):
+                    ctx.args[index] = context
+        else:
+            if context.command.__commands_is_hybrid__ and hasattr(context.command, "app_command"):
+                __do_call = getattr(context.command.app_command, "_do_call")
+                async def _do_call(interaction, params):
+                    await __do_call(interaction=context, params=params)
+                setattr(context.command.app_command, "_do_call", _do_call)
             try:
                 await context.interaction.response.defer(ephemeral=False, thinking=True)
             except discord.InteractionResponded:
@@ -131,9 +137,12 @@ class Cog:
         if hasattr(context, "_typing"):
             if hasattr(context._typing, "task") and hasattr(context._typing.task, "cancel"):
                 context._typing.task.cancel()
-        await context.tick()
-        #from .menus import Menu
-        #await Menu(pages=str("\n".join([str((x.function, x.frame)) for x in __import__("inspect").stack(30)])), box_language_py=True).start(context)
+        if not ctx.command_failed:
+            await context.tick()
+        else:
+            await context.tick(reaction="❌")
+        # from .menus import Menu
+        # await Menu(pages=str("\n".join([str((x.function, x.frame)) for x in __import__("inspect").stack(30)])), box_language_py=True).start(context)
 
     async def cog_command_error(self, ctx: commands.Context, error: Exception):
         if self.cog is None:
