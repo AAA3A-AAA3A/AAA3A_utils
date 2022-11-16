@@ -11,8 +11,6 @@ from redbot.core.utils.menus import start_adding_reactions
 from redbot.core.utils.predicates import MessagePredicate, ReactionPredicate
 from redbot.vendored.discord.ext import menus
 
-from .cogsutils import CogsUtils
-
 if discord.version_info.major >= 2:
     from .views import Buttons, Dropdown, Modal
 
@@ -524,12 +522,16 @@ class Menu:
             page = await self.source.get_page(self.current_page)
         current = self.pages.index(page)
         value = await self.source.format_page(self, page)
+        def replace_var_paths(text: str):
+            if self.ctx.bot.get_cog("AAA3A_utils") is None or not hasattr(self.ctx.bot.get_cog("AAA3A_utils"), "cogsutils"):
+                return text
+            return self.ctx.bot.get_cog("AAA3A_utils").cogsutils.replace_var_paths(text)
         if isinstance(value, typing.Dict):
             if "content" in value:
-                value["content"] = CogsUtils().replace_var_paths(value["content"])
+                value["content"] = replace_var_paths(value["content"])
             return current, value
         elif isinstance(value, str):
-            value = CogsUtils().replace_var_paths(value)
+            value = replace_var_paths(value)
             return current, {"content": value, "embed": None}
         elif isinstance(value, discord.Embed):
             return current, {"embed": value, "content": None}
