@@ -483,7 +483,7 @@ class CogsUtils(commands.Cog):
                 )
                 nsfw = getattr(_object.callback, "__discord_app_commands_is_nsfw__", False)
                 _object.app_command = discord.app_commands.Group(
-                    name=_object._locale_name or _object.name,
+                    name=(_object._locale_name or _object.name).lower(),
                     description=_object._locale_description
                     or _object.description
                     or _object.short_doc
@@ -1022,8 +1022,6 @@ class CogsUtils(commands.Cog):
         else:
             message = copy(message)
             message.author = author
-        if __is_mocked__:
-            message.__is_mocked__ = True
 
         message.content = content
         context = await bot.get_context(message)
