@@ -542,9 +542,11 @@ class CogsUtils(commands.Cog):
                     _object.parent.app_command if _object.parent is not None else None
                 )
                 _object.app_command.module = _object.module
+                _object.app_command.description = object.app_command.description[:100]
             elif isinstance(_object, discord.ext.commands.HybridCommand):
                 _object.with_app_command = True
                 _object.app_command = discord.ext.commands.hybrid.HybridAppCommand(_object)
+                _object.app_command.description = object.app_command.description[:100]
             else:
                 continue
             if _object.parent is not None:
