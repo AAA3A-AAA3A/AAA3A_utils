@@ -12,7 +12,6 @@ from redbot.core.utils.chat_formatting import box
 from rich.console import Console
 from rich.table import Table
 
-from .cogsutils import CogsUtils
 from .menus import Menu
 from .views import Buttons, Modal
 
@@ -81,7 +80,7 @@ class Settings():
                 kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
                 annotation=settings[setting]["converter"],
             )
-            if CogsUtils().is_dpy2:
+            if self.cog.cogsutils.is_dpy2:
                 if "style" not in settings[setting]:
                     settings[setting]["style"] = discord.TextStyle.short
                 else:
@@ -117,7 +116,7 @@ class Settings():
             commands_group.description = _help
             commands_group.callback.__doc__ = _help
             commands_group.cog = self.cog
-            if CogsUtils().is_dpy2:
+            if self.cog.cogsutils.is_dpy2:
                 if "ctx" in commands_group.params:
                     del commands_group.params["ctx"]
             self.bot.add_command(commands_group)
@@ -200,7 +199,7 @@ class Settings():
             self.bot.dispatch("command_add", command)
             if self.bot.get_cog("permissions") is None:
                 command.requires.ready_event.set()
-            if CogsUtils().is_dpy2:
+            if self.cog.cogsutils.is_dpy2:
                 if "ctx" in command.params:
                     del command.params["ctx"]
             setattr(self, f"settings_{name}", command)
@@ -236,7 +235,7 @@ class Settings():
                 self.bot.dispatch("command_add", command)
                 if self.bot.get_cog("permissions") is None:
                     command.requires.ready_event.set()
-                if CogsUtils().is_dpy2:
+                if self.cog.cogsutils.is_dpy2:
                     if "ctx" in command.params:
                         del command.params["ctx"]
                 setattr(self, f"settings_{name}", command)
@@ -318,7 +317,7 @@ class Settings():
                     "All tickets associated with this profile will be removed from the Config, but the channels will still exist. Commands related to the tickets will no longer work."
                 ).format(**locals())
             embed.color = 0xF00020
-            response = await CogsUtils().ConfirmationAsk(ctx, embed=embed)
+            response = await self.cog.cogsutils.ConfirmationAsk(ctx, embed=embed)
             if not response:
                 return
         data = self.get_data(ctx=ctx)
@@ -404,7 +403,7 @@ class Settings():
         await Menu(pages=message, box_language_py=True).start(ctx)
 
     async def send_modal(self, ctx: commands.Context, object: typing.Optional[typing.Union[discord.Guild, discord.Member, discord.abc.Messageable, discord.Role, discord.User]] = None, profile: typing.Optional[str] = None, confirmation: typing.Optional[bool] = False):
-        if not CogsUtils().is_dpy2:
+        if not self.cog.cogsutils.is_dpy2:
             raise RuntimeError()
         if object is None:
             if self.group == Config.GLOBAL:
@@ -485,7 +484,7 @@ class Settings():
                     embed.title = _(
                         "⚙️ Do you want to replace the entire Config of {self.cog.qualified_name} with what you specified?"
                     ).format(**locals())
-                    if await CogsUtils().ConfirmationAsk(ctx, embed=embed):
+                    if await self.cog.cogsutils.ConfirmationAsk(ctx, embed=embed):
                         if not self.use_profiles_system:
                             config = await data.set_raw(*self.global_path, value=config)
                         else:
