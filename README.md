@@ -8,6 +8,8 @@ I abandoned the pip package idea because updating was initially difficult. Then,
 
 For more info (docs, contributing, contact), please check the AAA3A-cogs repository.
 
+Thanks to Vexed for the code and the documentation to use Telemetry with Sentry (https://github.com/Vexed01/vex-cog-utils/blob/ba8adb3d270c968bc7ff3e3b977ac90ff752dca3/vexcogutils/sentry.py)!
+
 ## Install
 
 Type the following command in your console:
