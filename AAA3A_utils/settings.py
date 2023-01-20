@@ -242,12 +242,12 @@ class Settings():
                 _usage = self.settings[setting]["usage"]
 
                 if not self.use_profiles_system:
-                    async def command(_self, ctx: commands.Context, value: typing.Optional[self.settings[setting]["converter"]] = None):
+                    async def command(_self, ctx: commands.Context, *, value: typing.Optional[self.settings[setting]["converter"]] = None):
                         if value is None:
                             value = discord.utils.MISSING
                         await self.command(ctx, key=None, value=value)
                 else:
-                    async def command(_self, ctx: commands.Context, profile: ProfileConverter, value: typing.Optional[self.settings[setting]["converter"]] = None):
+                    async def command(_self, ctx: commands.Context, profile: ProfileConverter, *, value: typing.Optional[self.settings[setting]["converter"]] = None):
                         if value is None:
                             value = discord.utils.MISSING
                         await self.command(ctx, key=None, value=value, profile=profile)
