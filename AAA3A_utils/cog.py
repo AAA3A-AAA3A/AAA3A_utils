@@ -187,7 +187,8 @@ class Cog:
         return context
 
     async def cog_command_error(self, ctx: commands.Context, error: Exception):
-        if self.cog is None:
+        if self.cog is None or not hasattr(self.cog, "cogsutils"):
+            await ctx.bot.on_command_error(ctx=ctx, error=error, unhandled_by_cog=True)
             return
         no_sentry = False
         AAA3A_utils = ctx.bot.get_cog("AAA3A_utils")
