@@ -1,3 +1,4 @@
+from redbot.core import commands  # isort:skip
 from redbot.core.bot import Red  # isort:skip
 import discord  # isort:skip
 import typing  # isort:skip
@@ -42,16 +43,7 @@ from .settings import Settings
 from .shared_cog import SharedCog
 
 if discord.version_info.major >= 2:
-    from .views import (
-        Buttons,
-        ChannelSelect,
-        Dropdown,
-        MentionableSelect,
-        Modal,
-        RoleSelect,
-        Select,
-        UserSelect,
-    )  # NOQA
+    from .views import Buttons, ChannelSelect, Dropdown, MentionableSelect, Modal, RoleSelect, Select, UserSelect  # NOQA
 
 CogsUtils: typing.Any = None
 
