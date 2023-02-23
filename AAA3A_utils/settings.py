@@ -160,14 +160,25 @@ class CustomMessageConverter(commands.Converter, dict):
         if channel is None:
             channel = ctx
         _kwargs = self.__dict__.copy()
-        if env := kwargs.pop("env", None) is not None:
-            setattr(env, "__missing__", lambda key: key)
+        if (env := kwargs.pop("env", None)) is not None:
+            class _Env(typing.Dict):
+                def __getitem__(self, key: str):
+                    return env.__getitem__(key)
+
+                def __missing__(self, key: str):
+                    return "{" + f"{key}" + "}"
+            _env = _Env()
             if "content" in _kwargs and _kwargs["content"] is not None:
-                _kwargs["content"].format_map(env)
+                _kwargs["content"] = _kwargs["content"].format_map(_env)
             if "embed" in _kwargs and _kwargs["embed"] is not None:
-                for attr in ["title", "description", "footer"]:
-                    if value := getattr(_kwargs["embed"], attr, None) is not None:
-                        setattr(_kwargs["embed"], attr, value.format_map(env))
+                embed = _kwargs["embed"].copy()
+                if embed.title is not None:
+                    embed.title = embed.title.format_map(_env)
+                if embed.description is not None:
+                    embed.description = embed.description.format_map(_env)
+                if getattr(embed, "_author", None) is not None:
+                    embed._author["name"] = embed._author["name"].format_map(_env)
+                _kwargs["embed"] = embed
         _kwargs.update(**kwargs)
         return await channel.send(**_kwargs)
 
