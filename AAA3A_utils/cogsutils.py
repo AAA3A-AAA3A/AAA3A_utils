@@ -344,8 +344,8 @@ class CogsUtils(commands.Cog):
 
         setattr(self.cog.log, "_log", _log)
 
-        # logging to a log file
-        # file is automatically created by the module, if the parent foler exists
+        # logging to a log file.
+        # (File is automatically created by the module, if the parent foler exists.)
         try:
             cog_path = cog_data_path(cog_instance=self.cog, raw_name=self.cog.qualified_name)
             formatter = logging.Formatter(
@@ -544,6 +544,11 @@ class CogsUtils(commands.Cog):
             cog = self.cog
         if cog.qualified_name == "Medicat" and hasattr(cog, "CC_added"):
             await cog.CC_added.wait()
+        # For new `[p]slash list` in Flame's PR.
+        # for _object in cog.walk_commands():
+        #     if isinstance(_object, commands.HybridCommand):
+        #         if _object.app_command is not None:
+        #             _object.app_command.description = _object.app_command.description[:200]
         # await self.remove_hybrid_commands(cog=cog)
         AAA3A_utils = self.bot.get_cog("AAA3A_utils")
         if AAA3A_utils is not None:
@@ -551,7 +556,7 @@ class CogsUtils(commands.Cog):
         else:
             ignored_commands = []
         for _object in cog.walk_commands():
-            if getattr(_object, "app_command", None) is not None:
+            if getattr(_object, "app_command", None) is not None and getattr(_object, "app_command", None) is not discord.utils.MISSING:
                 continue
             if getattr(_object, "no_slash", False):
                 continue
