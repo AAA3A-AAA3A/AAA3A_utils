@@ -174,7 +174,7 @@ class CogsUtils(commands.Cog):
                 online_commit,
                 online_commit_for_each_files,
             ) = await self.to_update()
-            if to_update and False:
+            if to_update:
                 self.cog.log.warning(
                     f"Your {self.cog.qualified_name} cog, from {self.repo_name}, is out of date. You can update your cogs with the '[p]cog update' command in Discord."
                 )
@@ -461,7 +461,7 @@ class CogsUtils(commands.Cog):
         async with aiohttp.ClientSession() as session:
             async with session.get(
                 (
-                    f"https://api.github.com/repos/{repo_owner}/{repo_name}/commits?sha={repo_branch}&path={cog_name}"
+                    f"https://api.github.com/repos/{repo_owner}/{repo_name}/commits?sha={repo_branch}&path={cog_name}"  # Thanks Jack!
                     if repo_branch
                     else f"https://api.github.com/repos/{repo_owner}/{repo_name}/commits?path={cog_name}"
                 ),  # f"https://api.github.com/repos/{repo_owner}/{repo_name}/git/refs/heads/{repo_branch}" & f"https://api.github.com/repos/{repo_owner}/{repo_name}/contents?path={cog_name}"
