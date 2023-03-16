@@ -72,6 +72,178 @@ async def unsupported(ctx: commands.Context) -> None:
     await ctx.send("Aborting.")
     raise commands.CheckFailure("User choose no.")
 
+
+class Cog(commands.Cog):
+
+    def __init__(self, bot: Red) -> None:
+        self.bot: Red = bot
+
+    def format_help_for_context(self, ctx: commands.Context) -> str:
+        """Thanks Simbad!"""
+        text = super().format_help_for_context(ctx)
+        s = "s" if len(self.__authors__) > 1 else ""
+        text = f"{text}\n\n**Author{s}**: {humanize_list(self.__authors__)}\n**Cog version**: {self.__version__}\n**Cog commit**: {self.__commit__}"
+        if self.qualified_name not in ["AAA3A_utils"]:
+            text += f"\n**Cog documentation**: https://aaa3a-cogs.readthedocs.io/en/latest/cog_{self.qualified_name.lower()}.html\n**Translate my cogs**: https://crowdin.com/project/aaa3a-cogs"
+        return text
+
+    async def red_delete_data_for_user(self, *args, **kwargs) -> None:
+        """Nothing to delete."""
+        return
+
+    async def red_get_data_for_user(self, *args, **kwargs) -> typing.Dict[typing.Any, typing.Any]:
+        """Nothing to get."""
+        return {}
+
+    if discord.version_info.major >= 2:
+
+        async def cog_unload(self) -> None:
+            self.cogsutils._end()
+
+    else:
+
+        def cog_unload(self) -> None:
+            self.cogsutils._end()
+
+    async def cog_before_invoke(self, ctx: commands.Context) -> None:
+        if isinstance(ctx.command, commands.Group):
+            view = ctx.view
+            previous = view.index
+            view.skip_ws()
+            trigger = view.get_word()
+            invoked_subcommand = ctx.command.all_commands.get(trigger, None)
+            view.index = previous
+            if invoked_subcommand is not None or not ctx.command.invoke_without_command:
+                return
+        context = await Context.from_context(ctx)
+        if getattr(ctx.command, "__is_dev__", False):
+            await unsupported(ctx)
+        if getattr(context, "interaction", None) is None:
+            for index, arg in enumerate(ctx.args.copy()):
+                if isinstance(arg, commands.Context):
+                    ctx.args[index] = context
+            context._typing = context.channel.typing()
+            await context._typing.__aenter__()
+        else:
+            if context.command.__commands_is_hybrid__ and hasattr(context.command, "app_command"):
+                __do_call = getattr(context.command.app_command, "_do_call")
+
+                async def _do_call(interaction, params):
+                    await __do_call(interaction=context, params=params)
+
+                setattr(context.command.app_command, "_do_call", _do_call)
+            try:
+                await context.interaction.response.defer(ephemeral=False, thinking=True)
+            except (discord.InteractionResponded, discord.NotFound):
+                pass
+            context._typing = context.channel.typing()
+            try:
+                await context._typing.__aenter__()
+            except discord.InteractionResponded:
+                pass
+        return context
+
+    async def cog_after_invoke(self, ctx: commands.Context) -> None:
+        if isinstance(ctx.command, commands.Group) and (
+            ctx.invoked_subcommand is not None or not ctx.command.invoke_without_command
+        ):
+            return
+        context = await Context.from_context(ctx)
+        if (
+            hasattr(context, "_typing")
+            and hasattr(context._typing, "task")
+            and hasattr(context._typing.task, "cancel")
+        ):
+            context._typing.task.cancel()
+        if not ctx.command_failed:
+            await context.tick()
+        else:
+            await context.tick(reaction="❌")
+        # from .menus import Menu
+        # await Menu(pages=str("\n".join([str((x.function, x.frame)) for x in __import__("inspect").stack(30)])), box_language_py=True).start(context)
+        return context
+
+    async def cog_command_error(self, ctx: commands.Context, error: Exception) -> None:
+        if not hasattr(self, "cogsutils"):
+            await ctx.bot.on_command_error(ctx=ctx, error=error, unhandled_by_cog=True)
+            return
+        AAA3A_utils = ctx.bot.get_cog("AAA3A_utils")
+        is_command_error = False
+        if isinstance(error, commands.CommandInvokeError):
+            is_command_error = True
+        elif self.cogsutils.is_dpy2 and isinstance(error, commands.HybridCommandError):
+            is_command_error = True
+
+        if is_command_error:
+            if isinstance(
+                error.original, discord.Forbidden
+            ):  # Error can be changed into `commands.BotMissingPermissions` or not.
+                e = verbose_forbidden_exception(ctx, error.original)
+                if e is not None and isinstance(e, commands.BotMissingPermissions):
+                    error = e
+            uuid = uuid4().hex
+            no_sentry = AAA3A_utils is None or getattr(AAA3A_utils, "sentry", None) is None
+            if not no_sentry:
+                AAA3A_utils.sentry.last_errors[uuid] = {"ctx": ctx, "error": error}
+            if self.cogsutils.is_dpy2 and isinstance(
+                ctx.command, discord.ext.commands.HybridCommand
+            ):
+                if getattr(ctx, "interaction", None) is None:
+                    _type = "[hybrid|text]"
+                else:
+                    _type = "[hybrid|slash]"
+            elif getattr(ctx, "interaction", None) is not None:
+                _type = "[slash]"
+            else:
+                _type = "[text]"
+            message = await self.cogsutils.bot._config.invoke_error_msg()
+            if not message:
+                message = f"Error in {_type} command '{ctx.command.qualified_name}'."
+                if ctx.author.id in ctx.bot.owner_ids:
+                    message += " Check your console or logs for details. If necessary, please inform the creator of the cog in which this command is located. Thank you."
+                message = inline(message)
+            else:
+                message = message.replace("{command}", ctx.command.qualified_name)
+            if (
+                not no_sentry
+                and not AAA3A_utils.sentry.sentry_enabled
+                and await AAA3A_utils.senderrorwithsentry.can_run(ctx)
+                and not getattr(AAA3A_utils.senderrorwithsentry, "__is_dev__", False)
+            ):
+                message += "\n" + inline(
+                    f"You can send this error to the developer by running the following command:\n{ctx.prefix}AAA3A_utils senderrorwithsentry {uuid}"
+                )
+            await ctx.send(message)
+            asyncio.create_task(ctx.bot._delete_delay(ctx))
+            self.log.exception(
+                f"Exception in {_type} command '{ctx.command.qualified_name}'.",
+                exc_info=error.original,
+            )
+            exception_log = f"Exception in {_type} command '{ctx.command.qualified_name}':\n"
+            exception_log += "".join(
+                traceback.format_exception(type(error), error, error.__traceback__)
+            )
+            exception_log = self.cogsutils.replace_var_paths(exception_log)
+            ctx.bot._last_exception = exception_log
+            if not no_sentry:
+                await AAA3A_utils.sentry.send_command_error(ctx, error)
+        elif isinstance(error, commands.UserFeedbackCheckFailure):
+            if error.message:
+                message = error.message
+                message = warning(message)
+                await ctx.send(message)
+        elif isinstance(error, commands.CheckFailure) and not isinstance(
+            error, commands.BotMissingPermissions
+        ):
+            if getattr(ctx, "interaction", None) is not None:
+                await ctx.send(
+                    inline("You are not allowed to execute this command in this context."),
+                    ephemeral=True,
+                )
+        else:
+            await ctx.bot.on_command_error(ctx=ctx, error=error, unhandled_by_cog=True)
+
+
 def verbose_forbidden_exception(ctx: commands.Context, error: discord.Forbidden) -> None:
     if not isinstance(error, discord.Forbidden):
         return ValueError(error)
@@ -299,178 +471,3 @@ def verbose_forbidden_exception(ctx: commands.Context, error: discord.Forbidden)
         if permissions
         else None
     )
-
-
-class Cog(commands.Cog):
-
-    def __init__(self, bot: Red) -> None:
-        self.bot: Red = bot
-
-    def format_help_for_context(self, ctx: commands.Context) -> str:
-        """Thanks Simbad!"""
-        text = super(type(self.cog), self.cog).format_help_for_context(ctx)
-        s = "s" if len(self.cog.__authors__) > 1 else ""
-        text = f"{text}\n\n**Author{s}**: {humanize_list(self.cog.__authors__)}\n**Cog version**: {self.cog.__version__}\n**Cog commit**: {self.cog.__commit__}"
-        if self.cog.qualified_name not in ["AAA3A_utils"]:
-            text += f"\n**Cog documentation**: https://aaa3a-cogs.readthedocs.io/en/latest/cog_{self.cog.qualified_name.lower()}.html\n**Translate my cogs**: https://crowdin.com/project/aaa3a-cogs"
-        return text
-
-    async def red_delete_data_for_user(self, *args, **kwargs) -> None:
-        """Nothing to delete."""
-        return
-
-    async def red_get_data_for_user(self, *args, **kwargs) -> typing.Dict[typing.Any, typing.Any]:
-        """Nothing to get."""
-        return {}
-
-    if discord.version_info.major >= 2:
-
-        async def cog_unload(self) -> None:
-            self.cog.cogsutils._end()
-
-    else:
-
-        def cog_unload(self) -> None:
-            self.cog.cogsutils._end()
-
-    async def cog_before_invoke(self, ctx: commands.Context) -> None:
-        if self.cog is None:
-            return
-        if isinstance(ctx.command, commands.Group):
-            view = ctx.view
-            previous = view.index
-            view.skip_ws()
-            trigger = view.get_word()
-            invoked_subcommand = ctx.command.all_commands.get(trigger, None)
-            view.index = previous
-            if invoked_subcommand is not None or not ctx.command.invoke_without_command:
-                return
-        context = await Context.from_context(ctx)
-        if getattr(ctx.command, "__is_dev__", False):
-            await unsupported(ctx)
-        if getattr(context, "interaction", None) is None:
-            for index, arg in enumerate(ctx.args.copy()):
-                if isinstance(arg, commands.Context):
-                    ctx.args[index] = context
-            context._typing = context.channel.typing()
-            await context._typing.__aenter__()
-        else:
-            if context.command.__commands_is_hybrid__ and hasattr(context.command, "app_command"):
-                __do_call = getattr(context.command.app_command, "_do_call")
-
-                async def _do_call(interaction, params):
-                    await __do_call(interaction=context, params=params)
-
-                setattr(context.command.app_command, "_do_call", _do_call)
-            try:
-                await context.interaction.response.defer(ephemeral=False, thinking=True)
-            except (discord.InteractionResponded, discord.NotFound):
-                pass
-            context._typing = context.channel.typing()
-            try:
-                await context._typing.__aenter__()
-            except discord.InteractionResponded:
-                pass
-        return context
-
-    async def cog_after_invoke(self, ctx: commands.Context) -> None:
-        if self.cog is None:
-            return
-        if isinstance(ctx.command, commands.Group) and (
-            ctx.invoked_subcommand is not None or not ctx.command.invoke_without_command
-        ):
-            return
-        context = await Context.from_context(ctx)
-        if (
-            hasattr(context, "_typing")
-            and hasattr(context._typing, "task")
-            and hasattr(context._typing.task, "cancel")
-        ):
-            context._typing.task.cancel()
-        if not ctx.command_failed:
-            await context.tick()
-        else:
-            await context.tick(reaction="❌")
-        # from .menus import Menu
-        # await Menu(pages=str("\n".join([str((x.function, x.frame)) for x in __import__("inspect").stack(30)])), box_language_py=True).start(context)
-        return context
-
-    async def cog_command_error(self, ctx: commands.Context, error: Exception) -> None:
-        if self.cog is None or not hasattr(self.cog, "cogsutils"):
-            await ctx.bot.on_command_error(ctx=ctx, error=error, unhandled_by_cog=True)
-            return
-        AAA3A_utils = ctx.bot.get_cog("AAA3A_utils")
-        is_command_error = False
-        if isinstance(error, commands.CommandInvokeError):
-            is_command_error = True
-        elif self.cog.cogsutils.is_dpy2 and isinstance(error, commands.HybridCommandError):
-            is_command_error = True
-
-        if is_command_error:
-            if isinstance(
-                error.original, discord.Forbidden
-            ):  # Error can be changed into `commands.BotMissingPermissions` or not.
-                e = verbose_forbidden_exception(ctx, error.original)
-                if e is not None and isinstance(e, commands.BotMissingPermissions):
-                    error = e
-            uuid = uuid4().hex
-            no_sentry = AAA3A_utils is None or getattr(AAA3A_utils, "sentry", None) is None
-            if not no_sentry:
-                AAA3A_utils.sentry.last_errors[uuid] = {"ctx": ctx, "error": error}
-            if self.cog.cogsutils.is_dpy2 and isinstance(
-                ctx.command, discord.ext.commands.HybridCommand
-            ):
-                if getattr(ctx, "interaction", None) is None:
-                    _type = "[hybrid|text]"
-                else:
-                    _type = "[hybrid|slash]"
-            elif getattr(ctx, "interaction", None) is not None:
-                _type = "[slash]"
-            else:
-                _type = "[text]"
-            message = await self.cog.cogsutils.bot._config.invoke_error_msg()
-            if not message:
-                message = f"Error in {_type} command '{ctx.command.qualified_name}'."
-                if ctx.author.id in ctx.bot.owner_ids:
-                    message += " Check your console or logs for details. If necessary, please inform the creator of the cog in which this command is located. Thank you."
-                message = inline(message)
-            else:
-                message = message.replace("{command}", ctx.command.qualified_name)
-            if (
-                not no_sentry
-                and not AAA3A_utils.sentry.sentry_enabled
-                and await AAA3A_utils.senderrorwithsentry.can_run(ctx)
-                and not getattr(AAA3A_utils.senderrorwithsentry, "__is_dev__", False)
-            ):
-                message += "\n" + inline(
-                    f"You can send this error to the developer by running the following command:\n{ctx.prefix}AAA3A_utils senderrorwithsentry {uuid}"
-                )
-            await ctx.send(message)
-            asyncio.create_task(ctx.bot._delete_delay(ctx))
-            self.cog.log.exception(
-                f"Exception in {_type} command '{ctx.command.qualified_name}'.",
-                exc_info=error.original,
-            )
-            exception_log = f"Exception in {_type} command '{ctx.command.qualified_name}':\n"
-            exception_log += "".join(
-                traceback.format_exception(type(error), error, error.__traceback__)
-            )
-            exception_log = self.cog.cogsutils.replace_var_paths(exception_log)
-            ctx.bot._last_exception = exception_log
-            if not no_sentry:
-                await AAA3A_utils.sentry.send_command_error(ctx, error)
-        elif isinstance(error, commands.UserFeedbackCheckFailure):
-            if error.message:
-                message = error.message
-                message = warning(message)
-                await ctx.send(message)
-        elif isinstance(error, commands.CheckFailure) and not isinstance(
-            error, commands.BotMissingPermissions
-        ):
-            if getattr(ctx, "interaction", None) is not None:
-                await ctx.send(
-                    inline("You are not allowed to execute this command in this context."),
-                    ephemeral=True,
-                )
-        else:
-            await ctx.bot.on_command_error(ctx=ctx, error=error, unhandled_by_cog=True)
