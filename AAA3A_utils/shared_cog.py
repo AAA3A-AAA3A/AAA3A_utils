@@ -420,7 +420,7 @@ class SharedCog(commands.Cog, name="AAA3A_utils"):
             raise commands.UserFeedbackCheckFailure(_("This cog is not installed or loaded."))
         if cog.qualified_name not in self.cogsutils.get_all_repo_cogs_objects():
             raise commands.UserFeedbackCheckFailure(_("This cog is not a cog from AAA3A-cogs."))
-        if not hasattr(cog, "logs") or not isinstance(getattr(cog, "logs"), typing.Dict):
+        if not hasattr(cog, "logs") or not isinstance(cog.logs, typing.Dict) or cog.logs == {}:
             raise commands.UserFeedbackCheckFailure(_("This cog does not have any log saved."))
         if level == "stats":
             message = "---------- Logs Stats ----------"
