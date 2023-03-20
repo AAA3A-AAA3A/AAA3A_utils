@@ -116,7 +116,7 @@ class SharedCog(commands.Cog, name="AAA3A_utils"):
             self.sentry = SentryHelper(self)
 
     @commands.is_owner()
-    @hybrid_group(name="AAA3A_utils", aliases=["aaa3a_utils"], hidden=True)
+    @hybrid_group(name="aaa3a_utils", aliases=["AAA3A_utils"], hidden=True)
     async def AAA3A_utils(self, ctx: commands.Context) -> None:
         """All commands to manage all the cogs from AAA3A-cogs repo."""
         pass
