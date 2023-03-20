@@ -209,7 +209,7 @@ class CogsUtils(commands.Cog):
                     cog.cogsutils.loops = old_cog.cogsutils.loops
                 except AttributeError:
                     pass
-                await cog.cogsutils.add_cog(bot=self.bot, cog=cog)
+                await cog.cogsutils.add_cog(bot=self.bot)
             except Exception as e:
                 self.cog.log.debug("Error when adding AAA3A_utils cog.", exc_info=e)
         # Modify hybrid commands.
