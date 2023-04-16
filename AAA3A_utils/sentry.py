@@ -170,7 +170,7 @@ class SentryHelper:
             self.cog.log.error("Sending an error to Sentry failed.", exc_info=e)
             return False
 
-    def remove_sensitive_data(self, event: dict, hint: dict) -> typing.Dict:
+    def remove_sensitive_data(self, event: dict, hint: typing.Optional[dict] = {}) -> typing.Dict:
         """Remove sensitive data from the event. This should only be used by the Sentry SDK.
         This has two main parts:
         1) Remove any mentions of the bot's token
@@ -226,18 +226,18 @@ class SentryHelper:
             dict
                 Safe dict
             """
-            if isinstance(d, dict):
+            if isinstance(d, typing.Dict):
                 return {
                     self.cogsutils.replace_var_paths(regex_stuff(k.replace(token, "[BOT-TOKEN]")))
                     if isinstance(k, str)
                     else k: recursive_replace(v, token)
                     for k, v in d.items()
                 }
-            if isinstance(d, list):
+            elif isinstance(d, typing.List):
                 return [
                     self.cogsutils.replace_var_paths(
                         regex_stuff(recursive_replace(i, token))
-                    )  # type:ignore
+                    )
                     if isinstance(i, str)
                     else recursive_replace(i, token)
                     for i in d
