@@ -303,6 +303,7 @@ class SentryHelper:
         )
 
         scope = sentry_sdk.Scope()
+        scope.set_tag("cog_name", cog.qualified_name)
         scope.set_tag("cog_version", getattr(cog, "__version__", 1.0))
         scope.set_tag("cog_commit", getattr(cog, "__commit__", ""))
         scope.set_tag("red_release", red_version)
