@@ -127,7 +127,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
     @commands.is_owner()
     @AAA3A_utils.command()
     async def getlogs(
-        self, ctx: commands.Context, cog: str, level: typing.Optional[str] = "all"
+        self, ctx: commands.Context, cog: str, level: str = "all"
     ) -> None:
         """Get logs for a cog from AAA3A-cogs"""
         cog = ctx.bot.get_cog(cog)
@@ -195,7 +195,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
     @commands.is_owner()
     @AAA3A_utils.command()
     async def resetconfig(
-        self, ctx: commands.Context, cog: str, confirmation: typing.Optional[bool] = False
+        self, ctx: commands.Context, cog: str, confirmation: bool = False
     ) -> None:
         """Reset Config for a cog from AAA3A-cogs."""
         cog = ctx.bot.get_cog(cog)
