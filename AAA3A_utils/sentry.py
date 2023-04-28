@@ -145,13 +145,11 @@ class SentryHelper:
             if hub is None:
                 return
             if isinstance(error, commands.CommandInvokeError):
-                if self.cogsutils.is_dpy2 and isinstance(
-                    ctx.command, discord.ext.commands.HybridCommand
-                ):
+                if isinstance(ctx.command, discord.ext.commands.HybridCommand):
                     _type = "[hybrid|text]"
                 else:
                     _type = "[text]"
-            elif self.cogsutils.is_dpy2 and isinstance(error, commands.HybridCommandError):
+            elif isinstance(error, commands.HybridCommandError):
                 _type = "[hybrid|slash]"
             else:
                 return False
