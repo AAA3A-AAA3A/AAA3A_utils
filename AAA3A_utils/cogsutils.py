@@ -35,7 +35,7 @@ def _(untranslated: str) -> str:
     return untranslated
 
 
-class CogsUtils(commands.Cog):
+class CogsUtils:
     """Tools for AAA3A-cogs!"""
 
     def __init__(

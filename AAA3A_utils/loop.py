@@ -78,7 +78,9 @@ class Loop:
         self.limit_exception: int = limit_exception
         self.stop_manually: bool = False
 
-        self.start_datetime: datetime.datetime = datetime.datetime.utcnow()
+        self.start_datetime: datetime.datetime = datetime.datetime.now(
+            datetime.timezone.utc
+        )
         self.expected_interval = datetime.timedelta(seconds=self.interval)
         self.last_iteration: typing.Optional[datetime.datetime] = None
         self.next_iteration: typing.Optional[datetime.datetime] = None
@@ -100,7 +102,7 @@ class Loop:
 
     async def wait_until_iteration(self) -> None:
         """Sleep during the raw interval."""
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(datetime.timezone.utc)
         time = now.timestamp()
         time = math.ceil(time / self.interval) * self.interval
         next_iteration = datetime.datetime.fromtimestamp(time) - now
@@ -213,7 +215,7 @@ class Loop:
         """
         if self.next_iteration is None:  # not started yet
             return False
-        return self.next_iteration > datetime.datetime.utcnow()
+        return self.next_iteration > datetime.datetime.now(datetime.timezone.utc)
 
     @property
     def until_next(self) -> float:
@@ -225,7 +227,9 @@ class Loop:
         if self.next_iteration is None:  # not started yet
             return 0.0
 
-        raw_until_next = (self.next_iteration - datetime.datetime.utcnow()).total_seconds()
+        raw_until_next = (
+            self.next_iteration - datetime.datetime.now(datetime.timezone.utc)
+        ).total_seconds()
         if raw_until_next > self.expected_interval.total_seconds():  # should never happen
             return self.expected_interval.total_seconds()
         elif raw_until_next > 0.0:
@@ -241,8 +245,10 @@ class Loop:
         """Register an iteration as starting."""
         self.iteration_count += 1
         self.currently_running = True
-        self.last_iteration = datetime.datetime.utcnow()
-        self.next_iteration = datetime.datetime.utcnow() + self.expected_interval
+        self.last_iteration = datetime.datetime.now(datetime.timezone.utc)
+        self.next_iteration = (
+            datetime.datetime.now(datetime.timezone.utc) + self.expected_interval
+        )
         # this isn't accurate, it will be "corrected" when finishing is called
 
     def iteration_finish(self) -> None:
@@ -260,7 +266,7 @@ class Loop:
 
     def get_debug_embed(self) -> discord.Embed:
         """Get an embed with infomation on this loop."""
-        now: datetime.datetime = datetime.datetime.utcnow()
+        now: datetime.datetime = datetime.datetime.now(datetime.timezone.utc)
 
         raw_table = Table("Key", "Value")
         raw_table.add_row("expected_interval", str(self.expected_interval))
