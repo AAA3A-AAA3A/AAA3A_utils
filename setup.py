@@ -1,16 +1,13 @@
 import setuptools
-import json
 
 with open("README.md", mode="r") as f:
     long_description = f.read()
 
-with open("AAA3A_utils/version.json", mode="r") as f:
-    data = json.loads(f.read())
-version = data["version"]
+from .AAA3A_utils.version import __version__
 
 setuptools.setup(
     name="AAA3A_utils",
-    version=version,
+    version=__version__,
     author="AAA3A",
     author_email=None,
     description="Utils for AAA3A-cogs.",
