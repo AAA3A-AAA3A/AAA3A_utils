@@ -3,7 +3,8 @@ import setuptools
 with open("README.md", mode="r") as f:
     long_description = f.read()
 
-from .AAA3A_utils.version import __version__
+# from .AAA3A_utils.version import __version__  # doesn't work (ImportError: attempted relative import with no known parent package)
+__version__ = 1.0
 
 setuptools.setup(
     name="AAA3A_utils",
