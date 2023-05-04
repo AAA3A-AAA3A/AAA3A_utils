@@ -5,9 +5,7 @@ import typing  # isort:skip
 
 import asyncio
 import datetime
-import json
 import logging
-import os
 import re
 import traceback
 from uuid import uuid4
@@ -15,10 +13,7 @@ from uuid import uuid4
 from redbot.core.utils.chat_formatting import humanize_list, inline, warning
 
 from .context import Context, is_dev
-
-with open(os.path.join(os.path.dirname(__file__), "version.json"), mode="r") as f:
-    data = json.load(f)
-__version__ = data["version"]
+from .version import __version__
 
 __all__ = ["Cog"]
 

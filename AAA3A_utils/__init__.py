@@ -1,6 +1,3 @@
-import json
-import os
-
 from .cog import Cog
 from .cogsutils import CogsUtils
 from .context import Context
@@ -51,6 +48,4 @@ __all__ = [
     "Reactions",
 ]
 
-with open(os.path.join(os.path.dirname(__file__), "version.json"), mode="r") as f:
-    data = json.load(f)
-__version__ = data["version"]
+from .version import __version__
