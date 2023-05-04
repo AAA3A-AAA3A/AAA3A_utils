@@ -1,11 +1,16 @@
 import setuptools
+import json
 
-with open("README.md", "r") as fh:
-    long_description = fh.read()
+with open("README.md", mode="r") as f:
+    long_description = f.read()
+
+with open("AAA3A_utils/version.json", mode="r") as f:
+    data = json.loads(f.read())
+version = data["version"]
 
 setuptools.setup(
     name="AAA3A_utils",
-    version="1.0.0",
+    version=version,
     author="AAA3A",
     author_email=None,
     description="Utils for AAA3A-cogs.",
@@ -19,4 +24,7 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires=">=3.8.1",
+    install_requires=[
+        "sentry_sdk",
+    ],
 )

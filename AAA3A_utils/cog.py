@@ -5,7 +5,9 @@ import typing  # isort:skip
 
 import asyncio
 import datetime
+import json
 import logging
+import os
 import re
 import traceback
 from uuid import uuid4
@@ -13,6 +15,10 @@ from uuid import uuid4
 from redbot.core.utils.chat_formatting import humanize_list, inline, warning
 
 from .context import Context, is_dev
+
+with open(os.path.join(os.path.dirname(__file__), "version.json"), mode="r") as f:
+    data = json.load(f)
+__version__ = data["version"]
 
 __all__ = ["Cog"]
 
@@ -104,7 +110,7 @@ class Cog(commands.Cog):
         """Thanks Simbad!"""
         text = super().format_help_for_context(ctx)
         s = "s" if len(self.__authors__) > 1 else ""
-        text = f"{text}\n\n**Author{s}**: {humanize_list(self.__authors__)}\n**Cog version**: {self.__version__}\n**Cog commit**: {self.__commit__}"
+        text = f"{text}\n\n**Author{s}**: {humanize_list(self.__authors__)}\n**Cog version**: {self.__version__}\n**Cog commit**: {self.__commit__}\n**Utils version**: {__version__}"
         if self.qualified_name not in ["AAA3A_utils"]:
             text += f"\n**Cog documentation**: https://aaa3a-cogs.readthedocs.io/en/latest/cog_{self.qualified_name.lower()}.html\n**Translate my cogs**: https://crowdin.com/project/aaa3a-cogs"
         return text
