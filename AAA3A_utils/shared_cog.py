@@ -101,12 +101,6 @@ class SharedCog(Cog, name="AAA3A_utils"):
         self.telemetrywithsentry.__is_dev__: bool = True
         self.getallfor.__is_dev__: bool = True
 
-        # For `[p]slash list` in Flame's PR in Red repo.
-        if getattr(self.AAA3A_utils, "app_command", None):
-            self.AAA3A_utils.app_command.module = ".".join(
-                self.AAA3A_utils.app_command.module.split(".")[1:]
-            )  # Add `AAA3A_utils` module to new `[p]slash list` in Flame's PR.
-
     async def cog_load(self) -> None:
         if self.sentry is None:
             self.sentry = SentryHelper(self)
