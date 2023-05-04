@@ -1,1 +1,1 @@
-include ./version.json
+include /version.json
