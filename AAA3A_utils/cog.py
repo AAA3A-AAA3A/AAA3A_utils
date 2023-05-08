@@ -138,8 +138,6 @@ class Cog(commands.Cog):
             for index, arg in enumerate(ctx.args.copy()):
                 if isinstance(arg, commands.Context):
                     ctx.args[index] = context
-            context._typing = context.channel.typing()
-            await context._typing.__aenter__()
         else:
             if context.command.__commands_is_hybrid__ and hasattr(context.command, "app_command"):
                 __do_call = getattr(context.command.app_command, "_do_call")
@@ -152,11 +150,11 @@ class Cog(commands.Cog):
                 await context.interaction.response.defer(ephemeral=False, thinking=True)
             except (discord.InteractionResponded, discord.NotFound):
                 pass
-            context._typing = context.channel.typing()
-            try:
-                await context._typing.__aenter__()
-            except discord.InteractionResponded:
-                pass
+        context._typing = context.channel.typing()
+        try:
+            await context._typing.__aenter__()
+        except discord.InteractionResponded:
+            pass
         return context
 
     async def cog_after_invoke(self, ctx: commands.Context) -> None:
@@ -198,11 +196,11 @@ class Cog(commands.Cog):
             if not no_sentry:
                 AAA3A_utils.sentry.last_errors[uuid] = {"ctx": ctx, "error": error}
             if isinstance(ctx.command, discord.ext.commands.HybridCommand):
-                if getattr(ctx, "interaction", None) is None:
+                if ctx.interaction is None:
                     _type = "[hybrid|text]"
                 else:
                     _type = "[hybrid|slash]"
-            elif getattr(ctx, "interaction", None) is not None:
+            elif ctx.interaction is not None:
                 _type = "[slash]"
             else:
                 _type = "[text]"
@@ -245,7 +243,7 @@ class Cog(commands.Cog):
         elif isinstance(error, commands.CheckFailure) and not isinstance(
             error, commands.BotMissingPermissions
         ):
-            if getattr(ctx, "interaction", None) is not None:
+            if ctx.interaction is not None:
                 await ctx.send(
                     inline("You are not allowed to execute this command in this context."),
                     ephemeral=True,

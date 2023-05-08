@@ -223,110 +223,108 @@ class SharedCog(Cog, name="AAA3A_utils"):
         e = self.sentry.last_errors.pop(error)
         event_id = await self.sentry.send_command_error(e["ctx"], e["error"], manually=True)
         await ctx.send(
-            _("The error was successfully sent with the event id `{event_id}`.").format(
+            _("The error was successfully sent with the event id `{event_id}`. With this way of sending errors, I can not contact you, even if this error can not be solved without specific instructions.").format(
                 event_id=event_id
             )
         )
 
-    if discord.version_info.major >= 2:
+    @commands.is_owner()
+    @AAA3A_utils.command()
+    async def flags(self, ctx: commands.Context, *, content: str) -> None:
+        """Use any command with flags."""
+        msg: discord.Message = ctx.message
+        msg.content = (
+            ctx.prefix
+            if ctx.prefix != "/"
+            else (await self.bot.get_valid_prefixes(guild=ctx.guild))[0]
+        ) + content
+        context: commands.Context = await ctx.bot.get_context(msg)
+        if context.command is None or not context.valid:
+            raise commands.UserFeedbackCheckFailure(_("This command doen't exist."))
+        command: commands.Command = context.command
 
-        @commands.is_owner()
-        @AAA3A_utils.command()
-        async def flags(self, ctx: commands.Context, *, content: str) -> None:
-            """Use any command with flags."""
-            msg: discord.Message = ctx.message
-            msg.content = (
-                ctx.prefix
-                if ctx.prefix != "/"
-                else (await self.bot.get_valid_prefixes(guild=ctx.guild))[0]
-            ) + content
-            context: commands.Context = await ctx.bot.get_context(msg)
-            if context.command is None or not context.valid:
-                raise commands.UserFeedbackCheckFailure(_("This command doen't exist."))
-            command: commands.Command = context.command
+        async def _parse_arguments():
+            context.args = [context] if command.cog is None else [command.cog, context]
+            context.kwargs = {}
+            view = context.view
+            iterator = iter(command.params.items())
+            params = {}
+            for name, param in iterator:
+                # if param.kind == param.POSITIONAL_ONLY:
+                context.current_parameter = param
+                params[name] = param
 
-            async def _parse_arguments():
-                context.args = [context] if command.cog is None else [command.cog, context]
-                context.kwargs = {}
-                view = context.view
-                iterator = iter(command.params.items())
-                params = {}
-                for name, param in iterator:
-                    # if param.kind == param.POSITIONAL_ONLY:
-                    context.current_parameter = param
-                    params[name] = param
+            class FlagsConverter(commands.FlagConverter, prefix="--", delimiter=" "):
+                pass
 
-                class FlagsConverter(commands.FlagConverter, prefix="--", delimiter=" "):
-                    pass
-
-                for name, param in params.items():
-                    flag = discord.ext.commands.flags.Flag(
-                        name=name,
-                        attribute=name,
-                        aliases=[],
-                        annotation=param.annotation,
-                        default=param.default
-                        if param.default != inspect._empty
-                        else discord.utils.MISSING,
-                        max_args=1,
-                        override=False,
-                    )
-                    FlagsConverter.__commands_flags__[name] = flag
-
-                keys = [re.escape(k) for k in FlagsConverter.__commands_flags__]
-                keys = sorted(keys, key=len, reverse=True)
-                joined = "|".join(keys)
-                prefix = FlagsConverter.__commands_flag_prefix__
-                delimiter = FlagsConverter.__commands_flag_delimiter__
-                regex_flags = re.IGNORECASE
-                pattern = re.compile(
-                    f"(({re.escape(prefix)})(?P<flag>{joined}){re.escape(delimiter)})", regex_flags
+            for name, param in params.items():
+                flag = discord.ext.commands.flags.Flag(
+                    name=name,
+                    attribute=name,
+                    aliases=[],
+                    annotation=param.annotation,
+                    default=param.default
+                    if param.default != inspect._empty
+                    else discord.utils.MISSING,
+                    max_args=1,
+                    override=False,
                 )
-                FlagsConverter.__commands_flag_regex__ = pattern
+                FlagsConverter.__commands_flags__[name] = flag
 
-                converter = FlagsConverter
-                param = discord.ext.commands.parameters.Parameter(
-                    name="Flags",
-                    kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                    annotation=converter,
-                )
-                result1 = await discord.ext.commands.converter.run_converters(
-                    context, converter, context.message.content[len(context.prefix) :], param
-                )
-                result2 = result1.get_flags()
-                context.kwargs = {
-                    name: getattr(result1, name, params[name].default) for name in result2.keys()
-                }
-                if not command.ignore_extra and not view.eof:
-                    raise commands.TooManyArguments(
-                        f"Too many arguments passed to {command.qualified_name}"
-                    )
+            keys = [re.escape(k) for k in FlagsConverter.__commands_flags__]
+            keys = sorted(keys, key=len, reverse=True)
+            joined = "|".join(keys)
+            prefix = FlagsConverter.__commands_flag_prefix__
+            delimiter = FlagsConverter.__commands_flag_delimiter__
+            regex_flags = re.IGNORECASE
+            pattern = re.compile(
+                f"(({re.escape(prefix)})(?P<flag>{joined}){re.escape(delimiter)})", regex_flags
+            )
+            FlagsConverter.__commands_flag_regex__ = pattern
 
-            # Copied from dpy.
-            if not command.enabled:
-                raise commands.DisabledCommand(f"{command.name} command is disabled.")
-            if not await self.can_run(context, change_permission_state=True):
-                raise commands.CheckFailure(
-                    f"The check functions for command {command.qualified_name} failed."
+            converter = FlagsConverter
+            param = discord.ext.commands.parameters.Parameter(
+                name="Flags",
+                kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                annotation=converter,
+            )
+            result1 = await discord.ext.commands.converter.run_converters(
+                context, converter, context.message.content[len(context.prefix) :], param
+            )
+            result2 = result1.get_flags()
+            context.kwargs = {
+                name: getattr(result1, name, params[name].default) for name in result2.keys()
+            }
+            if not command.ignore_extra and not view.eof:
+                raise commands.TooManyArguments(
+                    f"Too many arguments passed to {command.qualified_name}"
                 )
+
+        # Copied from dpy.
+        if not command.enabled:
+            raise commands.DisabledCommand(f"{command.name} command is disabled.")
+        if not await self.can_run(context, change_permission_state=True):
+            raise commands.CheckFailure(
+                f"The check functions for command {command.qualified_name} failed."
+            )
+        if command._max_concurrency is not None:
+            await command._max_concurrency.acquire(ctx)
+        try:
+            if command.cooldown_after_parsing:
+                await _parse_arguments()
+                command._prepare_cooldowns(ctx)
+            else:
+                command._prepare_cooldowns(ctx)
+                await _parse_arguments()
+            await command.call_before_hooks(ctx)
+        except Exception:
             if command._max_concurrency is not None:
-                await command._max_concurrency.acquire(ctx)
-            try:
-                if command.cooldown_after_parsing:
-                    await _parse_arguments()
-                    command._prepare_cooldowns(ctx)
-                else:
-                    command._prepare_cooldowns(ctx)
-                    await _parse_arguments()
-                await command.call_before_hooks(ctx)
-            except Exception:
-                if command._max_concurrency is not None:
-                    await command._max_concurrency.release(ctx)
-                raise
-            context.invoked_subcommand = None
-            context.subcommand_passed = None
-            injected = discord.ext.commands.core.hooked_wrapped_callback(command, context, command.callback)  # type: ignore
-            await injected(*context.args, **context.kwargs)
+                await command._max_concurrency.release(ctx)
+            raise
+        context.invoked_subcommand = None
+        context.subcommand_passed = None
+        injected = discord.ext.commands.core.hooked_wrapped_callback(command, context, command.callback)  # type: ignore
+        await injected(*context.args, **context.kwargs)
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx: commands.Context, error: commands.CommandError) -> None:

@@ -70,6 +70,8 @@ class CogsUtils:
                 if env_var in os.environ:
                     regex = re.compile(re.escape(os.environ[env_var]), re.I)
                     text = regex.sub(f"{{{env_var}}}", text)
+                    regex = re.compile(re.escape(os.environ[env_var].replace("\\", "\\\\")), re.I)
+                    text = regex.sub(f"{{{env_var}}}", text)
         else:
 
             class FakeDict(typing.Dict):
@@ -236,16 +238,25 @@ class CogsUtils:
             )
         if hasattr(self.cog, "log") and (isinstance(self.cog.log, (partial, logging.Logger))):
             return self.cog.log
+
         self.cog.log = logging.getLogger(f"red.{self.repo_name}.{self.cog.qualified_name}")
+        self.cog.logs: typing.Dict[
+            str,
+            typing.List[
+                typing.Dict[
+                    str,
+                    typing.Optional[
+                        typing.Union[datetime.datetime, int, str, typing.Tuple[typing.Any]]
+                    ],
+                ]
+            ],
+        ] = {}
 
         __log = partial(logging.Logger._log, self.cog.log)
 
         def _log(level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=1):
             if self.cog is not None:
-                if not hasattr(self.cog, "logs") or not isinstance(self.cog.logs, typing.Dict):
-                    self.cog.logs: typing.Dict[typing.Union[str, int], typing.Dict] = {}
                 from logging import CRITICAL, DEBUG, ERROR, FATAL, INFO, WARN, WARNING
-
                 VERBOSE = DEBUG - 3
                 TRACE = DEBUG - 5
                 levels = {
@@ -284,7 +295,7 @@ class CogsUtils:
 
         setattr(self.cog.log, "_log", _log)
 
-        # logging to a log file.
+        # Logging in a log file.
         # (File is automatically created by the module, if the parent foler exists.)
         try:
             cog_path = cog_data_path(cog_instance=self.cog, raw_name=self.cog.qualified_name)

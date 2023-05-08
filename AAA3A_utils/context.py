@@ -22,7 +22,7 @@ __all__ = ["Context"]
 #         Adding additional functionality to the context.
 #         """
 #         context = await ctx.bot.get_context(
-#             ctx.message if getattr(ctx, "interaction", None) is None else ctx.interaction, cls=cls
+#             ctx.message if ctx.interaction is None else ctx.interaction, cls=cls
 #         )
 #         context.original_context = ctx
 #         delattr(ctx, "original_context")

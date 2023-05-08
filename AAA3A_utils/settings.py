@@ -960,7 +960,7 @@ class Settings:
                             await data.set_raw(*self.global_path, value=config)
                 view.stop()
             elif interaction.data["custom_id"] == "Settings_ModalConfig_view":
-                await Menu(pages=str(config), leng="py").start(ctx)
+                await Menu(pages=str(config), lang="py").start(ctx)
             elif interaction.data["custom_id"].startswith("Settings_ModalConfig_configure_"):
                 inputs = three_l[int(interaction.data["custom_id"][31:])]
                 view_modal = Modal(
