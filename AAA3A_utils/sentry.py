@@ -156,11 +156,16 @@ class SentryHelper:
             message = f"Error in {_type} command '{ctx.command.qualified_name}'."
             with hub:
                 hub.add_breadcrumb(category="command", message=message)
+                hub.scope.set_extra("user_permissions", ctx.permissions)
+                hub.scope.set_extra("user_permissions_dict", dict(ctx.permissions))
+                hub.scope.set_extra("bot_permissions", ctx.bot_permissions)
+                hub.scope.set_extra("bot_permissions_dict", dict(ctx.bot_permissions))
                 try:
                     e = error.original  # type:ignore
                 except AttributeError:
                     e = error
                 event_id = hub.capture_exception(e)
+                hub.scope._extras = {}
             return event_id
         except Exception as e:
             if manually:
