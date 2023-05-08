@@ -11,7 +11,7 @@ import git
 from git import Repo
 
 # git -C %USERPROFILE%\Documents\GitHub\AAA3A_utils rev-list HEAD --count AAA3A_utils
-VERSION = 4.14
+VERSION = 4.15
 
 if VERSION is None:
     utils_repo_clone_location = Path(os.environ["USERPROFILE"] + "\\Documents\\GitHub\\AAA3A_utils_clone_for_sync")
@@ -94,5 +94,7 @@ for cog in cog_folders:
         with open(destination / "utils_version.json", "w") as fp:
             fp.write(json.dumps({"needed_utils_version": VERSION}))
 
-utils_repo.close()
-git.rmtree(utils_repo_clone_location)
+
+if VERSION is None:
+    utils_repo.close()
+    git.rmtree(utils_repo_clone_location)
