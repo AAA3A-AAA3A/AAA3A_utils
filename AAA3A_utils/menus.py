@@ -74,7 +74,7 @@ class Menu(discord.ui.View):
                 )
             )
         if lang is not None and all(isinstance(page, str) for page in self.pages):
-            self.pages: typing.List[str] = [box(page, lang) for page in self.pages]
+            self.pages: typing.List[str] = [box(page[:2000 - len(f"```{lang}\n\n```")], lang) for page in self.pages]
         if not isinstance(self.pages[0], (typing.Dict, discord.Embed, str)):
             raise RuntimeError("Pages must be of type typing.Dict, discord.Embed or str.")
 
