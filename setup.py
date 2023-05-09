@@ -1,14 +1,18 @@
-import setuptools
+import setuptools  # isort:skip
+
+import os
+import re
 
 with open("README.md", mode="r") as f:
     long_description = f.read()
 
-# from .AAA3A_utils.version import __version__  # doesn't work (ImportError: attempted relative import with no known parent package)
-__version__ = 1.0
+with open(os.path.join(os.path.join(os.path.dirname(__file__), "AAA3A_utils"), "version.py"), mode="r") as file:
+    content = file.read()
+__version__ = float(re.compile(r"__version__\s*=\s*(?P<version>\d+\.\d+)").search(content).groupdict()["version"])
 
 setuptools.setup(
     name="AAA3A_utils",
-    version=__version__,
+    version=str(__version__),
     author="AAA3A",
     author_email=None,
     description="Utils for AAA3A-cogs.",
