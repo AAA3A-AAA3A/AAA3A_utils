@@ -15,11 +15,10 @@ from io import StringIO
 from pathlib import Path
 
 import pip
-from redbot import version_info as red_version_info
+from redbot import data_manager, version_info as red_version_info
 from redbot.cogs.downloader.converters import InstalledCog
 from redbot.cogs.downloader.repo_manager import Repo
 from redbot.core._diagnoser import IssueDiagnoser
-from redbot.core.data_manager import basic_config, config_file, instance_name, storage_type
 from redbot.core.utils.chat_formatting import (
     bold,
     box,
@@ -491,10 +490,10 @@ class SharedCog(Cog, name="AAA3A_utils"):
             osver = f"{distro.name()} {distro.version()}".strip()
         else:
             osver = "Could not parse OS, report this on Github."
-        driver = storage_type()
-        data_path_original = Path(basic_config["DATA_PATH"])
+        driver = data_manager.storage_type()
+        data_path_original = data_manager.data_path()
         data_path = Path(self.cogsutils.replace_var_paths(str(data_path_original)))
-        _config_file = Path(self.cogsutils.replace_var_paths(str(config_file)))
+        _config_file = Path(self.cogsutils.replace_var_paths(str(data_manager.metadata_file())))
         python_executable = Path(self.cogsutils.replace_var_paths(str(python_executable)))
         disabled_intents = (
             ", ".join(
@@ -608,7 +607,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
         red_table = Table("Key", "Value", title="Red instance informations")
         red_table.add_row("Red version", str(redver))
         red_table.add_row("Discord.py version", str(dpy_version))
-        red_table.add_row("Instance name", str(instance_name))
+        red_table.add_row("Instance name", data_manager.instance_name())
         red_table.add_row("Storage type", str(driver))
         red_table.add_row("Disabled intents", str(disabled_intents))
         red_table.add_row("Data path", str(data_path))
