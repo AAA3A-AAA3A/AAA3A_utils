@@ -5,6 +5,7 @@ import typing  # isort:skip
 
 import asyncio
 import datetime
+import inspect
 import math
 import time
 import traceback
@@ -105,7 +106,7 @@ class Loop:
         now = datetime.datetime.now(datetime.timezone.utc)
         time = now.timestamp()
         time = math.ceil(time / self.interval) * self.interval
-        next_iteration = datetime.datetime.fromtimestamp(time) - now
+        next_iteration = datetime.datetime.fromtimestamp(time, tz=datetime.timezone.utc) - now
         seconds_to_sleep = (next_iteration).total_seconds()
         if self.interval > 60 and hasattr(self.cogsutils.cog, "log"):
             self.cogsutils.cog.log.debug(
@@ -184,7 +185,7 @@ class Loop:
         ) >= datetime.datetime.timestamp(self.limit_date):
             self.stop_all()
             return True
-        if self.limit_exception and self.iteration_exception >= self.limit_exception:
+        if self.limit_exception is not None and self.iteration_exception >= self.limit_exception:
             self.stop_all()
             return True
         return False
@@ -265,7 +266,7 @@ class Loop:
         )
 
     def get_debug_embed(self) -> discord.Embed:
-        """Get an embed with infomation on this loop."""
+        """Get an embed with many infomations on this loop."""
         now: datetime.datetime = datetime.datetime.now(datetime.timezone.utc)
 
         raw_table = Table("Key", "Value")
@@ -274,6 +275,7 @@ class Loop:
         raw_table.add_row("currently_running", str(self.currently_running))
         raw_table.add_row("last_iteration", str(self.last_iteration))
         raw_table.add_row("next_iteration", str(self.next_iteration))
+        raw_table.add_row("wait_raw", str(self.wait_raw))
         raw_table_str = no_colour_rich_markup(raw_table, lang="py")
 
         if self.next_iteration and self.last_iteration:
@@ -309,6 +311,18 @@ class Loop:
         )
         datetime_table_str = no_colour_rich_markup(datetime_table, lang="py")
 
+        function_table = Table("Key", "Value")
+        function_table.add_row("Function", repr(getattr(self.function, "__func__", self.function))[:-23] + ">")
+        function_table.add_row("Function parameters", repr(inspect.signature(self.function)))
+        function_table.add_row("Function kwargs", repr(self.function_kwargs))
+        function_table_str = no_colour_rich_markup(function_table, lang="py")
+
+        stopping_table = Table("Key", "Value")
+        stopping_table.add_row("Limit Count", str(self.limit_count))
+        stopping_table.add_row("Limit Date", str(self.limit_date))
+        stopping_table.add_row("Limit Exception", str(self.limit_exception))
+        stopping_table_str = no_colour_rich_markup(stopping_table, lang="py")
+
         emoji = "✅" if self.integrity else "❌"
         embed: discord.Embed = discord.Embed(title=f"{self.name} Loop: `{emoji}`")
         embed.color = 0x00D26A if self.integrity else 0xF92F60
@@ -322,6 +336,16 @@ class Loop:
         embed.add_field(
             name="DateTime data",
             value=datetime_table_str,
+            inline=False,
+        )
+        embed.add_field(
+            name="Function data",
+            value=function_table_str,
+            inline=False,
+        )
+        embed.add_field(
+            name="Stopping data",
+            value=stopping_table_str,
             inline=False,
         )
         exc = self.last_exc
