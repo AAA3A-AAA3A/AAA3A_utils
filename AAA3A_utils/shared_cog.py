@@ -7,6 +7,7 @@ import typing  # isort:skip
 import datetime
 import inspect
 import os
+import pip
 import platform
 import re
 import sys
@@ -14,8 +15,8 @@ import traceback
 from io import StringIO
 from pathlib import Path
 
-import pip
-from redbot import data_manager, version_info as red_version_info
+from redbot import version_info as red_version_info
+from redbot.core import data_manager
 from redbot.cogs.downloader.converters import InstalledCog
 from redbot.cogs.downloader.repo_manager import Repo
 from redbot.core._diagnoser import IssueDiagnoser
