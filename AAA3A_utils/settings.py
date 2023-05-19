@@ -551,7 +551,20 @@ class Settings:
                 _converter = self.settings[setting]["converter"]
                 self.commands_group.remove_command(name)
                 _help = self.settings[setting]["description"]
-                _help += f"\n\nDev: {repr(_converter)}"
+                if not self.use_profiles_system:
+                    default_value = self.config._defaults.get(self.group, {})
+                    for x in self.global_path:
+                        default_value = default_value.get(x, {})
+                else:
+                    default_value = self.config._defaults.get(self.group, {})
+                    for x in self.global_path[:-1]:
+                        default_value = default_value.get(x, {})
+                    default_value = default_value["default_profile_settings"]
+                for x in self.settings[setting]["path"]:
+                    default_value = default_value.get(x, {})
+                if default_value == {}:
+                    default_value = discord.utils.MISSING
+                _help += f"\n\nDefault value: {default_value}\nDev: {repr(_converter)}"
                 _usage = self.settings[setting]["usage"]
 
                 if not self.use_profiles_system:
