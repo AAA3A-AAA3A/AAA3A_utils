@@ -36,7 +36,7 @@ def _(untranslated: str) -> str:
 
 
 class CogsUtils:
-    """Tools for AAA3A-cogs!"""
+    """Utils for AAA3A-cogs!"""
 
     def __init__(
         self, cog: typing.Optional[commands.Cog] = None, bot: typing.Optional[Red] = None

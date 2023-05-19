@@ -69,7 +69,7 @@ class Context:
         return getattr(self.original_context, __name)
 
     def __setattr__(self, __name, __value) -> None:
-        if __name in ["original_context"]:
+        if __name == "original_context":
             return super().__setattr__(__name, __value)
         return self.original_context.__setattr__(__name, __value)
         # super().__setattr__(__name, __value)
@@ -96,7 +96,7 @@ class Context:
 
         """
         if reaction == commands.context.TICK:
-            if getattr(self, "interaction", None) is not None and self.len_messages == 0:
+            if self.interaction is not None and self.len_messages == 0:
                 message = "Done."
             elif not can_user_react_in(self.me, self.channel) and self.len_messages == 0:
                 message = "Done."

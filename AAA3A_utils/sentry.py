@@ -165,7 +165,7 @@ class SentryHelper:
                 except AttributeError:
                     e = error
                 event_id = hub.capture_exception(e)
-                hub.scope._extras = {}
+                hub.scope._extras.clear()
             return event_id
         except Exception as e:
             if manually:

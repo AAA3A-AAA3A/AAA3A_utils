@@ -131,10 +131,10 @@ class Cog(commands.Cog):
             view.index = previous
             if invoked_subcommand is not None or not ctx.command.invoke_without_command:
                 return
-        context = await Context.from_context(ctx)
+        context: commands.Context = await Context.from_context(ctx)
         if getattr(ctx.command, "__is_dev__", False):
             await unsupported(ctx)
-        if getattr(context, "interaction", None) is None:
+        if context.interaction is None:
             for index, arg in enumerate(ctx.args.copy()):
                 if isinstance(arg, commands.Context):
                     ctx.args[index] = context
@@ -162,14 +162,14 @@ class Cog(commands.Cog):
             ctx.invoked_subcommand is not None or not ctx.command.invoke_without_command
         ):
             return
-        context = await Context.from_context(ctx)
+        context: commands.Context = await Context.from_context(ctx)
         if (
             hasattr(context, "_typing")
             and hasattr(context._typing, "task")
             and hasattr(context._typing.task, "cancel")
         ):
             context._typing.task.cancel()
-        if not ctx.command_failed:
+        if not context.command_failed:
             await context.tick()
         else:
             await context.tick(reaction="❌")
@@ -196,10 +196,7 @@ class Cog(commands.Cog):
             if not no_sentry:
                 AAA3A_utils.sentry.last_errors[uuid] = {"ctx": ctx, "error": error}
             if isinstance(ctx.command, discord.ext.commands.HybridCommand):
-                if ctx.interaction is None:
-                    _type = "[hybrid|text]"
-                else:
-                    _type = "[hybrid|slash]"
+                _type = "[hybrid|text]" if ctx.interaction is None else "[hybrid|slash]"
             elif ctx.interaction is not None:
                 _type = "[slash]"
             else:

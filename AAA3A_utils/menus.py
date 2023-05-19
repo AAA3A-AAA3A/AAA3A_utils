@@ -104,7 +104,7 @@ class Menu(discord.ui.View):
         self._current_page: int = page_start
         self._is_done = asyncio.Event()
 
-    async def start(self, ctx: commands.Context) -> None:
+    async def start(self, ctx: commands.Context, wait: bool = True) -> None:
         """
         Used to start the menu displaying the first page requested.
         Parameters
@@ -130,7 +130,12 @@ class Menu(discord.ui.View):
             await self.change_page()
         for page in self.pages:
             if isinstance(page, typing.Dict) and "file" in page:
-                del page["file"]
+                if "file" in page:
+                    page["attachments"] = [page.pop("file")]
+                elif "files" in page:
+                    page["attachments"] = page.pop("files")
+        if wait:
+            await self._is_done.wait()
         return self._message
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
