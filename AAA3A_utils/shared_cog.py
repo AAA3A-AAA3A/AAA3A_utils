@@ -4,6 +4,7 @@ from redbot.core import Config  # isort:skip
 import discord  # isort:skip
 import typing  # isort:skip
 
+import aiohttp
 import datetime
 import inspect
 import os
@@ -98,12 +99,20 @@ class SharedCog(Cog, name="AAA3A_utils"):
         self.cogsutils = CogsUtils(cog=self)
         self.sentry: SentryHelper = None
 
+        self._session: aiohttp.ClientSession = None
+
         self.telemetrywithsentry.__is_dev__: bool = True
         self.getallfor.__is_dev__: bool = True
 
     async def cog_load(self) -> None:
         if self.sentry is None:
             self.sentry = SentryHelper(self)
+        self._session: aiohttp.ClientSession = aiohttp.ClientSession()
+
+    async def cog_unload(self) -> None:
+        if self._session is not None:
+            await self._session.close()
+        await super().cog_unload()
 
     @commands.is_owner()
     @commands.hybrid_group(name="aaa3a_utils", aliases=["AAA3A_utils"], hidden=True)

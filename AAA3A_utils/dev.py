@@ -19,6 +19,7 @@ import time
 import traceback
 from functools import partial
 from io import StringIO
+from types import MethodType
 
 import aiohttp
 import redbot
@@ -364,7 +365,7 @@ class DevEnv(typing.Dict[str, typing.Any]):
                 "os": lambda ctx: os,
                 "sys": lambda ctx: sys,
                 # Aiohttp
-                "session": lambda ctx: aiohttp.ClientSession(),
+                "session": lambda ctx: ctx.bot.get_cog("AAA3A_utils")._session if ctx.bot.get_cog("AAA3A_utils") is not None else None,
                 "get_url": lambda ctx: get_url,
                 # Search attr
                 "get": lambda ctx: get,
@@ -446,7 +447,7 @@ class DevEnv(typing.Dict[str, typing.Any]):
         raw_table_str = no_colour_rich_markup(raw_table, lang="py")
         raw_table_str = self.sanitize_output(self.get("ctx", ctx), raw_table_str)
         pages = []
-        for page in pagify(raw_table_str, page_length=2000 - 10):
+        for page in pagify(raw_table_str, shorten_by=10):
             page = "\n".join(page.split("\n")[1:-1])
             pages.append(box(page, "py"))
         if ctx is not None:
@@ -541,10 +542,8 @@ class DevEnv(typing.Dict[str, typing.Any]):
                 setattr(cog, "sanitize_output", self.sanitize_output)
             elif hasattr(redbot.core.dev_commands, "sanitize_output"):
                 setattr(redbot.core.dev_commands, "sanitize_output", self.sanitize_output)
-            c = Cog(None)
-            c.cog = cog
-            setattr(cog, "cog_before_invoke", c.cog_before_invoke)
-            setattr(cog, "cog_after_invoke", c.cog_after_invoke)
+            setattr(cog, "cog_before_invoke", MethodType(Cog.cog_before_invoke, cog))
+            setattr(cog, "cog_after_invoke", MethodType(Cog.cog_after_invoke, cog))
         if cog.qualified_name == "RTFS":
             try:
                 from rtfs import rtfs
