@@ -59,9 +59,7 @@ class Menu(discord.ui.View):
             self.disabled_controls: typing.List[str] = ["send_as_file", "choose_page"]
         self.extra_items: typing.List[discord.ui.Item] = []
         self.members: typing.Optional[typing.List[int]] = (
-            members
-            if members is None
-            else [getattr(member, "id", member) for member in members]
+            members if members is None else [getattr(member, "id", member) for member in members]
         )
         self.ephemeral: bool = ephemeral
         if not self.pages:
@@ -70,11 +68,15 @@ class Menu(discord.ui.View):
             self.pages: typing.List[str] = list(
                 pagify(
                     self.pages,
-                    shorten_by=len(f"```{lang}\n\n```") if lang is not None else 8,  # 8 is default.
+                    shorten_by=len(f"```{lang}\n\n```")
+                    if lang is not None
+                    else 8,  # 8 is default.
                 )
             )
         if lang is not None and all(isinstance(page, str) for page in self.pages):
-            self.pages: typing.List[str] = [box(page[:2000 - len(f"```{lang}\n\n```")], lang) for page in self.pages]
+            self.pages: typing.List[str] = [
+                box(page[: 2000 - len(f"```{lang}\n\n```")], lang) for page in self.pages
+            ]
         if not isinstance(self.pages[0], (typing.Dict, discord.Embed, str)):
             raise RuntimeError("Pages must be of type typing.Dict, discord.Embed or str.")
 
@@ -150,7 +152,9 @@ class Menu(discord.ui.View):
         if not self.delete_after_timeout:
             for child in self.children:
                 child: discord.ui.Item
-                if hasattr(child, "disabled") and not (isinstance(child, discord.ui.Button) and child.style == discord.ButtonStyle.url):
+                if hasattr(child, "disabled") and not (
+                    isinstance(child, discord.ui.Button) and child.style == discord.ButtonStyle.url
+                ):
                     child.disabled = True
             try:
                 await self._message.edit(view=self)
@@ -214,7 +218,9 @@ class Menu(discord.ui.View):
         await self.change_page(interaction)
 
     @discord.ui.button(emoji="✖️", style=discord.ButtonStyle.danger, custom_id="close_page")
-    async def close_page(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+    async def close_page(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ) -> None:
         await interaction.response.defer()
         try:
             await self._message.delete()
@@ -229,7 +235,9 @@ class Menu(discord.ui.View):
         await self.change_page(interaction)
 
     @discord.ui.button(emoji="⏭️", custom_id="right_page")
-    async def right_page(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+    async def right_page(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ) -> None:
         self._current_page = self._source.get_max_pages() - 1
         await self.change_page(interaction)
 
@@ -260,7 +268,8 @@ class Menu(discord.ui.View):
                 plural = "s"
                 is_are = "are"
             query = await self.ctx.send(
-                f"There {is_are} still {n_remaining} message{plural} remaining. Type `more` to continue."
+                f"There {is_are} still {n_remaining} message{plural} remaining. Type `more` to"
+                " continue."
             )
             try:
                 resp = await self.ctx.bot.wait_for(
@@ -286,7 +295,9 @@ class Menu(discord.ui.View):
         return ret
 
     @discord.ui.button(emoji="💾", custom_id="send_as_file")
-    async def send_as_file(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+    async def send_as_file(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ) -> None:
         def cleanup_code(content):
             """Automatically removes code blocks from the code."""
             # remove ˋˋˋpy\n````
@@ -305,7 +316,9 @@ class Menu(discord.ui.View):
         )
 
     @discord.ui.button(label="Page 1/1", custom_id="choose_page")
-    async def choose_page(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+    async def choose_page(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ) -> None:
         class ChoosePageModal(discord.ui.Modal):
             def __init__(_self):
                 super().__init__(title="Choose page")
@@ -368,6 +381,7 @@ class Menu(discord.ui.View):
             ],
         ) -> typing.Union[str, discord.Embed]:
             return page
+
 
 class Reactions:
     """Create Reactions easily."""

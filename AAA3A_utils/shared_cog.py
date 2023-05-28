@@ -4,11 +4,9 @@ from redbot.core import Config  # isort:skip
 import discord  # isort:skip
 import typing  # isort:skip
 
-import aiohttp
 import datetime
 import inspect
 import os
-import pip
 import platform
 import re
 import sys
@@ -16,10 +14,12 @@ import traceback
 from io import StringIO
 from pathlib import Path
 
+import aiohttp
+import pip
 from redbot import version_info as red_version_info
-from redbot.core import data_manager
 from redbot.cogs.downloader.converters import InstalledCog
 from redbot.cogs.downloader.repo_manager import Repo
+from redbot.core import data_manager
 from redbot.core._diagnoser import IssueDiagnoser
 from redbot.core.utils.chat_formatting import (
     bold,
@@ -122,9 +122,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
 
     @commands.is_owner()
     @AAA3A_utils.command()
-    async def getlogs(
-        self, ctx: commands.Context, cog: str, level: str = "all"
-    ) -> None:
+    async def getlogs(self, ctx: commands.Context, cog: str, level: str = "all") -> None:
         """Get logs for a cog from AAA3A-cogs"""
         cog = ctx.bot.get_cog(cog)
         if cog is None:
@@ -232,9 +230,11 @@ class SharedCog(Cog, name="AAA3A_utils"):
         e = self.sentry.last_errors.pop(error)
         event_id = await self.sentry.send_command_error(e["ctx"], e["error"], manually=True)
         await ctx.send(
-            _("The error was successfully sent with the event id `{event_id}`. With this way of sending errors, I can not contact you, even if this error can not be solved without specific instructions.").format(
-                event_id=event_id
-            )
+            _(
+                "The error was successfully sent with the event id `{event_id}`. With this way of"
+                " sending errors, I can not contact you, even if this error can not be solved"
+                " without specific instructions."
+            ).format(event_id=event_id)
         )
 
     @commands.is_owner()
@@ -430,7 +430,8 @@ class SharedCog(Cog, name="AAA3A_utils"):
             if self.cogsutils.ConfirmationAsk(
                 ctx,
                 _(
-                    "The Downloader cog cog is not loaded. I can't continue. Do you want me to do it?"
+                    "The Downloader cog cog is not loaded. I can't continue. Do you want me to"
+                    " do it?"
                 ),
             ):
                 await ctx.invoke(ctx.bot.get_command("load"), "downloader")
@@ -552,7 +553,10 @@ class SharedCog(Cog, name="AAA3A_utils"):
         def get_cooldowns(command):
             cooldowns = []
             if s := command._buckets._cooldown:
-                txt = f"{s.rate} time{'s' if s.rate>1 else ''} in {humanize_timedelta(seconds=s.per)}"
+                txt = (
+                    f"{s.rate} time{'s' if s.rate>1 else ''} in"
+                    f" {humanize_timedelta(seconds=s.per)}"
+                )
                 try:
                     txt += f" per {s.type.name.capitalize()}"
                 # This is to avoid custom bucketype erroring out stuff (eg:licenseinfo)

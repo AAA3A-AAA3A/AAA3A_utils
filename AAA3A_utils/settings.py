@@ -142,7 +142,8 @@ class CustomMessageConverter(commands.Converter, dict):
             if length > 6000:
                 raise commands.BadArgument(
                     _(
-                        "Embed size exceeds Discord limit of 6000 characters, provided one of {length}."
+                        "Embed size exceeds Discord limit of 6000 characters, provided one of"
+                        " {length}."
                     ).format(length=length)
                 )
             kwargs["embed"] = embed
@@ -318,7 +319,10 @@ class Settings:
                 label = settings[setting]["label"]
                 settings[setting]["description"] = f"Set `{label}`."
             if "usage" not in settings[setting]:
-                if settings[setting]["converter"] in discord.ext.commands.converter.CONVERTER_MAPPING:
+                if (
+                    settings[setting]["converter"]
+                    in discord.ext.commands.converter.CONVERTER_MAPPING
+                ):
                     x = settings[setting]["converter"].__name__.replace(" ", "_")
                     usage = x[0]
                     for y in x[1:]:
@@ -342,7 +346,6 @@ class Settings:
         self.settings: typing.Dict[str, typing.Dict[str, typing.Any]] = settings
 
     async def add_commands(self, force: typing.Optional[bool] = False) -> None:
-
         if not isinstance(self.commands_group, commands.Group):
             name = "set" + (
                 self.commands_group
@@ -584,9 +587,8 @@ class Settings:
                         await self.command(ctx, key=None, value=value, profile=profile)
 
                 command.__qualname__ = f"{self.cog.qualified_name}.settings_{name}"
-                if (
-                    self.settings[setting]["no_slash"]
-                    and isinstance(self.commands_group, commands.HybridGroup)
+                if self.settings[setting]["no_slash"] and isinstance(
+                    self.commands_group, commands.HybridGroup
                 ):
                     command: commands.Command = self.commands_group.command(
                         name=name,
@@ -622,7 +624,10 @@ class Settings:
                 self.commands[f"{name}"] = command
 
         if self.group != Config.GLOBAL:
-            self.rpc_callback_settings.__dashboard_decorator_params__[1]["context_ids"] = ["guild_id", f"{self.group.lower()}_id"]
+            self.rpc_callback_settings.__dashboard_decorator_params__[1]["context_ids"] = [
+                "guild_id",
+                f"{self.group.lower()}_id",
+            ]
         setattr(self.cog, "rpc_callback_settings", self.rpc_callback_settings)
         self.commands_added.set()
 
@@ -718,7 +723,9 @@ class Settings:
             embed.title = _("Do you really want to remove this profile?")
             if self.cog.qualified_name == "TicketTool":
                 embed.description = _(
-                    "All tickets associated with this profile will be removed from the Config, but the channels will still exist. Commands related to the tickets will no longer work."
+                    "All tickets associated with this profile will be removed from the Config, but"
+                    " the channels will still exist. Commands related to the tickets will no"
+                    " longer work."
                 )
             embed.color = 0xF00020
             response = await self.cog.cogsutils.ConfirmationAsk(ctx, embed=embed)
@@ -774,7 +781,10 @@ class Settings:
                         for message_id in guilds_data[guild]["dropdowns"]:
                             if "profile" not in guilds_data[guild]["dropdowns"][message_id]:
                                 continue
-                            if guilds_data[guild]["dropdowns"][message_id]["profile"] != old_profile:
+                            if (
+                                guilds_data[guild]["dropdowns"][message_id]["profile"]
+                                != old_profile
+                            ):
                                 continue
                             guilds_data[guild]["dropdowns"][message_id]["profile"] = profile
 
@@ -811,7 +821,8 @@ class Settings:
             elif self.group == Config.USER:
                 _object = ctx.author
         message = (
-            f"---------- {self.cog.qualified_name}'s Settings for `{profile}` profile ----------\n```\n\n```py\n"
+            f"---------- {self.cog.qualified_name}'s Settings for `{profile}` profile"
+            " ----------\n```\n\n```py\n"
             if self.use_profiles_system
             else f"---------- {self.cog.qualified_name}'s Settings ----------\n```\n\n```py\n"
         )
@@ -827,11 +838,9 @@ class Settings:
                     value.replace("_", " ").title().replace(" ", ""),
                     repr(values[value]["default"]),
                     repr(values[value]["value"]),
-                    (
-                        "|".join(
-                            f'"{v}"' if isinstance(v, str) else str(v)
-                            for v in self.settings[value]["converter"].__args__
-                        )
+                    "|".join(
+                        f'"{v}"' if isinstance(v, str) else str(v)
+                        for v in self.settings[value]["converter"].__args__
                     )
                     if self.settings[value]["converter"] is typing.Literal
                     else getattr(self.settings[value]["converter"], "__name__", ""),
@@ -843,11 +852,9 @@ class Settings:
                     value.replace("_", " ").title().replace(" ", ""),
                     repr(values[value]["default"]),
                     repr(values[value]["value"]),
-                    (
-                        "|".join(
-                            f'"{v}"' if isinstance(v, str) else str(v)
-                            for v in self.settings[value]["converter"].__args__
-                        )
+                    "|".join(
+                        f'"{v}"' if isinstance(v, str) else str(v)
+                        for v in self.settings[value]["converter"].__args__
                     )
                     if self.settings[value]["converter"] is typing.Literal
                     else getattr(self.settings[value]["converter"], "__name__", ""),
@@ -933,7 +940,8 @@ class Settings:
                     )
                 except discord.ext.commands.errors.CommandError as e:
                     await ctx.send(
-                        f"An error occurred when using the `{_input.label}` converter:\n{box(e, lang='py')}"
+                        f"An error occurred when using the `{_input.label}`"
+                        f" converter:\n{box(e, lang='py')}"
                     )
                     return None
                 if (
@@ -964,7 +972,8 @@ class Settings:
                 if not confirmation:
                     embed: discord.Embed = discord.Embed()
                     embed.title = _(
-                        "⚙️ Do you want to replace the entire Config of {cog.qualified_name} with what you specified?"
+                        "⚙️ Do you want to replace the entire Config of {cog.qualified_name} with"
+                        " what you specified?"
                     ).format(cog=self.cog)
                     if await self.cog.cogsutils.ConfirmationAsk(ctx, embed=embed):
                         if self.use_profiles_system:
@@ -984,18 +993,11 @@ class Settings:
                                 self.settings[setting]["label"]
                                 + " ("
                                 + (
-                                    (
-                                        "|".join(
-                                            f'"{v}"'
-                                            if isinstance(v, str)
-                                            else str(v)
-                                            for v in self.settings[setting][
-                                                "converter"
-                                            ].__args__
-                                        )
+                                    "|".join(
+                                        f'"{v}"' if isinstance(v, str) else str(v)
+                                        for v in self.settings[setting]["converter"].__args__
                                     )
-                                    if self.settings[setting]["converter"]
-                                    is typing.Literal
+                                    if self.settings[setting]["converter"] is typing.Literal
                                     else getattr(
                                         self.settings[setting]["converter"],
                                         "__name__",
@@ -1012,8 +1014,7 @@ class Settings:
                                 is not CustomMessageConverter
                                 else json.dumps(values[setting]["value"])
                             )
-                            if str(values[setting]["value"])
-                            != str(values[setting]["default"])
+                            if str(values[setting]["value"]) != str(values[setting]["default"])
                             else None,
                             "required": False,
                             "custom_id": f"Settings_ModalConfig_{setting}",
@@ -1096,7 +1097,10 @@ class Settings:
             )
             context.__dashboard_fake__ = True
             if not await self.commands_group.can_run(context):
-                return {"status": 1, "error_message": "You are not allowed to access these settings."}
+                return {
+                    "status": 1,
+                    "error_message": "You are not allowed to access these settings.",
+                }
         else:
             context = await self.cog.cogsutils.invoke_command(
                 author=user,
@@ -1203,11 +1207,9 @@ class Settings:
                         self.settings[setting]["label"]
                         + " ("
                         + (
-                            (
-                                "|".join(
-                                    f'"{v}"' if isinstance(v, str) else str(v)
-                                    for v in self.settings[setting]["converter"].__args__
-                                )
+                            "|".join(
+                                f'"{v}"' if isinstance(v, str) else str(v)
+                                for v in self.settings[setting]["converter"].__args__
                             )
                             if self.settings[setting]["converter"] is typing.Literal
                             else getattr(
@@ -1225,8 +1227,7 @@ class Settings:
                 if str(values[setting]["value"]) != str(values[setting]["default"]):
                     field["value"] = (
                         str(values[setting]["value"])
-                        if self.settings[setting]["converter"]
-                        is not CustomMessageConverter
+                        if self.settings[setting]["converter"] is not CustomMessageConverter
                         else json.dumps(values[setting]["value"])
                     )
                 # field["required"] = False

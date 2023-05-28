@@ -42,7 +42,6 @@ except ImportError:
     SentryHelper = None
 from .settings import Settings
 from .shared_cog import SharedCog
-
 from .views import (
     Buttons,
     ChannelSelect,
@@ -365,7 +364,9 @@ class DevEnv(typing.Dict[str, typing.Any]):
                 "os": lambda ctx: os,
                 "sys": lambda ctx: sys,
                 # Aiohttp
-                "session": lambda ctx: ctx.bot.get_cog("AAA3A_utils")._session if ctx.bot.get_cog("AAA3A_utils") is not None else None,
+                "session": lambda ctx: ctx.bot.get_cog("AAA3A_utils")._session
+                if ctx.bot.get_cog("AAA3A_utils") is not None
+                else None,
                 "get_url": lambda ctx: get_url,
                 # Search attr
                 "get": lambda ctx: get,
@@ -556,7 +557,8 @@ class DevEnv(typing.Dict[str, typing.Any]):
                                     return CogsUtils().replace_var_paths(self.header)
                                 return {}
                             return CogsUtils().replace_var_paths(
-                                f"{self.header}\n{box(page, lang='py')}\nPage {menu.current_page + 1} / {self.get_max_pages()}"
+                                f"{self.header}\n{box(page, lang='py')}\nPage"
+                                f" {menu.current_page + 1} / {self.get_max_pages()}"
                             )
                         except Exception as e:
                             # since d.py menus likes to suppress all errors

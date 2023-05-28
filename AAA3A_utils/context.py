@@ -3,10 +3,9 @@ from redbot.core.bot import Red  # isort:skip
 import discord  # isort:skip
 import typing  # isort:skip
 
-from .menus import Menu
-
 from redbot.core.utils import can_user_react_in
 
+from .menus import Menu
 
 __all__ = ["Context"]
 

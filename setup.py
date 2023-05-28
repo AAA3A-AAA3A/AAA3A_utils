@@ -6,9 +6,13 @@ import re
 with open("README.md", mode="r") as f:
     long_description = f.read()
 
-with open(os.path.join(os.path.join(os.path.dirname(__file__), "AAA3A_utils"), "version.py"), mode="r") as file:
+with open(
+    os.path.join(os.path.join(os.path.dirname(__file__), "AAA3A_utils"), "version.py"), mode="r"
+) as file:
     content = file.read()
-__version__ = float(re.compile(r"__version__\s*=\s*(?P<version>\d+\.\d+)").search(content).groupdict()["version"])
+__version__ = float(
+    re.compile(r"__version__\s*=\s*(?P<version>\d+\.\d+)").search(content).groupdict()["version"]
+)
 
 setuptools.setup(
     name="AAA3A_utils",

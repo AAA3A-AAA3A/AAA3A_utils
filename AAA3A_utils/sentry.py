@@ -51,24 +51,36 @@ def _(untranslated: str) -> str:
 
 
 SENTRY_MASTER_MSG = _(
-    "Hey there! This looks like the first time you're using AAA3A's cogs (or you just updated to "
-    "a version which supports this). To help make this cog, and all my others, as good "
-    "and bug-free as possible, I have **opt-in** telemetry and error reporting __which affects "
-    "all of my (github.com/AAA3A-AAA3A's) cogs__ on the AAA3A-cogs repository, using Sentry. The "
-    "telemetry consists of data on the cog release and performance data of backgroup tasks and "
-    "loops (if applicable), and error reporting means that if something goes wrong the error and "
-    "some associated data will be automatically sent to me so I can fix it quickly.\n\nA best "
-    "effort is made to ensure no sensitive data is transmitted. For more information, including "
-    "some technical details, visit <https://aaa3a-cogs.readthedocs.io/en/latest/repo_telemetry.html>\n\n"
-    "**If you would like to opt-in to telemetry and error reporting, and help me develop my cogs, "
-    "run the command `[p]AAA3A_utils telemetrywithsentry True`. `[p]` is your prefix.**\nNo data is collected "
-    "relating to command usage."
+    "Hey there! This looks like the first time you're using AAA3A's cogs (or you just updated to a"
+    " version which supports this). To help make this cog, and all my others, as good and bug-free"
+    " as possible, I have **opt-in** telemetry and error reporting __which affects all of my"
+    " (github.com/AAA3A-AAA3A's) cogs__ on the AAA3A-cogs repository, using Sentry. The telemetry"
+    " consists of data on the cog release and performance data of backgroup tasks and loops (if"
+    " applicable), and error reporting means that if something goes wrong the error and some"
+    " associated data will be automatically sent to me so I can fix it quickly.\n\nA best effort"
+    " is made to ensure no sensitive data is transmitted. For more information, including some"
+    " technical details, visit"
+    " <https://aaa3a-cogs.readthedocs.io/en/latest/repo_telemetry.html>\n\n**If you would like to"
+    " opt-in to telemetry and error reporting, and help me develop my cogs, run the command"
+    " `[p]AAA3A_utils telemetrywithsentry True`. `[p]` is your prefix.**\nNo data is collected"
+    " relating to command usage."
 )
 SENTRY_REMINDER_ON = _(
-    "Hey there! You just installed AAA3A's {} cog. This is a reminder that you previously enabled telemetry and error reporting, which applies to all of my cogs, and this one is no different.\n\nI would like to emphasise again that a best effort it made to remove sensitive data. You can see <https://aaa3a-cogs.readthedocs.io/en/latest/repo_telemetry.html> for more details and change your choice at any time with the `[p]AAA3A_utils telemetrywithsentry False` command, applying to all my cogs."
+    "Hey there! You just installed AAA3A's {} cog. This is a reminder that you previously enabled"
+    " telemetry and error reporting, which applies to all of my cogs, and this one is no"
+    " different.\n\nI would like to emphasise again that a best effort it made to remove sensitive"
+    " data. You can see <https://aaa3a-cogs.readthedocs.io/en/latest/repo_telemetry.html> for more"
+    " details and change your choice at any time with the `[p]AAA3A_utils telemetrywithsentry"
+    " False` command, applying to all my cogs."
 )
 SENTRY_REMINDER_OFF = _(
-    "Hey there! You just installed AAA3A's {} cog. This is a reminder that you previously chose not to enable telemetry and error reporting, which is also available in this cog. I hope you don't mind this reminder.\n\nI would like to emphasise again that a best effort it made to remove sensitive data. You can see <https://aaa3a-cogs.readthedocs.io/en/latest/repo_telemetry.html> for more details and change your choice at any time with the `[p]AAA3A_utils telemetrywithsentry True` command, applying to all my cogs."
+    "Hey there! You just installed AAA3A's {} cog. This is a reminder that you previously chose"
+    " not to enable telemetry and error reporting, which is also available in this cog. I hope you"
+    " don't mind this reminder.\n\nI would like to emphasise again that a best effort it made to"
+    " remove sensitive data. You can see"
+    " <https://aaa3a-cogs.readthedocs.io/en/latest/repo_telemetry.html> for more details and"
+    " change your choice at any time with the `[p]AAA3A_utils telemetrywithsentry True` command,"
+    " applying to all my cogs."
 )
 
 __all__ = ["SentryHelper"]
@@ -238,9 +250,7 @@ class SentryHelper:
                 }
             elif isinstance(d, typing.List):
                 return [
-                    self.cogsutils.replace_var_paths(
-                        regex_stuff(recursive_replace(i, token))
-                    )
+                    self.cogsutils.replace_var_paths(regex_stuff(recursive_replace(i, token)))
                     if isinstance(i, str)
                     else recursive_replace(i, token)
                     for i in d
@@ -299,7 +309,9 @@ class SentryHelper:
             traces_sample_rate=0.005,
             before_send=self.remove_sensitive_data,
             before_breadcrumb=self.remove_sensitive_data,
-            release=f"AAA3A-cogs|{cog.qualified_name}@{getattr(cog, '__version__', 1.0)}|{getattr(cog, '__commit__', '')}",
+            release=(
+                f"AAA3A-cogs|{cog.qualified_name}@{getattr(cog, '__version__', 1.0)}|{getattr(cog, '__commit__', '')}"
+            ),
             debug=False,
             max_breadcrumbs=25,
             server_name="[EXPUNGED]",

@@ -80,7 +80,6 @@ async def unsupported(ctx: commands.Context) -> None:
 
 
 class Cog(commands.Cog):
-
     __authors__: typing.List[str] = ["AAA3A"]
     __version__: float = 1.0
     __commit__: str = ""
@@ -105,9 +104,17 @@ class Cog(commands.Cog):
         """Thanks Simbad!"""
         text = super().format_help_for_context(ctx)
         s = "s" if len(self.__authors__) > 1 else ""
-        text = f"{text}\n\n**Author{s}**: {humanize_list(self.__authors__)}\n**Cog version**: {self.__version__}\n**Cog commit**: {self.__commit__}\n**Utils version**: {__version__}"
+        text = (
+            f"{text}\n\n**Author{s}**: {humanize_list(self.__authors__)}\n**Cog version**:"
+            f" {self.__version__}\n**Cog commit**: {self.__commit__}\n**Utils version**:"
+            f" {__version__}"
+        )
         if self.qualified_name not in ["AAA3A_utils"]:
-            text += f"\n**Cog documentation**: https://aaa3a-cogs.readthedocs.io/en/latest/cog_{self.qualified_name.lower()}.html\n**Translate my cogs**: https://crowdin.com/project/aaa3a-cogs"
+            text += (
+                "\n**Cog documentation**:"
+                f" https://aaa3a-cogs.readthedocs.io/en/latest/cog_{self.qualified_name.lower()}.html\n**Translate"
+                " my cogs**: https://crowdin.com/project/aaa3a-cogs"
+            )
         return text
 
     async def red_delete_data_for_user(self, *args, **kwargs) -> None:
@@ -185,7 +192,9 @@ class Cog(commands.Cog):
         is_command_error = isinstance(
             error, (commands.CommandInvokeError, commands.HybridCommandError)
         )
-        if is_command_error and isinstance(error.original, discord.Forbidden):  # Error can be changed into `commands.BotMissingPermissions` or not.
+        if is_command_error and isinstance(
+            error.original, discord.Forbidden
+        ):  # Error can be changed into `commands.BotMissingPermissions` or not.
             e = verbose_forbidden_exception(ctx, error.original)
             if e is not None and isinstance(e, commands.BotMissingPermissions):
                 error = e
@@ -205,7 +214,10 @@ class Cog(commands.Cog):
             if not message:
                 message = f"Error in {_type} command '{ctx.command.qualified_name}'."
                 if ctx.author.id in ctx.bot.owner_ids:
-                    message += " Check your console or logs for details. If necessary, please inform the creator of the cog in which this command is located. Thank you."
+                    message += (
+                        " Check your console or logs for details. If necessary, please inform the"
+                        " creator of the cog in which this command is located. Thank you."
+                    )
                 message = inline(message)
             else:
                 message = message.replace("{command}", ctx.command.qualified_name)
@@ -216,7 +228,8 @@ class Cog(commands.Cog):
                 and not getattr(AAA3A_utils.senderrorwithsentry, "__is_dev__", False)
             ):
                 message += "\n" + inline(
-                    f"You can send this error to the developer by running the following command:\n{ctx.prefix}AAA3A_utils senderrorwithsentry {uuid}"
+                    "You can send this error to the developer by running the following"
+                    f" command:\n{ctx.prefix}AAA3A_utils senderrorwithsentry {uuid}"
                 )
             await ctx.send(message)
             asyncio.create_task(ctx.bot._delete_delay(ctx))
@@ -254,7 +267,7 @@ def verbose_forbidden_exception(ctx: commands.Context, error: discord.Forbidden)
         return ValueError(error)
     method = error.response.request_info.method
     url = str(error.response.request_info.url)
-    url = url[len(discord.http.Route.BASE):]
+    url = url[len(discord.http.Route.BASE) :]
     url = url.split("?")[0]
     url = re.sub(r"\b\d{17,20}\b", "{snowflake}", url)
     key = f"{method.upper()} {url}"

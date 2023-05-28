@@ -11,7 +11,6 @@ except ImportError:
     SentryHelper = None
 from .settings import Settings
 from .shared_cog import SharedCog
-
 from .views import (
     Buttons,
     ChannelSelect,

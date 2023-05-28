@@ -79,9 +79,7 @@ class Loop:
         self.limit_exception: int = limit_exception
         self.stop_manually: bool = False
 
-        self.start_datetime: datetime.datetime = datetime.datetime.now(
-            datetime.timezone.utc
-        )
+        self.start_datetime: datetime.datetime = datetime.datetime.now(datetime.timezone.utc)
         self.expected_interval = datetime.timedelta(seconds=self.interval)
         self.last_iteration: typing.Optional[datetime.datetime] = None
         self.next_iteration: typing.Optional[datetime.datetime] = None
@@ -110,7 +108,8 @@ class Loop:
         seconds_to_sleep = (next_iteration).total_seconds()
         if self.interval > 60 and hasattr(self.cogsutils.cog, "log"):
             self.cogsutils.cog.log.debug(
-                f"Sleeping for {seconds_to_sleep} seconds until {self.name} loop next iteration ({self.iteration_count + 1})..."
+                f"Sleeping for {seconds_to_sleep} seconds until {self.name} loop next iteration"
+                f" ({self.iteration_count + 1})..."
             )
         await asyncio.sleep(seconds_to_sleep)
 
@@ -130,7 +129,8 @@ class Loop:
                 if hasattr(self.cogsutils.cog, "log"):
                     if self.iteration_count == 1:
                         self.cogsutils.cog.log.debug(
-                            f"{self.name} initial iteration finished in {total}s ({self.iteration_count})."
+                            f"{self.name} initial iteration finished in {total}s"
+                            f" ({self.iteration_count})."
                         )
                     elif self.interval > 60:
                         self.cogsutils.cog.log.debug(
@@ -140,12 +140,18 @@ class Loop:
                 if hasattr(self.cogsutils.cog, "log"):
                     if self.iteration_count == 1:
                         self.cogsutils.cog.log.exception(
-                            f"Something went wrong in the {self.name} loop ({self.iteration_count}).",
+                            (
+                                f"Something went wrong in the {self.name} loop"
+                                f" ({self.iteration_count})."
+                            ),
                             exc_info=e,
                         )
                     else:
                         self.cogsutils.cog.log.exception(
-                            f"Something went wrong in the {self.name} loop iteration ({self.iteration_count}).",
+                            (
+                                f"Something went wrong in the {self.name} loop iteration"
+                                f" ({self.iteration_count})."
+                            ),
                             exc_info=e,
                         )
                 self.iteration_error(e)
@@ -247,9 +253,7 @@ class Loop:
         self.iteration_count += 1
         self.currently_running = True
         self.last_iteration = datetime.datetime.now(datetime.timezone.utc)
-        self.next_iteration = (
-            datetime.datetime.now(datetime.timezone.utc) + self.expected_interval
-        )
+        self.next_iteration = datetime.datetime.now(datetime.timezone.utc) + self.expected_interval
         # this isn't accurate, it will be "corrected" when finishing is called
 
     def iteration_finish(self) -> None:
@@ -312,7 +316,9 @@ class Loop:
         datetime_table_str = no_colour_rich_markup(datetime_table, lang="py")
 
         function_table = Table("Key", "Value")
-        function_table.add_row("Function", repr(getattr(self.function, "__func__", self.function))[:-23] + ">")
+        function_table.add_row(
+            "Function", repr(getattr(self.function, "__func__", self.function))[:-23] + ">"
+        )
         function_table.add_row("Function parameters", repr(inspect.signature(self.function)))
         function_table.add_row("Function kwargs", repr(self.function_kwargs))
         function_table_str = no_colour_rich_markup(function_table, lang="py")

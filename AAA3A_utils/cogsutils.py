@@ -25,7 +25,6 @@ from .dev import DevEnv
 from .loop import Loop
 from .menus import Reactions
 from .shared_cog import SharedCog
-
 from .views import ConfirmationAskView
 
 __all__ = ["CogsUtils"]
@@ -126,7 +125,12 @@ class CogsUtils:
             nb_commits, version, commit = await self.get_cog_version()
             self.cog.__version__ = version
             self.cog.__commit__ = commit
-        except (self.DownloaderNotLoaded, asyncio.TimeoutError, ValueError, TypeError):  # `TypeError: <class 'extension.extension.Cog'> is a built-in class` is when the cog failed to load.
+        except (
+            self.DownloaderNotLoaded,
+            asyncio.TimeoutError,
+            ValueError,
+            TypeError,
+        ):  # `TypeError: <class 'extension.extension.Cog'> is a built-in class` is when the cog failed to load.
             pass
         except Exception as e:  # Really doesn't matter if this fails, so fine with debug level.
             self.cog.log.debug(
@@ -143,7 +147,8 @@ class CogsUtils:
             ) = await self.to_update()
             if to_update:
                 self.cog.log.warning(
-                    f"Your {self.cog.qualified_name} cog, from {self.repo_name}, is out of date. You can update your cogs with the '[p]cog update' command in Discord."
+                    f"Your {self.cog.qualified_name} cog, from {self.repo_name}, is out of date."
+                    " You can update your cogs with the '[p]cog update' command in Discord."
                 )
             else:
                 self.cog.log.debug(f"{self.cog.qualified_name} cog is up to date.")
@@ -172,7 +177,9 @@ class CogsUtils:
                     cog.cogsutils.loops = old_cog.cogsutils.loops
                 except AttributeError:
                     pass
-                await cog.cogsutils.add_cog(bot=self.bot, override=True)  # `override` shouldn't be required...
+                await cog.cogsutils.add_cog(
+                    bot=self.bot, override=True
+                )  # `override` shouldn't be required...
             except discord.ClientException:  # Cog already loaded.
                 pass
             except Exception as e:
@@ -182,7 +189,10 @@ class CogsUtils:
             await self.add_hybrid_commands()
         except Exception as e:
             self.cog.log.error(
-                f"Error when adding [hybrid|slash] commands from the {self.cog.qualified_name} cog.",
+                (
+                    "Error when adding [hybrid|slash] commands from the"
+                    f" {self.cog.qualified_name} cog."
+                ),
                 exc_info=e,
             )
         AAA3A_utils: SharedCog = self.bot.get_cog("AAA3A_utils")
@@ -258,6 +268,7 @@ class CogsUtils:
         def _log(level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=1):
             if self.cog is not None:
                 from logging import CRITICAL, DEBUG, ERROR, FATAL, INFO, WARN, WARNING
+
                 VERBOSE = DEBUG - 3
                 TRACE = DEBUG - 5
                 levels = {
@@ -608,7 +619,8 @@ class CogsUtils:
             )
         else:
             self.cog.log.info(
-                f"The Config unique identifier has been successfully modified for the {self.cog.qualified_name} cog."
+                "The Config unique identifier has been successfully modified for the"
+                f" {self.cog.qualified_name} cog."
             )
         return True, old_config, new_config
 
