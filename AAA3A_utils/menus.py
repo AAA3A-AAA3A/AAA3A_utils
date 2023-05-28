@@ -70,7 +70,7 @@ class Menu(discord.ui.View):
             self.pages: typing.List[str] = list(
                 pagify(
                     self.pages,
-                    page_length=2000 - len(f"```{lang}\n\n```" if lang is not None else ""),
+                    shorten_by=len(f"```{lang}\n\n```") if lang is not None else 8,  # 8 is default.
                 )
             )
         if lang is not None and all(isinstance(page, str) for page in self.pages):
@@ -130,10 +130,8 @@ class Menu(discord.ui.View):
             await self.change_page()
         for page in self.pages:
             if isinstance(page, typing.Dict) and "file" in page:
-                if "file" in page:
-                    page["attachments"] = [page.pop("file")]
-                elif "files" in page:
-                    page["attachments"] = page.pop("files")
+                del page["file"]  # ValueError: I/O operation on closed file.
+                # page["attachments"] = [page.pop("file")]
         if wait:
             await self._is_done.wait()
         return self._message
@@ -149,7 +147,6 @@ class Menu(discord.ui.View):
         return True
 
     async def on_timeout(self) -> None:
-        self._is_done.set()
         if not self.delete_after_timeout:
             for child in self.children:
                 child: discord.ui.Item
@@ -165,6 +162,7 @@ class Menu(discord.ui.View):
             except discord.HTTPException:
                 pass
         self.stop()
+        self._is_done.set()
 
     async def get_page(
         self, page_num: int
@@ -223,6 +221,7 @@ class Menu(discord.ui.View):
         except discord.HTTPException:
             pass
         self.stop()
+        self._is_done.set()
 
     @discord.ui.button(emoji="▶️", custom_id="next_page")
     async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:

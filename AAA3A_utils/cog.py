@@ -121,7 +121,7 @@ class Cog(commands.Cog):
     async def cog_unload(self) -> None:
         self.cogsutils._end()
 
-    async def cog_before_invoke(self, ctx: commands.Context) -> None:
+    async def cog_before_invoke(self, ctx: commands.Context) -> Context:
         if isinstance(ctx.command, commands.Group):
             view = ctx.view
             previous = view.index
@@ -157,7 +157,7 @@ class Cog(commands.Cog):
             pass
         return context
 
-    async def cog_after_invoke(self, ctx: commands.Context) -> None:
+    async def cog_after_invoke(self, ctx: commands.Context) -> Context:
         if isinstance(ctx.command, commands.Group) and (
             ctx.invoked_subcommand is not None or not ctx.command.invoke_without_command
         ):
@@ -254,7 +254,7 @@ def verbose_forbidden_exception(ctx: commands.Context, error: discord.Forbidden)
         return ValueError(error)
     method = error.response.request_info.method
     url = str(error.response.request_info.url)
-    url = url[len(discord.http.Route.BASE) :]
+    url = url[len(discord.http.Route.BASE):]
     url = url.split("?")[0]
     url = re.sub(r"\b\d{17,20}\b", "{snowflake}", url)
     key = f"{method.upper()} {url}"
@@ -398,11 +398,11 @@ def verbose_forbidden_exception(ctx: commands.Context, error: discord.Forbidden)
         "PATCH /guilds/{guild.id}/templates/{template.code}": ["MANAGE_GUILD"],
         "DELETE /guilds/{guild.id}/templates/{template.code}": ["MANAGE_GUILD"],
         "GET /invites/{invite.code}": [],
-        "DELETE /invites/{invite.code}": ["MANAGE_CHANNEL"],
+        "DELETE /invites/{invite.code}": ["MANAGE_CHANNELS"],
         "POST /stage-instances": ["MANAGE_CHANNELS"],
         "GET /stage-instances/{channel.id}": [],
-        "PATCH /stage-instances/{channel.id}": ["MANAGE_CHANNEL"],
-        "DELETE /stage-instances/{channel.id}": ["MANAGE_CHANNEL"],
+        "PATCH /stage-instances/{channel.id}": ["MANAGE_CHANNELS"],
+        "DELETE /stage-instances/{channel.id}": ["MANAGE_CHANNELS"],
         "GET /stickers/{sticker.id}": [],
         "GET /sticker-packs": [],
         "GET /guilds/{guild.id}/stickers": ["MANAGE_EMOJIS_AND_STICKERS"],

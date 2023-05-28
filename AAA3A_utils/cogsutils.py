@@ -87,7 +87,7 @@ class CogsUtils:
         return text
 
     async def add_cog(
-        self, bot: typing.Optional[Red] = None, cog: typing.Optional[commands.Cog] = None
+        self, bot: typing.Optional[Red] = None, cog: typing.Optional[commands.Cog] = None, **kwargs
     ) -> commands.Cog:
         """
         Load a cog by checking whether the required function is awaitable or not.
@@ -98,7 +98,7 @@ class CogsUtils:
             cog = self.cog
             await self.change_config_unique_identifier(cog=cog)
             self._setup()
-        value = bot.add_cog(cog)
+        value = bot.add_cog(cog, **kwargs)
         if inspect.isawaitable(value):
             await value
         return cog
@@ -162,8 +162,7 @@ class CogsUtils:
         # Add SharedCog.
         if self.cog.qualified_name != "AAA3A_utils":
             try:
-                old_cog = self.bot.get_cog("AAA3A_utils")
-                await self.bot.remove_cog("AAA3A_utils")
+                old_cog = await self.bot.remove_cog("AAA3A_utils")
                 cog = SharedCog(self.bot, CogsUtils)
                 try:
                     if getattr(old_cog, "sentry", None) is not None:
@@ -173,7 +172,9 @@ class CogsUtils:
                     cog.cogsutils.loops = old_cog.cogsutils.loops
                 except AttributeError:
                     pass
-                await cog.cogsutils.add_cog(bot=self.bot)
+                await cog.cogsutils.add_cog(bot=self.bot, override=True)  # `override` shouldn't be required...
+            except discord.ClientException:  # Cog already loaded.
+                pass
             except Exception as e:
                 self.cog.log.debug("Error when adding AAA3A_utils cog.", exc_info=e)
         # Modify hybrid commands.

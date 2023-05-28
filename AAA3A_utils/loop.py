@@ -194,8 +194,8 @@ class Loop:
         self.stop = True
         self.next_iteration = None
         self.task.cancel()
-        if f"{self.name}" in self.cogsutils.loops and self.cogsutils.loops[f"{self.name}"] == self:
-            del self.cogsutils.loops[f"{self.name}"]
+        # if self.cogsutils.loops.get(self.name) == self:
+        #     del self.cogsutils.loops[f"{self.name}"]
         if hasattr(self.cogsutils.cog, "log"):
             self.cogsutils.cog.log.debug(
                 f"{self.name} loop has been stopped after {self.iteration_count} iteration(s)."
