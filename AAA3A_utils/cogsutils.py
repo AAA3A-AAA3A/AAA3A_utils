@@ -756,6 +756,7 @@ class CogsUtils:
         dispatch_message: typing.Optional[bool] = False,
         invoke: typing.Optional[bool] = True,
         __is_mocked__: typing.Optional[bool] = True,
+        assume_yes: typing.Optional[bool] = False,
         message_id: typing.Optional[str] = "".join(choice(string.digits) for i in range(18)),
         timestamp: typing.Optional[datetime.datetime] = datetime.datetime.now(),
     ) -> typing.Union[commands.Context, discord.Message]:
@@ -810,18 +811,20 @@ class CogsUtils:
 
         message.content = content
         context = await bot.get_context(message)
+        context.author = author
+        context.guild = channel.guild
+        context.channel = channel
+        if __is_mocked__:
+            context.__is_mocked__ = True
+        if assume_yes:
+            context.assume_yes = True
         if not invoke:
             return context
         if context.valid:
-            context.author = author
-            context.guild = channel.guild
-            context.channel = channel
-            MemberPrefix = self.bot.get_cog("MemberPrefix")
-            if MemberPrefix is not None:
-                if hasattr(MemberPrefix, "cache_messages"):
-                    MemberPrefix.cache_messages.append(message.id)
-            if __is_mocked__:
-                context.__is_mocked__ = True
+            # MemberPrefix = self.bot.get_cog("MemberPrefix")
+            # if MemberPrefix is not None:
+            #     if hasattr(MemberPrefix, "cache_messages"):
+            #         MemberPrefix.cache_messages.append(message.id)
             await bot.invoke(context)
         else:
             if dispatch_message:

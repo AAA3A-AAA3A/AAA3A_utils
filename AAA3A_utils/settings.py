@@ -821,10 +821,9 @@ class Settings:
             elif self.group == Config.USER:
                 _object = ctx.author
         message = (
-            f"---------- {self.cog.qualified_name}'s Settings for `{profile}` profile"
-            " ----------\n```\n\n```py\n"
+            f"---------- {self.cog.qualified_name}'s Settings for `{profile}` profile ----------\n```\n```py\n"
             if self.use_profiles_system
-            else f"---------- {self.cog.qualified_name}'s Settings ----------\n```\n\n```py\n"
+            else f"---------- {self.cog.qualified_name}'s Settings ----------\n```\n```py\n"
         )
         try:
             values = await self.get_values(_object=_object, profile=profile)

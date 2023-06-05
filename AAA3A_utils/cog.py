@@ -185,9 +185,9 @@ class Cog(commands.Cog):
         return context
 
     async def cog_command_error(self, ctx: commands.Context, error: Exception) -> None:
-        if not hasattr(self, "cogsutils"):
-            await ctx.bot.on_command_error(ctx=ctx, error=error, unhandled_by_cog=True)
-            return
+        # if not hasattr(self, "cogsutils"):
+        #     await ctx.bot.on_command_error(ctx=ctx, error=error, unhandled_by_cog=True)
+        #     return
         AAA3A_utils = ctx.bot.get_cog("AAA3A_utils")
         is_command_error = isinstance(
             error, (commands.CommandInvokeError, commands.HybridCommandError)
@@ -210,7 +210,7 @@ class Cog(commands.Cog):
                 _type = "[slash]"
             else:
                 _type = "[text]"
-            message = await self.cogsutils.bot._config.invoke_error_msg()
+            message = await ctx.bot._config.invoke_error_msg()
             if not message:
                 message = f"Error in {_type} command '{ctx.command.qualified_name}'."
                 if ctx.author.id in ctx.bot.owner_ids:
@@ -241,7 +241,7 @@ class Cog(commands.Cog):
             exception_log += "".join(
                 traceback.format_exception(type(error), error, error.__traceback__)
             )
-            exception_log = self.cogsutils.replace_var_paths(exception_log)
+            exception_log = getattr(self, "cogsutils", AAA3A_utils.cogsutils).replace_var_paths(exception_log)
             ctx.bot._last_exception = exception_log
             if not no_sentry:
                 await AAA3A_utils.sentry.send_command_error(ctx, error)

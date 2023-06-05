@@ -119,6 +119,9 @@ class Menu(discord.ui.View):
         for button in self.children:
             if button.custom_id in self.disabled_controls:
                 self.remove_item(button)
+        for button in self.children:
+            self.remove_item(button)
+            self.add_item(button)
         for item in self.extra_items:
             self.add_item(item)
         if choose_button := discord.utils.get(self.children, custom_id="choose_page"):
@@ -322,11 +325,12 @@ class Menu(discord.ui.View):
         class ChoosePageModal(discord.ui.Modal):
             def __init__(_self):
                 super().__init__(title="Choose page")
+                nb_pages = len(self.pages)
                 _self.item = discord.ui.TextInput(
-                    label="Page number",
+                    label=f"Page number between 1 and {nb_pages}",
                     placeholder="Page number",
                     required=True,
-                    max_length=len(str(len(self.pages))),
+                    max_length=len(str(nb_pages)),
                 )
                 _self.add_item(_self.item)
 
