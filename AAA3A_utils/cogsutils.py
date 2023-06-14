@@ -821,10 +821,6 @@ class CogsUtils:
         if not invoke:
             return context
         if context.valid:
-            # MemberPrefix = self.bot.get_cog("MemberPrefix")
-            # if MemberPrefix is not None:
-            #     if hasattr(MemberPrefix, "cache_messages"):
-            #         MemberPrefix.cache_messages.append(message.id)
             await bot.invoke(context)
         else:
             if dispatch_message:
@@ -929,12 +925,16 @@ class CogsUtils:
             new_check = {p: True for p in check}
             check = new_check
         return not any(
-            getattr(permissions, f"{p}", None)
+            getattr(permissions, p, None) is not None  # Explicitly check whether the value is None.
             and (
-                check[p]
-                and not getattr(permissions, f"{p}")
-                or not check[p]
-                and getattr(permissions, f"{p}")
+                (
+                    check[p]
+                    and not getattr(permissions, p)
+                )
+                or (
+                    not check[p]
+                    and getattr(permissions, p)
+                )
             )
             for p in check
         )

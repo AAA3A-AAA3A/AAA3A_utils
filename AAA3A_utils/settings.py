@@ -492,7 +492,7 @@ class Settings:
             async def rename_profile(
                 _self, ctx: commands.Context, old_profile: ProfileConverter, profile: str
             ):
-                """Clone an existing profile with his settings."""
+                """Rename an existing profile."""
                 await self.rename_profile(ctx, old_profile=old_profile, profile=profile)
 
             async def list_profiles(_self, ctx: commands.Context):
@@ -963,11 +963,13 @@ class Settings:
             config: typing.Dict,
             three_l: typing.Dict,
         ):
-            if not interaction.response.is_done():
-                await interaction.response.defer()
             if interaction.data["custom_id"] == "Settings_ModalConfig_cancel":
+                if not interaction.response.is_done():
+                    await interaction.response.defer()
                 view.stop()
             elif interaction.data["custom_id"] == "Settings_ModalConfig_done":
+                if not interaction.response.is_done():
+                    await interaction.response.defer()
                 if not confirmation:
                     embed: discord.Embed = discord.Embed()
                     embed.title = _(
@@ -981,6 +983,8 @@ class Settings:
                             await data.set_raw(*self.global_path, value=config)
                 view.stop()
             elif interaction.data["custom_id"] == "Settings_ModalConfig_view":
+                if not interaction.response.is_done():
+                    await interaction.response.defer()
                 await Menu(pages=str(config), lang="py").start(ctx)
             elif interaction.data["custom_id"].startswith("Settings_ModalConfig_configure_"):
                 inputs = three_l[int(interaction.data["custom_id"][31:])]
@@ -1029,7 +1033,7 @@ class Settings:
         buttons = [
             {
                 "label": "Cancel",
-                "emoji": "❌",
+                "emoji": "✖️",
                 "style": 4,
                 "disabled": False,
                 "custom_id": "Settings_ModalConfig_cancel",
