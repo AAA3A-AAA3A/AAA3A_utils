@@ -6,6 +6,8 @@ import typing  # isort:skip
 import asyncio
 import re
 
+from colorama import Fore
+
 from redbot.core.utils.chat_formatting import box, pagify, text_to_file
 from redbot.core.utils.menus import start_adding_reactions
 from redbot.core.utils.predicates import MessagePredicate, ReactionPredicate
@@ -16,6 +18,14 @@ __all__ = ["Menu", "Reactions"]
 
 def _(untranslated: str) -> str:
     return untranslated
+
+
+def cleanup_ansi(text: str) -> str:
+    for attr in dir(Fore):
+        if attr.startswith("_") or not isinstance(getattr(Fore, attr), str):
+            continue
+        text = text.replace(getattr(Fore, attr), "")
+    return text
 
 
 class Menu(discord.ui.View):
@@ -31,6 +41,7 @@ class Menu(discord.ui.View):
         page_start: typing.Optional[int] = 0,
         members: typing.Optional[typing.Iterable[typing.Union[discord.Member, int]]] = None,
         ephemeral: typing.Optional[bool] = False,
+        prefix: typing.Optional[str] = None,
         lang: typing.Optional[str] = None,
     ) -> None:
         if members is None:
@@ -64,18 +75,20 @@ class Menu(discord.ui.View):
         self.ephemeral: bool = ephemeral
         if not self.pages:
             self.pages: typing.List[str] = ["Nothing to show."]
+        self.prefix: typing.Optional[str] = prefix
+        if self.prefix is not None and not self.prefix.startswith("```"):
+            self.prefix = box(self.prefix, lang="py")
         if isinstance(self.pages, str):
             self.pages: typing.List[str] = list(
                 pagify(
                     self.pages,
-                    shorten_by=len(f"```{lang}\n\n```")
-                    if lang is not None
-                    else 8,  # 8 is default.
+                    shorten_by=len(f"```{lang or ''}\n\n```") + (len(f"{self.prefix}\n") if self.prefix is not None else 0)
                 )
             )
-        if lang is not None and all(isinstance(page, str) for page in self.pages):
+        self.lang: typing.Optional[str] = lang
+        if (self.prefix is not None or lang is not None) and all(isinstance(page, str) for page in self.pages):
             self.pages: typing.List[str] = [
-                box(page[: 2000 - len(f"```{lang}\n\n```")], lang) for page in self.pages
+                (self.prefix or "") + "\n" + (box(page[: 2000 - len(f"```{self.lang}\n\n```")], self.lang) if self.lang is not None else page) for page in self.pages
             ]
         if not isinstance(self.pages[0], (typing.Dict, discord.Embed, str)):
             raise RuntimeError("Pages must be of type typing.Dict, discord.Embed or str.")
@@ -247,8 +260,10 @@ class Menu(discord.ui.View):
     @discord.ui.button(emoji="🔻", custom_id="send_all")
     async def send_all(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         await interaction.response.defer()
-        for x in range(len(self.pages)):
-            current, kwargs = await self.get_page(x)
+        for i in range(len(self.pages)):
+            __, kwargs = await self.get_page(i)
+            if self.prefix is not None and i != 0 and kwargs["content"] is not None:
+                kwargs["content"] = kwargs["content"][len(self.prefix):]
             await interaction.channel.send(**kwargs)
 
     @discord.ui.button(emoji="📩", custom_id="send_interactive")
@@ -257,8 +272,10 @@ class Menu(discord.ui.View):
     ) -> None:
         await interaction.response.defer()
         ret = []
-        for x in range(len(self.pages)):
-            current, kwargs = await self.get_page(x)
+        for i in range(len(self.pages)):
+            current, kwargs = await self.get_page(i)
+            if self.prefix is not None and i != 0 and kwargs["content"] is not None:
+                kwargs["content"] = kwargs["content"][len(self.prefix):]
             msg = await self.ctx.send(**kwargs)
             ret.append(msg)
             n_remaining = len(self.pages) - current
@@ -308,8 +325,15 @@ class Menu(discord.ui.View):
                 content = re.compile(r"^((```py(thon)?)(?=\s)|(```))").sub("", content)[:-3]
             return content.strip("` \n")
 
-        all_text = [cleanup_code(page) for page in self.pages]
-        all_text = "\n".join(all_text)
+        if not self.ctx.channel.permissions_for(self.ctx.me).attach_files:
+            await interaction.response.send_message(_("I don't have the permission to attach files in this channel."), ephemeral=True)
+            return
+        pages = self.pages.copy()
+        if self.prefix is not None:
+            for i, page in enumerate(pages):
+                pages[i] = page[len(self.prefix):]
+        all_text = [cleanup_code(cleanup_ansi(page)) for page in pages]
+        all_text = (f"{self.prefix}\n\n" if self.prefix is not None else "") + "\n".join(all_text)
         await interaction.response.send_message(
             file=text_to_file(
                 all_text,

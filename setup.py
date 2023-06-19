@@ -32,5 +32,6 @@ setuptools.setup(
     python_requires=">=3.8.1",
     install_requires=[
         "sentry_sdk",
+        "colorama",
     ],
 )
