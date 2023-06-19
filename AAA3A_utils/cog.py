@@ -259,7 +259,7 @@ class Cog(commands.Cog):
                     ephemeral=True,
                 )
         else:
-            await ctx.bot.on_command_error(ctx=ctx, error=error, unhandled_by_cog=True)
+            await ctx.bot.on_command_error(ctx, error=error, unhandled_by_cog=True)
 
 
 def verbose_forbidden_exception(ctx: commands.Context, error: discord.Forbidden) -> None:

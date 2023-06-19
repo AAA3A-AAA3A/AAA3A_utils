@@ -756,9 +756,9 @@ class CogsUtils:
         dispatch_message: typing.Optional[bool] = False,
         invoke: typing.Optional[bool] = True,
         __is_mocked__: typing.Optional[bool] = True,
-        assume_yes: typing.Optional[bool] = False,
         message_id: typing.Optional[str] = "".join(choice(string.digits) for i in range(18)),
         timestamp: typing.Optional[datetime.datetime] = datetime.datetime.now(),
+        **kwargs
     ) -> typing.Union[commands.Context, discord.Message]:
         """
         Invoke the specified command with the specified user in the specified channel.
@@ -808,16 +808,16 @@ class CogsUtils:
         else:
             message = copy(message)
             message.author = author
+            message.channel = channel
+            message.content = content
 
-        message.content = content
-        context = await bot.get_context(message)
+        context: commands.Context = await bot.get_context(message)
         context.author = author
         context.guild = channel.guild
         context.channel = channel
         if __is_mocked__:
             context.__is_mocked__ = True
-        if assume_yes:
-            context.assume_yes = True
+        context.__dict__.update(**kwargs)
         if not invoke:
             return context
         if context.valid:
@@ -825,8 +825,6 @@ class CogsUtils:
         else:
             if dispatch_message:
                 message.content = old_content
-                message.author = author
-                message.channel = channel
                 bot.dispatch("message", message)
         return context if context.valid else message
 

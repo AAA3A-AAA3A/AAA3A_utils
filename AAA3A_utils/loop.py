@@ -282,7 +282,7 @@ class Loop:
         raw_table.add_row("wait_raw", str(self.wait_raw))
         raw_table_str = no_colour_rich_markup(raw_table, lang="py")
 
-        if self.next_iteration and self.last_iteration:
+        if self.next_iteration is not None and self.last_iteration is not None:
             processed_table = Table("Key", "Value")
             processed_table.add_row(
                 "Seconds until next", str((self.next_iteration - now).total_seconds())
@@ -298,6 +298,8 @@ class Loop:
                 ),
             )
             processed_table_str = no_colour_rich_markup(processed_table, lang="py")
+        elif self.iteration_count:
+            processed_table_str = "Loop isn't running."
         else:
             processed_table_str = "Loop hasn't started yet."
 
