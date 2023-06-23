@@ -63,6 +63,8 @@ class CogsUtils:
                     text = regex.sub(f"{{{env_var}}}", text)
                     regex = re.compile(re.escape(os.environ[env_var].replace("\\", "\\\\")), re.I)
                     text = regex.sub(f"{{{env_var}}}", text)
+                    regex = re.compile(re.escape(os.environ[env_var].replace("\\", "/")), re.I)
+                    text = regex.sub(f"{{{env_var}}}", text)
         else:
 
             class FakeDict(typing.Dict):

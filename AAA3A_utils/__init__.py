@@ -22,6 +22,7 @@ from .views import (
 )  # NOQA
 
 from . import cog
+cog.DevEnv = DevEnv
 cog.SharedCog = SharedCog
 
 from .version import __version__

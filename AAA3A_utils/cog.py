@@ -14,13 +14,14 @@ from uuid import uuid4
 from redbot.core.data_manager import cog_data_path
 from redbot.core.utils.chat_formatting import humanize_list, inline, warning
 
-from .dev import DevEnv
 from .cogsutils import CogsUtils
 from .context import Context, is_dev
 from .loop import Loop
 from .version import __version__ as __utils_version__
 from .settings import Settings
+# from .dev import DevEnv
 # from .shared_cog import SharedCog
+DevEnv: dict = None
 SharedCog: commands.Cog = None
 
 __all__ = ["Cog"]
