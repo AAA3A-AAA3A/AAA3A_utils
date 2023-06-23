@@ -115,6 +115,14 @@ class SharedCog(Cog, name="AAA3A_utils"):
             await self._session.close()
         await super().cog_unload()
 
+    async def red_delete_data_for_user(self, *args, **kwargs) -> None:
+        """Nothing to delete."""
+        return
+
+    async def red_get_data_for_user(self, *args, **kwargs) -> typing.Dict[str, typing.Any]:
+        """Nothing to get."""
+        return {}
+
     @commands.is_owner()
     @commands.hybrid_group(name="aaa3a_utils", aliases=["AAA3A_utils"], hidden=True)
     async def AAA3A_utils(self, ctx: commands.Context) -> None:
