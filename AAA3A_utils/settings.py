@@ -17,6 +17,7 @@ from redbot.core.utils.chat_formatting import box
 from rich.console import Console
 from rich.table import Table
 
+from .cogsutils import CogsUtils
 from .menus import Menu
 from .views import Buttons, Modal
 
@@ -728,7 +729,7 @@ class Settings:
                     " longer work."
                 )
             embed.color = 0xF00020
-            response = await self.cog.cogsutils.ConfirmationAsk(ctx, embed=embed)
+            response = await CogsUtils.ConfirmationAsk(ctx, embed=embed)
             if not response:
                 return
         data = self.get_data(ctx=ctx)
@@ -976,7 +977,7 @@ class Settings:
                         "⚙️ Do you want to replace the entire Config of {cog.qualified_name} with"
                         " what you specified?"
                     ).format(cog=self.cog)
-                    if await self.cog.cogsutils.ConfirmationAsk(ctx, embed=embed):
+                    if await CogsUtils.ConfirmationAsk(ctx, embed=embed):
                         if self.use_profiles_system:
                             await data.set_raw(*self.global_path, profile, value=config)
                         else:
@@ -1092,7 +1093,8 @@ class Settings:
     ):
         if "guild" in kwargs:
             guild = kwargs["guild"]
-            context = await self.cog.cogsutils.invoke_command(
+            context = await CogsUtils.invoke_command(
+                bot=self.bot,
                 author=user,
                 channel=kwargs.get("channel", guild.text_channels[0]),
                 command=f"{self.commands_group.qualified_name}",
@@ -1105,7 +1107,8 @@ class Settings:
                     "error_message": "You are not allowed to access these settings.",
                 }
         else:
-            context = await self.cog.cogsutils.invoke_command(
+            context = await CogsUtils.invoke_command(
+                bot=self.bot,
                 author=user,
                 channel=list(self.bot.get_all_channels())[0],
                 command=f"{self.commands_group.qualified_name}",

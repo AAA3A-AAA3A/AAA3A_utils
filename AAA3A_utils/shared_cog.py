@@ -31,7 +31,8 @@ from redbot.core.utils.chat_formatting import (
 from rich.console import Console
 from rich.table import Table
 
-from .cog import Cog
+from AAA3A_utils.cog import Cog
+from .cogsutils import CogsUtils
 from .menus import Menu
 from .sentry import SentryHelper
 
@@ -69,8 +70,8 @@ class StrConverter(commands.Converter):
 class SharedCog(Cog, name="AAA3A_utils"):
     """Commands to manage all the cogs in AAA3A-cogs repo!"""
 
-    def __init__(self, bot: Red, CogsUtils) -> None:
-        self.bot: Red = bot
+    def __init__(self, bot: Red) -> None:
+        super().__init__(bot=bot)
 
         self.config: Config = Config.get_conf(
             self,
@@ -96,7 +97,6 @@ class SharedCog(Cog, name="AAA3A_utils"):
         }
         self.config.register_global(**self.AAA3A_utils_global)
 
-        self.cogsutils = CogsUtils(cog=self)
         self.sentry: SentryHelper = None
 
         self._session: aiohttp.ClientSession = None
@@ -105,8 +105,9 @@ class SharedCog(Cog, name="AAA3A_utils"):
         self.getallfor.__is_dev__: bool = True
 
     async def cog_load(self) -> None:
+        await super().cog_load()
         if self.sentry is None:
-            self.sentry = SentryHelper(self)
+            self.sentry = SentryHelper(bot=self.bot, cog=self)
         self._session: aiohttp.ClientSession = aiohttp.ClientSession()
 
     async def cog_unload(self) -> None:
@@ -127,9 +128,9 @@ class SharedCog(Cog, name="AAA3A_utils"):
         cog = ctx.bot.get_cog(cog)
         if cog is None:
             raise commands.UserFeedbackCheckFailure(_("This cog is not installed or loaded."))
-        if cog.qualified_name not in self.cogsutils.get_all_repo_cogs_objects():
+        if getattr(cog, "__repo_name__", None) != "AAA3A-cogs":
             raise commands.UserFeedbackCheckFailure(_("This cog is not a cog from AAA3A-cogs."))
-        if not hasattr(cog, "logs") or not isinstance(cog.logs, typing.Dict) or cog.logs == {}:
+        if cog.logs == {}:
             raise commands.UserFeedbackCheckFailure(_("This cog does not have any log saved."))
         if level == "stats":
             message = "---------- Logs Stats ----------"
@@ -166,7 +167,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
                 )
             result.append(
                 box(
-                    self.cogsutils.replace_var_paths(
+                    CogsUtils.replace_var_paths(
                         f"[{asctime}] {levelname} [{name}] {message}\n{exc_info}"
                     )[: 2000 - 10],
                     lang="py",
@@ -181,9 +182,9 @@ class SharedCog(Cog, name="AAA3A_utils"):
         cog = ctx.bot.get_cog(cog)
         if cog is None:
             raise commands.UserFeedbackCheckFailure(_("This cog is not installed or loaded."))
-        if cog.qualified_name not in self.cogsutils.get_all_repo_cogs_objects():
+        if getattr(cog, "__repo_name__", None) != "AAA3A-cogs":
             raise commands.UserFeedbackCheckFailure(_("This cog is not a cog from AAA3A-cogs."))
-        embeds = [loop.get_debug_embed() for loop in cog.cogsutils.loops.values()]
+        embeds = [loop.get_debug_embed() for loop in cog.loops]
         await Menu(pages=embeds).start(ctx)
 
     @commands.is_owner()
@@ -195,17 +196,17 @@ class SharedCog(Cog, name="AAA3A_utils"):
         cog = ctx.bot.get_cog(cog)
         if cog is None:
             raise commands.UserFeedbackCheckFailure(_("This cog is not installed or loaded."))
-        if cog.qualified_name not in self.cogsutils.get_all_repo_cogs_objects():
+        if getattr(cog, "__repo_name__", None) != "AAA3A-cogs":
             raise commands.UserFeedbackCheckFailure(_("This cog is not a cog from AAA3A-cogs."))
         if not hasattr(cog, "config") or not isinstance(getattr(cog, "config"), Config):
-            raise commands.UserFeedbackCheckFailure(_("This cog does not use the Config."))
+            raise commands.UserFeedbackCheckFailure(_("This cog doesn't use the Config."))
         if not confirmation:
             embed: discord.Embed = discord.Embed()
             embed.title = _("⚠️ - Reset Config")
             embed.description = _("Do you really want to remove ALL data saved with this cog?")
             embed.color = 0xF00020
-            if not await self.cogsutils.ConfirmationAsk(ctx, embed=embed):
-                await self.cogsutils.delete_message(ctx.message)
+            if not await CogsUtils.ConfirmationAsk(ctx, embed=embed):
+                await CogsUtils.delete_message(ctx.message)
                 return
         await getattr(cog, "config").clear_all()
 
@@ -425,9 +426,9 @@ class SharedCog(Cog, name="AAA3A_utils"):
                     _("The command `{command}` does not exist.")
                 )
             _commands = [object_command]
-        downloader = ctx.bot.get_cog("Downloader")
-        if downloader is None:
-            if self.cogsutils.ConfirmationAsk(
+        downloader_cog = ctx.bot.get_cog("Downloader")
+        if downloader_cog is None:
+            if CogsUtils.ConfirmationAsk(
                 ctx,
                 _(
                     "The Downloader cog cog is not loaded. I can't continue. Do you want me to"
@@ -435,10 +436,10 @@ class SharedCog(Cog, name="AAA3A_utils"):
                 ),
             ):
                 await ctx.invoke(ctx.bot.get_command("load"), "downloader")
-                downloader = ctx.bot.get_cog("Downloader")
+                downloader_cog = ctx.bot.get_cog("Downloader")
             else:
                 return
-        installed_cogs = await downloader.config.installed_cogs()
+        installed_cogs = await downloader_cog.config.installed_cogs()
         loaded_cogs = [c.lower() for c in ctx.bot.cogs]
         if repo is not None:
             rp = _repos[0]
@@ -448,9 +449,9 @@ class SharedCog(Cog, name="AAA3A_utils"):
                 )
             if not isinstance(repo, Repo):
                 found = False
-                for r in await downloader.config.installed_cogs():
+                for r in await downloader_cog.config.installed_cogs():
                     if "AAA3A".lower() in str(r).lower():
-                        _repos = [downloader._repo_manager.get_repo(str(r))]
+                        _repos = [downloader_cog._repo_manager.get_repo(str(r))]
                         found = True
                         break
                 if not found:
@@ -458,15 +459,15 @@ class SharedCog(Cog, name="AAA3A_utils"):
                         _("Repo by the name `{rp}` does not exist.").format(rp=rp)
                     )
             if check_updates:
-                cogs_to_check, failed = await downloader._get_cogs_to_check(repos={_repos[0]})
-                cogs_to_update, libs_to_update = await downloader._available_updates(cogs_to_check)
-                cogs_to_update, filter_message = downloader._filter_incorrect_cogs(cogs_to_update)
+                cogs_to_check, failed = await downloader_cog._get_cogs_to_check(repos={_repos[0]})
+                cogs_to_update, libs_to_update = await downloader_cog._available_updates(cogs_to_check)
+                cogs_to_update, filter_message = downloader_cog._filter_incorrect_cogs(cogs_to_update)
                 to_update_cogs = [c.name.lower() for c in cogs_to_update]
 
         if all is not None:
             _repos = []
             for r in installed_cogs:
-                _repos.append(downloader._repo_manager.get_repo(str(r)))
+                _repos.append(downloader_cog._repo_manager.get_repo(str(r)))
             _cogs = []
             for r in installed_cogs:
                 for c in installed_cogs[r]:
@@ -503,9 +504,9 @@ class SharedCog(Cog, name="AAA3A_utils"):
             osver = "Could not parse OS, report this on Github."
         driver = data_manager.storage_type()
         data_path_original = data_manager.data_path()
-        data_path = Path(self.cogsutils.replace_var_paths(str(data_path_original)))
-        _config_file = Path(self.cogsutils.replace_var_paths(str(data_manager.metadata_file())))
-        python_executable = Path(self.cogsutils.replace_var_paths(str(python_executable)))
+        data_path = Path(CogsUtils.replace_var_paths(str(data_path_original)))
+        _config_file = Path(CogsUtils.replace_var_paths(str(data_manager.metadata_file())))
+        python_executable = Path(CogsUtils.replace_var_paths(str(python_executable)))
         disabled_intents = (
             ", ".join(
                 intent_name.replace("_", " ").title()
@@ -871,9 +872,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
                         p = box(p)
                         await ctx.send(p)
         to_html += end_html
-        if self.cogsutils.check_permissions_for(
-            channel=ctx.channel, user=ctx.me, check=["send_attachments"]
-        ):
+        if ctx.channel.permissions_for(ctx.me).attach_files:
             await ctx.send(file=text_to_file(text=to_html, filename="diagnostic.html"))
 
 

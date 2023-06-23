@@ -5,6 +5,7 @@ import typing  # isort:skip
 
 from redbot.core.utils import can_user_react_in
 
+from .cogsutils import CogsUtils
 from .menus import Menu
 
 __all__ = ["Context"]
@@ -133,7 +134,7 @@ class Context:
         """
         if content is not None:
             try:
-                content = self.cog.cogsutils.replace_var_paths(str(content))
+                content = CogsUtils.replace_var_paths(str(content))
             except AttributeError:
                 pass
         self.len_messages += 1

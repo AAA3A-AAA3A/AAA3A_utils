@@ -1,3 +1,4 @@
+from redbot.core import commands  # isort:skip
 import discord  # isort:skip
 import typing  # isort:skip
 
@@ -14,6 +15,8 @@ from io import StringIO
 from redbot.core.utils.chat_formatting import box, pagify
 from rich.console import Console
 from rich.table import Table
+
+from .cogsutils import CogsUtils
 
 __all__ = ["Loop"]
 
@@ -49,7 +52,7 @@ class Loop:
 
     def __init__(
         self,
-        cogsutils,
+        cog: commands.Cog,
         name: str,
         function: typing.Callable,
         days: typing.Optional[int] = 0,
@@ -65,7 +68,7 @@ class Loop:
     ) -> None:
         if function_kwargs is None:
             function_kwargs = {}
-        self.cogsutils = cogsutils
+        self.cog: commands.Cog = cog
 
         self.name: str = name
         self.function: typing.Callable = function
@@ -96,7 +99,7 @@ class Loop:
             self.start()
 
     def start(self) -> typing.Any:  # typing_extensions.Self
-        self.task = self.cogsutils.bot.loop.create_task(self.loop())
+        self.task = self.cog.bot.loop.create_task(self.loop())
         return self
 
     async def wait_until_iteration(self) -> None:
@@ -106,18 +109,18 @@ class Loop:
         time = math.ceil(time / self.interval) * self.interval
         next_iteration = datetime.datetime.fromtimestamp(time, tz=datetime.timezone.utc) - now
         seconds_to_sleep = (next_iteration).total_seconds()
-        if self.interval > 60 and hasattr(self.cogsutils.cog, "log"):
-            self.cogsutils.cog.log.debug(
+        if self.interval > 60 and hasattr(self.cog, "log"):
+            self.cog.log.debug(
                 f"Sleeping for {seconds_to_sleep} seconds until {self.name} loop next iteration"
                 f" ({self.iteration_count + 1})..."
             )
         await asyncio.sleep(seconds_to_sleep)
 
     async def loop(self) -> None:
-        await self.cogsutils.bot.wait_until_red_ready()
+        await self.cog.bot.wait_until_red_ready()
         await asyncio.sleep(1)
-        if hasattr(self.cogsutils.cog, "log"):
-            self.cogsutils.cog.log.debug(f"{self.name} loop has started.")
+        if hasattr(self.cog, "log"):
+            self.cog.log.debug(f"{self.name} loop has started.")
         while True:
             try:
                 start = time.monotonic()
@@ -126,20 +129,20 @@ class Loop:
                 self.iteration_finish()
                 end = time.monotonic()
                 total = round(end - start, 1)
-                if hasattr(self.cogsutils.cog, "log"):
+                if hasattr(self.cog, "log"):
                     if self.iteration_count == 1:
-                        self.cogsutils.cog.log.debug(
+                        self.cog.log.debug(
                             f"{self.name} initial iteration finished in {total}s"
                             f" ({self.iteration_count})."
                         )
                     elif self.interval > 60:
-                        self.cogsutils.cog.log.debug(
+                        self.cog.log.debug(
                             f"{self.name} iteration finished in {total}s ({self.iteration_count})."
                         )
             except Exception as e:
-                if hasattr(self.cogsutils.cog, "log"):
+                if hasattr(self.cog, "log"):
                     if self.iteration_count == 1:
-                        self.cogsutils.cog.log.exception(
+                        self.cog.log.exception(
                             (
                                 f"Something went wrong in the {self.name} loop"
                                 f" ({self.iteration_count})."
@@ -147,7 +150,7 @@ class Loop:
                             exc_info=e,
                         )
                     else:
-                        self.cogsutils.cog.log.exception(
+                        self.cog.log.exception(
                             (
                                 f"Something went wrong in the {self.name} loop iteration"
                                 f" ({self.iteration_count})."
@@ -200,10 +203,10 @@ class Loop:
         self.stop = True
         self.next_iteration = None
         self.task.cancel()
-        # if self.cogsutils.loops.get(self.name) == self:
-        #     del self.cogsutils.loops[f"{self.name}"]
-        if hasattr(self.cogsutils.cog, "log"):
-            self.cogsutils.cog.log.debug(
+        # if self.loops.get(self.name) == self:
+        #     del self.cog.loops[self.cog.loops.index(self)]
+        if hasattr(self.cog, "log"):
+            self.cog.log.debug(
                 f"{self.name} loop has been stopped after {self.iteration_count} iteration(s)."
             )
         return self
@@ -357,7 +360,7 @@ class Loop:
             inline=False,
         )
         exc = self.last_exc
-        exc = self.cogsutils.replace_var_paths(exc)
+        exc = CogsUtils.replace_var_paths(exc)
         if len(exc) > 1024:
             exc = list(pagify(exc, page_length=1024))[0] + "\n..."
         embed.add_field(name="Exception", value=box(exc), inline=False)

@@ -31,7 +31,7 @@ from redbot.core.utils.chat_formatting import box, pagify
 from rich.console import Console
 from rich.table import Table
 
-from .cog import Cog
+from .cogsutils import CogsUtils
 from .context import Context, is_dev
 from .loop import Loop
 from .menus import Menu, Reactions
@@ -54,7 +54,7 @@ from .views import (
     UserSelect,
 )  # NOQA
 
-CogsUtils: typing.Any = None
+Cog: typing.Any = None
 
 __all__ = ["DevSpace", "DevEnv"]
 
@@ -175,14 +175,14 @@ class DevEnv(typing.Dict[str, typing.Any]):
     def sanitize_output(ctx: commands.Context, input_: str) -> str:
         """Hides the bot's token from a string."""
         token = ctx.bot.http.token
-        input_ = CogsUtils().replace_var_paths(input_)
+        input_ = CogsUtils.replace_var_paths(input_)
         return re.sub(re.escape(token), "[EXPUNGED]", input_, re.I)
 
     @classmethod
     def get_env(
         cls, bot: Red, ctx: typing.Optional[commands.Context] = None
     ) -> typing.Dict[str, typing.Any]:
-        log = CogsUtils().init_logger(name="Test")
+        log = CogsUtils.get_logger(name="Test")
 
         async def _rtfs(ctx: commands.Context, object):
             code = inspect.getsource(object)
@@ -471,8 +471,8 @@ class DevEnv(typing.Dict[str, typing.Any]):
         If the bot owner is X, then add several values to the development environment, if they don't already exist.
         Even checks the id of the bot owner in the variable of my Sudo cog, if it's installed and loaded.
         """
-        global CogsUtils
-        CogsUtils = cog.cogsutils.__class__
+        global Cog
+        Cog = cog.__class__.__bases__[0]
         if cog.qualified_name == "AAA3A_utils":
             return
         if not (is_dev(bot) or force):
@@ -525,7 +525,7 @@ class DevEnv(typing.Dict[str, typing.Any]):
             bot.remove_dev_env_value(cog.qualified_name)
         except KeyError:
             pass
-        if not cog.cogsutils.at_least_one_cog_loaded():
+        if not CogsUtils.at_least_one_cog_loaded(bot):
             _env = cls.get_env(bot)
             for name in _env:
                 try:
@@ -554,9 +554,9 @@ class DevEnv(typing.Dict[str, typing.Any]):
                         try:
                             if page is None:
                                 if self.header.startswith("<"):
-                                    return CogsUtils().replace_var_paths(self.header)
+                                    return CogsUtils.replace_var_paths(self.header)
                                 return {}
-                            return CogsUtils().replace_var_paths(
+                            return CogsUtils.replace_var_paths(
                                 f"{self.header}\n{box(page, lang='py')}\nPage"
                                 f" {menu.current_page + 1} / {self.get_max_pages()}"
                             )
@@ -594,7 +594,7 @@ class DevEnv(typing.Dict[str, typing.Any]):
             self[key] = module
             return module
         try:
-            if cog := self["bot"].get_cog(key):
+            if (cog := self["bot"].get_cog(key)) is not None:
                 self[key] = cog
                 return cog
         except (KeyError, AttributeError):
@@ -607,56 +607,56 @@ class DevEnv(typing.Dict[str, typing.Any]):
                 pass
             else:
                 try:
-                    if member := self["guild"].get_member(_id):
+                    if (member := self["guild"].get_member(_id)) is not None:
                         self[key] = member
                         return member
                 except (KeyError, AttributeError):
                     pass
                 try:
-                    if user := self["bot"].get_user(_id):
+                    if (user := self["bot"].get_user(_id)) is not None:
                         self[key] = user
                         return user
                 except (KeyError, AttributeError):
                     pass
                 try:
-                    if guild := self["bot"].get_guild(_id):
+                    if (guild := self["bot"].get_guild(_id)) is not None:
                         self[key] = guild
                         return guild
                 except (KeyError, AttributeError):
                     pass
                 try:
-                    if channel := self["guild"].get_channel(_id):
+                    if (channel := self["guild"].get_channel(_id)) is not None:
                         self[key] = channel
                         return channel
                 except (KeyError, AttributeError):
                     pass
                 try:
-                    if role := self["guild"].get_role(_id):
+                    if (role := self["guild"].get_role(_id)) is not None:
                         self[key] = role
                         return role
                 except (KeyError, AttributeError):
                     pass
                 try:
-                    if message := self["channel"].get_partial_message(_id):
+                    if (message := self["channel"].get_partial_message(_id)) is not None:
                         self[key] = message
                         return message
                 except (KeyError, AttributeError):
                     pass
         try:
-            if value := self["devspace"].get(key):
+            if (value := self["devspace"].get(key)) is not None:
                 return value
         except (KeyError, AttributeError):
             pass
-        if attr := getattr(discord, key, None):
+        if (attr := getattr(discord, key, None)) is not None:
             self.imported.append(f"discord.{key}")
             self[key] = attr
             return attr
-        if attr := getattr(typing, key, None):
+        if (attr := getattr(typing, key, None)) is not None:
             self.imported.append(f"typing.{key}")
             self[key] = attr
             return attr
         try:
-            if attr := getattr(self["bot"].get_cog("AAA3A_utils").cogsutils, key, None):
+            if (attr := getattr(CogsUtils, key, None)) is not None:
                 self.imported.append(f"AAA3A_utils.CogsUtils.{key}")
                 self[key] = attr
                 return attr

@@ -1,14 +1,12 @@
 from .cog import Cog
 from .cogsutils import CogsUtils
 from .context import Context
+from . import dev  # `AttributeError: module 'AAA3A_utils' has no attribute 'dev'`
 from .dev import DevEnv, DevSpace
 from .loop import Loop
 from .menus import Menu, Reactions
 
-try:
-    from .sentry import SentryHelper
-except ImportError:
-    SentryHelper = None
+from .sentry import SentryHelper
 from .settings import Settings
 from .shared_cog import SharedCog
 from .views import (
@@ -23,7 +21,13 @@ from .views import (
     UserSelect,
 )  # NOQA
 
+from . import cog
+cog.SharedCog = SharedCog
+
+from .version import __version__
+
 __author__ = "AAA3A"
+__version__ = __version__
 __all__ = [
     "CogsUtils",
     "Loop",
@@ -47,4 +51,3 @@ __all__ = [
     "Reactions",
 ]
 
-from .version import __version__

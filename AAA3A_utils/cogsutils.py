@@ -17,15 +17,8 @@ from pathlib import Path
 from random import choice
 
 import aiohttp
-from redbot.core import Config
-from redbot.core.data_manager import cog_data_path
-from redbot.core.utils.menus import start_adding_reactions
 from redbot.logging import RotatingFileHandler
 
-from .dev import DevEnv
-from .loop import Loop
-from .menus import Reactions
-from .shared_cog import SharedCog
 from .views import ConfirmationAskView
 
 __all__ = ["CogsUtils"]
@@ -38,33 +31,31 @@ def _(untranslated: str) -> str:
 class CogsUtils:
     """Utils for AAA3A-cogs!"""
 
-    def __init__(
-        self, cog: typing.Optional[commands.Cog] = None, bot: typing.Optional[Red] = None
-    ) -> None:
-        if cog is not None:
-            if isinstance(cog, str):
-                cog = bot.get_cog(cog)
-            self.cog: commands.Cog = cog
-            self.bot: Red = self.cog.bot if hasattr(self.cog, "bot") else bot
-            self.data_path: Path = cog_data_path(cog_instance=self.cog)
-        elif bot is not None:
-            self.cog: typing.Optional[commands.Cog] = None
-            self.bot: Red = bot
-        else:
-            self.cog: typing.Optional[commands.Cog] = None
-            self.bot: typing.Optional[Red] = None
-        self.loops: typing.Dict[str, Loop] = {}
-        self.views: typing.List[getattr(getattr(discord, "ui", None), "View", None)] = []
-        self.repo_name: str = "AAA3A-cogs"
+    # def __init__(
+    #     self, cog: typing.Optional[commands.Cog] = None, bot: typing.Optional[Red] = None
+    # ) -> None:
+    #     if cog is not None:
+    #         if isinstance(cog, str):
+    #             cog = bot.get_cog(cog)
+    #         self.cog: commands.Cog = cog
+    #         self.bot: Red = self.cog.bot if hasattr(self.cog, "bot") else bot
+
+    #     elif bot is not None:
+    #         self.cog: typing.Optional[commands.Cog] = None
+    #         self.bot: Red = bot
+    #     else:
+    #         self.cog: typing.Optional[commands.Cog] = None
+    #         self.bot: typing.Optional[Red] = None
 
     @property
     def is_dpy2(self) -> bool:
         """
-        Returns True if the current redbot instance is running under dpy2.
+        Returns `True` if the current redbot instance is running under dpy2.
         """
         return discord.version_info.major >= 2
 
-    def replace_var_paths(self, text: str, reverse: typing.Optional[bool] = False) -> str:
+    @classmethod
+    def replace_var_paths(cls, text: str, reverse: typing.Optional[bool] = False) -> str:
         if not reverse:
             for env_var in ["USERPROFILE", "HOME", "USERNAME", "COMPUTERNAME"]:
                 if env_var in os.environ:
@@ -86,216 +77,71 @@ class CogsUtils:
             text = text.format_map(FakeDict())
         return text
 
-    async def add_cog(
-        self, bot: typing.Optional[Red] = None, cog: typing.Optional[commands.Cog] = None, **kwargs
-    ) -> commands.Cog:
-        """
-        Load a cog by checking whether the required function is awaitable or not.
-        """
-        if bot is None:
-            bot = self.bot
-        if cog is None:
-            cog = self.cog
-            await self.change_config_unique_identifier(cog=cog)
-            self._setup()
-        value = bot.add_cog(cog, **kwargs)
-        if inspect.isawaitable(value):
-            await value
-        return cog
+    # async def add_cog(
+    #     self, bot: typing.Optional[Red] = None, cog: typing.Optional[commands.Cog] = None, **kwargs
+    # ) -> commands.Cog:
+    #     """
+    #     Load a cog by checking whether the required function is awaitable or not.
+    #     """
+    #     if bot is None:
+    #         bot = self.bot
+    #     if cog is None:
+    #         cog = self.cog
+    #         await self.change_config_unique_identifier(cog=cog)
+    #         self._setup()
+    #     value = bot.add_cog(cog, **kwargs)
+    #     if inspect.isawaitable(value):
+    #         await value
+    #     return cog
 
-    def _setup(self) -> None:
+    @classmethod
+    def get_logger(cls, name: typing.Optional[str] = None, cog: typing.Optional[commands.Cog] = None) -> logging.Logger:
         """
-        Adding additional functionality to the cog.
-        """
-        if self.cog is None:
-            return
-        setattr(self.cog, "cogsutils", self)
-        # Init logger.
-        self.init_logger()
-        asyncio.create_task(self._await_setup())
-
-    async def _await_setup(self) -> None:
-        """
-        Adds dev environment values, slash commands add Views.
-        """
-        await self.bot.wait_until_red_ready()
-        # Add Dev Env values.
-        DevEnv.add_dev_env_values(bot=self.bot, cog=self.cog)
-        # Get cog version.
-        try:
-            nb_commits, version, commit = await self.get_cog_version()
-            self.cog.__version__ = version
-            self.cog.__commit__ = commit
-        except (
-            self.DownloaderNotLoaded,
-            asyncio.TimeoutError,
-            ValueError,
-            TypeError,
-        ):  # `TypeError: <class 'extension.extension.Cog'> is a built-in class` is when the cog failed to load.
-            pass
-        except Exception as e:  # Really doesn't matter if this fails, so fine with debug level.
-            self.cog.log.debug(
-                f"Something went wrong checking {self.cog.qualified_name} version.",
-                exc_info=e,
-            )
-        # Check updates.
-        try:
-            (
-                to_update,
-                local_commit,
-                online_commit,
-                online_commit_for_each_files,
-            ) = await self.to_update()
-            if to_update:
-                self.cog.log.warning(
-                    f"Your {self.cog.qualified_name} cog, from {self.repo_name}, is out of date."
-                    " You can update your cogs with the '[p]cog update' command in Discord."
-                )
-            else:
-                self.cog.log.debug(f"{self.cog.qualified_name} cog is up to date.")
-        except (
-            self.DownloaderNotLoaded,
-            asyncio.TimeoutError,
-            ValueError,
-            asyncio.LimitOverrunError,
-        ):
-            pass
-        except Exception as e:  # Really doesn't matter if this fails, so fine with debug level.
-            self.cog.log.debug(
-                f"Something went wrong checking if {self.cog.qualified_name} cog is up to date.",
-                exc_info=e,
-            )
-        # Add SharedCog.
-        if self.cog.qualified_name != "AAA3A_utils":
-            try:
-                old_cog = await self.bot.remove_cog("AAA3A_utils")
-                cog = SharedCog(self.bot, CogsUtils)
-                try:
-                    if getattr(old_cog, "sentry", None) is not None:
-                        cog.sentry = old_cog.sentry
-                        cog.sentry.cog = cog
-                        cog.sentry.cogsutils = cog.cogsutils
-                    cog.cogsutils.loops = old_cog.cogsutils.loops
-                except AttributeError:
-                    pass
-                await cog.cogsutils.add_cog(
-                    bot=self.bot, override=True
-                )  # `override` shouldn't be required...
-            except discord.ClientException:  # Cog already loaded.
-                pass
-            except Exception as e:
-                self.cog.log.debug("Error when adding AAA3A_utils cog.", exc_info=e)
-        # Modify hybrid commands.
-        try:
-            await self.add_hybrid_commands()
-        except Exception as e:
-            self.cog.log.error(
-                (
-                    "Error when adding [hybrid|slash] commands from the"
-                    f" {self.cog.qualified_name} cog."
-                ),
-                exc_info=e,
-            )
-        AAA3A_utils: SharedCog = self.bot.get_cog("AAA3A_utils")
-        if AAA3A_utils is not None:
-            await AAA3A_utils.sentry.maybe_send_owners(self.cog)
-
-    def _end(self) -> None:
-        """
-        Removes dev environment values, slash commands and Views.
-        """
-        # Close logger.
-        self.close_logger()
-        # Remove Dev Env values.
-        DevEnv.remove_dev_env_values(bot=self.bot, cog=self.cog)
-        # Stop loops.
-        loops = dict(self.loops.items())
-        for loop in loops:
-            if self.cog.qualified_name == "AAA3A_utils" and loop == "Sentry Helper":
-                continue
-            self.loops[loop].stop_all()
-        # Stop views.
-        for view in self.views:
-            view.stop()
-            try:
-                self.bot.persistent_views.remove(view)
-            except ValueError:
-                pass
-        self.views.clear()
-        asyncio.create_task(self._await_end())
-
-    async def _await_end(self) -> None:
-        # Remove SharedCog.
-        AAA3A_utils: SharedCog = self.bot.get_cog("AAA3A_utils")
-        if AAA3A_utils is not None:
-            if getattr(AAA3A_utils, "sentry", None) is not None:
-                await AAA3A_utils.sentry.cog_unload(self.cog)
-            if not self.at_least_one_cog_loaded():
-                try:
-                    AAA3A_utils.cogsutils.loops["Sentry Helper"].stop_all()
-                except ValueError:
-                    pass
-                await self.bot.remove_cog("AAA3A_utils")
-
-    def init_logger(self, name: typing.Optional[str] = None) -> logging.Logger:
-        """
-        Prepare the logger for the cog.
+        Get a logger for a provided name or a provided cog.
         Thanks to @laggron42 on GitHub! (https://github.com/laggron42/Laggron-utils/blob/master/laggron_utils/logging.py)
         """
-        if name is not None or self.cog is None:
+        if name is None and cog is None:
+            raise RuntimeError()
+        if name is not None and cog is None:
             return (
-                logging.getLogger(f"{name}")
+                logging.getLogger(name)
                 if name.startswith("red.")
-                else logging.getLogger(f"red.{self.repo_name}.{name}")
+                else logging.getLogger(f"red.AAA3A-cogs.{name}")
             )
-        if hasattr(self.cog, "log") and (isinstance(self.cog.log, (partial, logging.Logger))):
-            return self.cog.log
 
-        self.cog.log = logging.getLogger(f"red.{self.repo_name}.{self.cog.qualified_name}")
-        self.cog.logs: typing.Dict[
-            str,
-            typing.List[
-                typing.Dict[
-                    str,
-                    typing.Optional[
-                        typing.Union[datetime.datetime, int, str, typing.Tuple[typing.Any]]
-                    ],
-                ]
-            ],
-        ] = {}
+        logger = logging.getLogger(f"red.{cog.__repo_name__}.{cog.qualified_name}") if name is None else logging.getLogger(f"red.{cog.__repo_name__}.{cog.qualified_name}.{name}")
 
-        __log = partial(logging.Logger._log, self.cog.log)
+        __log = partial(logging.Logger._log, logger)
 
         def _log(level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=1):
-            if self.cog is not None:
-                from logging import CRITICAL, DEBUG, ERROR, FATAL, INFO, WARN, WARNING
+            from logging import CRITICAL, DEBUG, ERROR, FATAL, INFO, WARN, WARNING
 
-                VERBOSE = DEBUG - 3
-                TRACE = DEBUG - 5
-                levels = {
-                    CRITICAL: "CRITICAL",
-                    DEBUG: "DEBUG",
-                    ERROR: "ERROR",
-                    FATAL: "FATAL",
-                    INFO: "INFO",
-                    WARN: "WARN",
-                    WARNING: "WARNING",
-                    VERBOSE: "VERBOSE",
-                    TRACE: "TRACE",
+            VERBOSE = DEBUG - 3
+            TRACE = DEBUG - 5
+            levels = {
+                CRITICAL: "CRITICAL",
+                DEBUG: "DEBUG",
+                ERROR: "ERROR",
+                FATAL: "FATAL",
+                INFO: "INFO",
+                WARN: "WARN",
+                WARNING: "WARNING",
+                VERBOSE: "VERBOSE",
+                TRACE: "TRACE",
+            }
+            _level = levels.get(level, str(level))
+            if _level not in cog.logs:
+                cog.logs[_level] = []
+            cog.logs[_level].append(
+                {
+                    "time": datetime.datetime.now(),
+                    "level": level,
+                    "message": msg,
+                    "args": args,
+                    "exc_info": exc_info,
+                    "levelname": _level,
                 }
-                _level = levels.get(level, str(level))
-                if _level not in self.cog.logs:
-                    self.cog.logs[_level] = []
-                self.cog.logs[_level].append(
-                    {
-                        "time": datetime.datetime.now(),
-                        "level": level,
-                        "message": msg,
-                        "args": args,
-                        "exc_info": exc_info,
-                        "levelname": _level,
-                    }
-                )
+            )
             __log(
                 level=level,
                 msg=msg,
@@ -305,22 +151,20 @@ class CogsUtils:
                 stack_info=stack_info,
                 stacklevel=stacklevel,
             )
-
-        setattr(self.cog.log, "_log", _log)
+        setattr(logger, "_log", _log)
 
         # Logging in a log file.
         # (File is automatically created by the module, if the parent foler exists.)
         try:
-            cog_path = cog_data_path(cog_instance=self.cog, raw_name=self.cog.qualified_name)
             formatter = logging.Formatter(
                 "[{asctime}] {levelname} [{name}] {message}",
                 datefmt="%Y-%m-%d %H:%M:%S",
                 style="{",
             )
-            if cog_path.exists():
+            if cog.data_path.exists():
                 file_handler = RotatingFileHandler(
-                    stem=self.cog.qualified_name,
-                    directory=cog_path,
+                    stem=cog.qualified_name,
+                    directory=cog.data_path,
                     maxBytes=1_000_0,
                     backupCount=0,
                     encoding="utf-8",
@@ -328,43 +172,42 @@ class CogsUtils:
                 # file_handler.doRollover()
                 file_handler.setLevel(logging.DEBUG)
                 file_handler.setFormatter(formatter)
-                self.cog.log.addHandler(file_handler)
+                logger.addHandler(file_handler)
         except Exception as e:
-            self.cog.log.debug("Error when initiating the logger in a separate file.", exc_info=e)
-        return self.cog.log
+            logger.debug("Error when initiating the logger in a separate file.", exc_info=e)
 
-    def close_logger(self) -> None:
+        return logger
+
+    @classmethod
+    def close_logger(cls, logger: logging.Logger) -> None:
         """
         Closes the files for the logger of a cog.
         """
-        if not hasattr(self.cog, "log") or not isinstance(self.cog.log, logging.Logger):
-            return
-        for handler in self.cog.log.handlers:
+        for handler in logger.handlers:
             handler.close()
-        self.cog.log.handlers = []
+        logger.handlers = []
 
+    @classmethod
     async def get_cog_version(
-        self, cog: typing.Optional[typing.Union[commands.Cog, str]] = None
+        cls, bot: Red, cog: typing.Union[commands.Cog, str]
     ) -> typing.Tuple[int, float, str]:
-        if cog is None:
-            cog = self.cog
         cog_name = cog.lower() if isinstance(cog, str) else cog.qualified_name.lower()
-        downloader = self.bot.get_cog("Downloader")
-        if downloader is None:
-            raise self.DownloaderNotLoaded("The Downloader cog is not loaded.")
+        downloader_cog = bot.get_cog("Downloader")
+        if downloader_cog is None:
+            raise RuntimeError("The Downloader cog is not loaded.")
 
-        if await self.bot._cog_mgr.find_cog(cog_name) is None:
+        if await bot._cog_mgr.find_cog(cog_name) is None:
             raise ValueError("This cog was not found in any cog path.")
 
         from redbot.cogs.downloader.repo_manager import ProcessFormatter, Repo
 
         repo = None
         path = Path(inspect.getsourcefile(cog.__class__))
-        if not path.parent.parent == (await self.bot._cog_mgr.install_path()):
+        if not path.parent.parent == (await bot._cog_mgr.install_path()):
             local = None
             repo = Repo(name="", url="", branch="", commit="", folder_path=path.parent.parent)
         else:
-            local = discord.utils.get(await downloader.installed_cogs(), name=cog_name)
+            local = discord.utils.get(await downloader_cog.installed_cogs(), name=cog_name)
             if local is not None:
                 repo = local.repo
         if repo is None:
@@ -404,27 +247,27 @@ class CogsUtils:
 
         return nb_commits, version, commit
 
-    async def to_update(
-        self,
-        cog: typing.Optional[typing.Union[commands.Cog, str]] = None,
+    @classmethod
+    async def check_if_to_update(
+        cls,
+        bot: Red,
+        cog: typing.Union[commands.Cog, str],
         repo_url: typing.Optional[str] = None,
     ) -> typing.Tuple[bool, str, str]:
-        if cog is None:
-            cog = self.cog
         cog_name = cog.lower() if isinstance(cog, str) else cog.qualified_name.lower()
         if repo_url is None:
-            downloader = self.bot.get_cog("Downloader")
-            if downloader is None:
-                raise self.DownloaderNotLoaded("The cog downloader is not loaded.")
-            if await self.bot._cog_mgr.find_cog(cog_name) is None:
+            downloader_cog = bot.get_cog("Downloader")
+            if downloader_cog is None:
+                raise RuntimeError("The Downloader cog is not loaded.")
+            if await bot._cog_mgr.find_cog(cog_name) is None:
                 raise ValueError("This cog was not found in any cog path.")
-            local = discord.utils.get(await downloader.installed_cogs(), name=cog_name)
+            local = discord.utils.get(await downloader_cog.installed_cogs(), name=cog_name)
             if local is None:
-                raise ValueError("This cog is not installed on this bot with Downloader.")
+                raise ValueError("This cog is not installed on this bot with the cog Downloader.")
             local_commit = local.commit
             repo = local.repo
             if repo is None:
-                raise ValueError("This cog is not installed on this bot with Downloader.")
+                raise ValueError("This cog is not installed on this bot with the cog Downloader.")
             repo_url = repo.url
         else:
             cog = None
@@ -501,16 +344,15 @@ class CogsUtils:
             to_update = False
         else:
             path = Path(inspect.getsourcefile(cog.__class__))
-            if not path.parent.parent == (await self.bot._cog_mgr.install_path()):
+            if not path.parent.parent == (await bot._cog_mgr.install_path()):
                 to_update = False
 
         return to_update, local_commit, online_commit  # , online_commit_for_each_files
 
-    async def add_hybrid_commands(self, cog: typing.Optional[commands.Cog] = None) -> None:
-        if cog is None:
-            cog = self.cog
-        if hasattr(self.cog, "settings") and hasattr(self.cog.settings, "commands_added"):
-            await self.cog.settings.commands_added.wait()
+    @classmethod
+    async def add_hybrid_commands(cls, bot: Red, cog: commands.Cog) -> None:
+        if hasattr(cog, "settings") and hasattr(cog.settings, "commands_added"):
+            await cog.settings.commands_added.wait()
         if cog.qualified_name == "Medicat" and hasattr(cog, "CC_added"):
             await cog.CC_added.wait()
         for _object in cog.walk_commands():
@@ -519,128 +361,24 @@ class CogsUtils:
                     _object.app_command.description = _object.app_command.description[:100]
                 if _object.parent is not None and not _object.parent.invoke_without_command:
                     _object.checks.extend(_object.parent.checks)
-                if hasattr(cog, "_cogsutils_add_hybrid_commands"):
-                    await cog._cogsutils_add_hybrid_commands(_object)
-        await self.bot.tree.red_check_enabled()
+        await bot.tree.red_check_enabled()
 
-    async def change_config_unique_identifier(
-        self, cog: typing.Optional[commands.Cog] = None
-    ) -> typing.Union[
-        bool, typing.Tuple[bool, typing.Dict[str, typing.Any], typing.Dict[str, typing.Any]]
-    ]:
-        try:
-            if cog is None:
-                cog = self.cog
-            cogs_with_old_config_custom_ids = {
-                "AntiNuke": 947269490247,
-                "Calculator": 905683670375,
-                "ClearChannel": 837018163805,
-                "CmdChannel": 793502759720,
-                "DiscordModals": 897374386384,
-                "DropdownsTexts": 985347935839,
-                "Ip": 969369062738,
-                "Medicat": 953864285308,
-                "MemberPrefix": 647053803629,
-                "ReactToCommand": 703485369742,
-                "RolesButtons": 370638632963,
-                "Seen": 864398642893,
-                "SimpleSanction": 793615829052,
-                "TicketTool": 937480369417,
-                "UrlButtons": 974269742704,
-            }
-            if cog.qualified_name not in cogs_with_old_config_custom_ids:
-                return False
-            if not hasattr(cog, "config"):
-                return False
-            old_config: Config = Config.get_conf(
-                cog,
-                identifier=cogs_with_old_config_custom_ids[cog.qualified_name],
-                force_registration=True,
-            )
-            new_config: Config = Config.get_conf(
-                cog, identifier=205192943327321000143939875896557571750, force_registration=True
-            )
-            old_config_all = {}
-            new_config_all = {}
-            for base_group in [
-                old_config.GLOBAL,
-                old_config.USER,
-                old_config.MEMBER,
-                old_config.ROLE,
-                old_config.CHANNEL,
-                old_config.GUILD,
-            ]:
-                old_config_all[base_group] = await old_config._get_base_group(base_group).all()
-                if old_config_all[base_group] == {}:
-                    del old_config_all[base_group]
-                new_config_all[base_group] = await new_config._get_base_group(base_group).all()
-                if new_config_all[base_group] == {}:
-                    new_config_all[base_group] = new_config._defaults.get(base_group, None)
-                if new_config_all[base_group] is None:
-                    del new_config_all[base_group]
-            if old_config_all == old_config._defaults or new_config_all != new_config._defaults:
-                return False
-            for base_group in [
-                old_config.GLOBAL,
-                old_config.USER,
-                old_config.MEMBER,
-                old_config.ROLE,
-                old_config.CHANNEL,
-                old_config.GUILD,
-            ]:
-                data = old_config_all.get(base_group, {})
-                if data == {}:
-                    continue
-                if data == old_config._defaults.get(base_group, {}):
-                    continue
-                await new_config._get_base_group(base_group).set(data)
-            old_config_all = {}
-            new_config_all = {}
-            for base_group in [
-                old_config.GLOBAL,
-                old_config.USER,
-                old_config.MEMBER,
-                old_config.ROLE,
-                old_config.CHANNEL,
-                old_config.GUILD,
-            ]:
-                old_config_all[base_group] = await old_config._get_base_group(base_group).all()
-                if old_config_all[base_group] == {}:
-                    del old_config_all[base_group]
-                new_config_all[base_group] = await new_config._get_base_group(base_group).all()
-                if new_config_all[base_group] == {}:
-                    new_config_all[base_group] = new_config._defaults.get(base_group, None)
-                if new_config_all[base_group] is None:
-                    del new_config_all[base_group]
-            await old_config.clear_all()
-        except Exception as e:
-            self.cog.log.error(
-                f"Error in the {self.cog.qualified_name} cog's Config unique identifier change.",
-                exc_info=e,
-            )
-        else:
-            self.cog.log.info(
-                "The Config unique identifier has been successfully modified for the"
-                f" {self.cog.qualified_name} cog."
-            )
-        return True, old_config, new_config
-
+    @classmethod
     async def ConfirmationAsk(
-        self,
+        cls,
         ctx: commands.Context,
         *args,
         timeout: typing.Optional[int] = 60,
         timeout_message: typing.Optional[str] = _("Timed out, please try again"),
-        way: typing.Optional[typing.Literal["buttons", "reactions", "message"]] = "buttons",
+        way: typing.Optional[typing.Literal["buttons", "message"]] = "buttons",  # , "reactions"
         delete_message: typing.Optional[bool] = True,
         members_authored: typing.Optional[typing.Iterable[discord.Member]] = [],
         **kwargs,
     ) -> bool:
         """
-        Request a confirmation by the user., in the form of buttons/reactions/message, with many additional options.
+        Request a confirmation by the user., in the form of buttons/message, with many additional options.
         """
         check_owner = True
-        reactions = ["✅", "✖️"]
 
         if way == "buttons":
             return await ConfirmationAskView(
@@ -651,40 +389,40 @@ class CogsUtils:
                 members=members_authored,
             ).start(*args, **kwargs)
 
-        elif way == "reactions":
-            message = await ctx.send(*args, **kwargs)
-            try:
-                start_adding_reactions(message, reactions)
-            except discord.HTTPException:
-                way = "message"
-            view = Reactions(
-                bot=ctx.bot,
-                message=message,
-                remove_reaction=False,
-                timeout=timeout,
-                reactions=reactions,
-                members=[ctx.author.id] + list(ctx.bot.owner_ids)
-                if check_owner
-                else [] + [x.id for x in members_authored],
-            )
-            try:
-                reaction, user, function_result = await view.wait_result()
-                if str(reaction.emoji) == reactions[0]:
-                    end_reaction = True
-                    if delete_message:
-                        await self.delete_message(message)
-                    return True
-                elif str(reaction.emoji) == reactions[1]:
-                    end_reaction = True
-                    if delete_message:
-                        await self.delete_message(message)
-                    return False
-            except TimeoutError:
-                if delete_message:
-                    await self.delete_message(message)
-                if timeout_message is not None:
-                    await ctx.send(timeout_message)
-                return None
+        # elif way == "reactions":
+        #     message = await ctx.send(*args, **kwargs)
+        #     try:
+        #         start_adding_reactions(message, reactions)
+        #     except discord.HTTPException:
+        #         way = "message"
+        #     view = Reactions(
+        #         bot=ctx.bot,
+        #         message=message,
+        #         remove_reaction=False,
+        #         timeout=timeout,
+        #         reactions=reactions,
+        #         members=[ctx.author.id] + list(ctx.bot.owner_ids)
+        #         if check_owner
+        #         else [] + [x.id for x in members_authored],
+        #     )
+        #     try:
+        #         reaction, user, function_result = await view.wait_result()
+        #         if str(reaction.emoji) == reactions[0]:
+        #             end_reaction = True
+        #             if delete_message:
+        #                 await cls.delete_message(message)
+        #             return True
+        #         elif str(reaction.emoji) == reactions[1]:
+        #             end_reaction = True
+        #             if delete_message:
+        #                 await cls.delete_message(message)
+        #             return False
+        #     except TimeoutError:
+        #         if delete_message:
+        #             await cls.delete_message(message)
+        #         if timeout_message is not None:
+        #             await ctx.send(timeout_message)
+        #         return None
 
         elif way == "message":
             message = await ctx.send(*args, **kwargs)
@@ -712,25 +450,26 @@ class CogsUtils:
                 if msg.content in ("yes", "y"):
                     end_reaction = True
                     if delete_message:
-                        await self.delete_message(message)
-                    await self.delete_message(msg)
+                        await cls.delete_message(message)
+                    await cls.delete_message(msg)
                     return True
                 elif msg.content in ("no", "n"):
                     end_reaction = True
                     if delete_message:
-                        await self.delete_message(message)
-                    await self.delete_message(msg)
+                        await cls.delete_message(message)
+                    await cls.delete_message(msg)
                     return False
             except asyncio.TimeoutError:
                 if not end_reaction:
                     if delete_message:
-                        await self.delete_message(message)
+                        await cls.delete_message(message)
                     if timeout_message is not None:
                         await ctx.send(timeout_message)
                     return None
 
+    @classmethod
     async def delete_message(
-        self, message: discord.Message, delay: typing.Optional[float] = None
+        cls, message: discord.Message, delay: typing.Optional[float] = None
     ) -> bool:
         """
         Delete a message, ignoring any exceptions.
@@ -747,8 +486,10 @@ class CogsUtils:
         else:
             return True
 
+    @classmethod
     async def invoke_command(
-        self,
+        cls,
+        bot: Red,
         author: discord.User,
         channel: discord.TextChannel,
         command: str,
@@ -764,7 +505,6 @@ class CogsUtils:
         """
         Invoke the specified command with the specified user in the specified channel.
         """
-        bot = self.bot
         if prefix == "/":  # For hybrid and slash commands.
             prefix = None
         if prefix is None:
@@ -861,7 +601,8 @@ class CogsUtils:
                 bot.dispatch("message", message)
         return context if context.valid else message
 
-    async def get_hook(self, channel: discord.TextChannel) -> discord.Webhook:
+    @classmethod
+    async def get_hook(cls, bot: Red, channel: discord.TextChannel) -> discord.Webhook:
         """
         Create a discord.Webhook object. It tries to retrieve an existing webhook created by the bot or to create it itself.
         """
@@ -869,7 +610,7 @@ class CogsUtils:
             (
                 webhook
                 for webhook in await channel.webhooks()
-                if webhook.user.id == self.bot.user.id
+                if webhook.user.id == bot.user.id
             ),
             None,
         )
@@ -877,8 +618,9 @@ class CogsUtils:
             hook = await channel.create_webhook(name=f"red_bot_hook_{str(channel.id)}")
         return hook
 
+    @classmethod
     def get_embed(
-        self, embed_dict: typing.Dict
+        cls, embed_dict: typing.Dict
     ) -> typing.Dict[str, typing.Union[discord.Embed, str]]:
         data = embed_dict
         if data.get("embed"):
@@ -910,8 +652,9 @@ class CogsUtils:
             raise commands.BadArgument(f"An error has occurred.\n{e}).")
         return {"embed": embed, "content": content}
 
+    @classmethod
     def datetime_to_timestamp(
-        self,
+        cls,
         dt: datetime.datetime,
         format: typing.Literal["f", "F", "d", "D", "t", "T", "R"] = "f",
     ) -> str:
@@ -940,8 +683,9 @@ class CogsUtils:
         t = str(int(dt.timestamp()))
         return f"<t:{t}:{format}>"
 
+    @classmethod
     def check_permissions_for(
-        self,
+        cls,
         channel: typing.Union[discord.TextChannel, discord.VoiceChannel, discord.DMChannel],
         user: discord.User,
         check: typing.Union[typing.List, typing.Dict],
@@ -970,81 +714,77 @@ class CogsUtils:
             for p in check
         )
 
-    def create_loop(
-        self,
-        function,
-        name: typing.Optional[str] = None,
-        days: typing.Optional[int] = 0,
-        hours: typing.Optional[int] = 0,
-        minutes: typing.Optional[int] = 0,
-        seconds: typing.Optional[int] = 0,
-        function_kwargs: typing.Optional[typing.Dict] = None,
-        wait_raw: typing.Optional[bool] = False,
-        limit_count: typing.Optional[int] = None,
-        limit_date: typing.Optional[datetime.datetime] = None,
-        limit_exception: typing.Optional[int] = None,
-    ) -> Loop:
-        """
-        Create a loop like Loop, but with default values and loop object recording functionality.
-        """
-        if function_kwargs is None:
-            function_kwargs = {}
-        if name is None:
-            name = f"{self.cog.qualified_name}"
-        if (
-            datetime.timedelta(
-                days=days, hours=hours, minutes=minutes, seconds=seconds
-            ).total_seconds()
-            == 0
-        ):
-            seconds = 900  # 15 minutes
-        loop = Loop(
-            cogsutils=self,
-            name=name,
-            function=function,
-            days=days,
-            hours=hours,
-            minutes=minutes,
-            seconds=seconds,
-            function_kwargs=function_kwargs,
-            wait_raw=wait_raw,
-            limit_count=limit_count,
-            limit_date=limit_date,
-            limit_exception=limit_exception,
-        )
-        if f"{loop.name}" in self.loops:
-            self.loops[f"{loop.name}"].stop_all()
-        self.loops[f"{loop.name}"] = loop
-        return loop
+    # @classmethod
+    # def create_loop(
+    #     cls,
+    #     cog: commands.Cog,
+    #     function,
+    #     name: typing.Optional[str] = None,
+    #     days: typing.Optional[int] = 0,
+    #     hours: typing.Optional[int] = 0,
+    #     minutes: typing.Optional[int] = 0,
+    #     seconds: typing.Optional[int] = 0,
+    #     function_kwargs: typing.Optional[typing.Dict] = None,
+    #     wait_raw: typing.Optional[bool] = False,
+    #     limit_count: typing.Optional[int] = None,
+    #     limit_date: typing.Optional[datetime.datetime] = None,
+    #     limit_exception: typing.Optional[int] = None,
+    # ) -> Loop:
+    #     """
+    #     Create a `Loop` class instance, with default values and loop object recording functionality.
+    #     """
+    #     if function_kwargs is None:
+    #         function_kwargs = {}
+    #     if name is None:
+    #         name = cog.qualified_name
+    #     if (
+    #         datetime.timedelta(
+    #             days=days, hours=hours, minutes=minutes, seconds=seconds
+    #         ).total_seconds()
+    #         == 0
+    #     ):
+    #         seconds = 900  # 15 minutes
+    #     loop = Loop(
+    #         cog=cog,
+    #         name=name,
+    #         function=function,
+    #         days=days,
+    #         hours=hours,
+    #         minutes=minutes,
+    #         seconds=seconds,
+    #         function_kwargs=function_kwargs,
+    #         wait_raw=wait_raw,
+    #         limit_count=limit_count,
+    #         limit_date=limit_date,
+    #         limit_exception=limit_exception,
+    #     )
+    #     # if (existing_loop := discord.utils.get(self.cog.loops, name=name)) is not None:
+    #     #     existing_loop.stop_all()
+    #     cog.loops.append(loop)
+    #     return loop
 
-    def get_all_repo_cogs_objects(self) -> typing.Dict[str, commands.Cog]:
+    @classmethod
+    def get_all_repo_cogs_objects(cls, bot: Red) -> typing.Dict[str, commands.Cog]:
         """
-        Get a dictionary containing the objects or None of all my cogs.
+        Get a dictionary containing the objects of all my cogs.
         """
         cogs = {}
-        for cog in self.bot.cogs.values():
+        for cog in bot.cogs.values():
             if cog.qualified_name in ["CogGuide"]:
                 continue
-            if (
-                hasattr(cog, "cogsutils")
-                and getattr(cog.cogsutils, "repo_name", None) == "AAA3A-cogs"
-                and (f"{cog.qualified_name}" not in cogs or cogs[f"{cog.qualified_name}"] is None)
-            ):
-                cogs[f"{cog.qualified_name}"] = cog
+            if getattr(cog, "__repo_name__", None) == "AAA3A-cogs":
+                cogs[cog.qualified_name] = cog
         return cogs
 
-    def at_least_one_cog_loaded(self) -> bool:
+    @classmethod
+    def at_least_one_cog_loaded(cls, bot: Red) -> bool:
         """
         Return True if at least one cog of all my cogs is loaded.
         """
-        return any(object is not None for object in self.get_all_repo_cogs_objects().values())
+        return any(cog is not None for cog in cls.get_all_repo_cogs_objects(bot).values())
 
-    def generate_key(
-        self,
-        length: typing.Optional[int] = 10,
-        existing_keys: typing.Optional[typing.Union[typing.List, typing.Set]] = None,
-        strings_used: typing.Optional[typing.List] = None,
-    ) -> str:
+    @classmethod
+    def generate_key(cls, length: typing.Optional[int] = 10, existing_keys: typing.Optional[typing.Union[typing.List, typing.Set]] = None, strings_used: typing.Optional[typing.List] = None) -> str:
         """
         Generate a secret key, with the choice of characters, the number of characters and a list of existing keys.
         """
@@ -1075,110 +815,102 @@ class CogsUtils:
             if key not in existing_keys:
                 return key
 
+    @classmethod
     async def check_in_listener(
-        self, output, allowed_by_whitelist_blacklist: typing.Optional[bool] = True
+        cls, bot: Red, arg: typing.Union[discord.Message, discord.RawReactionActionEvent, discord.Interaction], allowed_by_whitelist_blacklist: bool = True
     ) -> bool:
         """
         Check all parameters for the output of any listener.
         Thanks to Jack! (https://discord.com/channels/133049272517001216/160386989819035648/825373605000511518)
         """
         try:
-            if isinstance(output, discord.Message):
+            if isinstance(arg, discord.Message):
                 # check whether the message was sent by a webhook
-                if output.webhook_id is not None:
+                if arg.webhook_id is not None:
                     raise discord.ext.commands.BadArgument()
                 # check whether the message was sent in a guild
-                if output.guild is None:
+                if arg.guild is None:
                     raise discord.ext.commands.BadArgument()
                 # check whether the message author isn't a bot
-                if output.author is None:
+                if arg.author is None:
                     raise discord.ext.commands.BadArgument()
-                if output.author.bot:
+                if arg.author.bot:
                     raise discord.ext.commands.BadArgument()
                 # check whether the bot can send messages in the given channel
-                if output.channel is None:
+                if arg.channel is None:
                     raise discord.ext.commands.BadArgument()
-                if not self.check_permissions_for(
-                    channel=output.channel, user=output.guild.me, check=["send_messages"]
-                ):
+                if not arg.channel.permissions_for(arg.guild.me).send_messages:
                     raise discord.ext.commands.BadArgument()
                 # check whether the cog isn't disabled
-                if self.cog is not None and await self.bot.cog_disabled_in_guild(
-                    self.cog, output.guild
-                ):
-                    raise discord.ext.commands.BadArgument()
+                # if self.cog is not None and await self.bot.cog_disabled_in_guild(
+                #     self.cog, output.guild
+                # ):
+                #     raise discord.ext.commands.BadArgument()
                 # check whether the channel isn't on the ignore list
-                if not await self.bot.ignored_channel_or_guild(output):
+                if not await bot.ignored_channel_or_guild(arg):
                     raise discord.ext.commands.BadArgument()
                 # check whether the message author isn't on allowlist/blocklist
                 if (
                     allowed_by_whitelist_blacklist
-                    and not await self.bot.allowed_by_whitelist_blacklist(output.author)
+                    and not await bot.allowed_by_whitelist_blacklist(arg.author)
                 ):
                     raise discord.ext.commands.BadArgument()
-            elif isinstance(output, discord.RawReactionActionEvent):
+            elif isinstance(arg, discord.RawReactionActionEvent):
                 # check whether the message was sent in a guild
-                output.guild = self.bot.get_guild(output.guild_id)
-                if output.guild is None:
+                arg.guild = bot.get_guild(arg.guild_id)
+                if arg.guild is None:
                     raise discord.ext.commands.BadArgument()
                 # check whether the message author isn't a bot
-                output.author = output.guild.get_member(output.user_id)
-                if output.author is None:
+                arg.author = arg.guild.get_member(arg.user_id)
+                if arg.author is None:
                     raise discord.ext.commands.BadArgument()
-                if output.author.bot:
+                if arg.author.bot:
                     raise discord.ext.commands.BadArgument()
                 # check whether the bot can send message in the given channel
-                output.channel = output.guild.get_channel(output.channel_id)
-                if output.channel is None:
+                arg.channel = arg.guild.get_channel(arg.channel_id)
+                if arg.channel is None:
                     raise discord.ext.commands.BadArgument()
-                if not self.check_permissions_for(
-                    channel=output.channel, user=output.guild.me, check=["send_messages"]
-                ):
+                if not arg.channel.permissions_for(arg.guild.me).send_messages:
                     raise discord.ext.commands.BadArgument()
                 # check whether the cog isn't disabled
-                if self.cog is not None and await self.bot.cog_disabled_in_guild(
-                    self.cog, output.guild
-                ):
-                    raise discord.ext.commands.BadArgument()
+                # if self.cog is not None and await self.bot.cog_disabled_in_guild(
+                #     self.cog, output.guild
+                # ):
+                #     raise discord.ext.commands.BadArgument()
                 # check whether the channel isn't on the ignore list
-                if not await self.bot.ignored_channel_or_guild(output):
+                if not await bot.ignored_channel_or_guild(arg):
                     raise discord.ext.commands.BadArgument()
                 # check whether the message author isn't on allowlist/blocklist
                 if (
                     allowed_by_whitelist_blacklist
-                    and not await self.bot.allowed_by_whitelist_blacklist(output.author)
+                    and not await bot.allowed_by_whitelist_blacklist(arg.author)
                 ):
                     raise discord.ext.commands.BadArgument()
-            elif isinstance(output, discord.Interaction):
+            elif isinstance(arg, discord.Interaction):
                 # check whether the message was sent in a guild
-                if output.guild is None:
+                if arg.guild is None:
                     raise discord.ext.commands.BadArgument()
                 # check whether the message author isn't a bot
-                if output.author is None:
+                if arg.author is None:
                     raise discord.ext.commands.BadArgument()
-                if output.author.bot:
+                if arg.author.bot:
                     raise discord.ext.commands.BadArgument()
                 # check whether the bot can send message in the given channel
-                if output.channel is None:
+                if arg.channel is None:
                     raise discord.ext.commands.BadArgument()
-                if not self.check_permissions_for(
-                    channel=output.channel, user=output.guild.me, check=["send_messages"]
-                ):
+                if not arg.channel.permissions_for(arg.guild.me).send_messages:
                     raise discord.ext.commands.BadArgument()
-                    # check whether the cog isn't disabled
-                if self.cog is not None and await self.bot.cog_disabled_in_guild(
-                    self.cog, output.guild
-                ):
-                    raise discord.ext.commands.BadArgument()
-                    # check whether the message author isn't on allowlist/blocklist
+                # check whether the cog isn't disabled
+                # if self.cog is not None and await self.bot.cog_disabled_in_guild(
+                #     self.cog, output.guild
+                # ):
+                #     raise discord.ext.commands.BadArgument()
+                # check whether the message author isn't on allowlist/blocklist
                 if (
                     allowed_by_whitelist_blacklist
-                    and not await self.bot.allowed_by_whitelist_blacklist(output.author)
+                    and not await bot.allowed_by_whitelist_blacklist(arg.author)
                 ):
                     raise discord.ext.commands.BadArgument()
         except commands.BadArgument:
             return False
         return True
-
-    class DownloaderNotLoaded(Exception):
-        pass

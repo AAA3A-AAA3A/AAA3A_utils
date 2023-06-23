@@ -8,12 +8,20 @@ import datetime
 import logging
 import re
 import traceback
+from pathlib import Path
 from uuid import uuid4
 
+from redbot.core.data_manager import cog_data_path
 from redbot.core.utils.chat_formatting import humanize_list, inline, warning
 
+from .dev import DevEnv
+from .cogsutils import CogsUtils
 from .context import Context, is_dev
-from .version import __version__
+from .loop import Loop
+from .version import __version__ as __utils_version__
+from .settings import Settings
+# from .shared_cog import SharedCog
+SharedCog: commands.Cog = None
 
 __all__ = ["Cog"]
 
@@ -83,31 +91,162 @@ class Cog(commands.Cog):
     __authors__: typing.List[str] = ["AAA3A"]
     __version__: float = 1.0
     __commit__: str = ""
-    bot: Red
-    log: logging.Logger
-    logs: typing.Dict[
-        str,
-        typing.List[
-            typing.Dict[
-                str,
-                typing.Optional[
-                    typing.Union[datetime.datetime, int, str, typing.Tuple[typing.Any]]
-                ],
-            ]
-        ],
-    ] = {}
+    __repo_name__: str = "AAA3A-cogs"
+    __utils_version__: float = __utils_version__
+
+    # bot: Red
+    # data_path: Path
+    # log: logging.Logger
+    # logs: typing.Dict[
+    #     str,
+    #     typing.List[
+    #         typing.Dict[
+    #             str,
+    #             typing.Optional[
+    #                 typing.Union[datetime.datetime, int, str, typing.Tuple[typing.Any]]
+    #             ],
+    #         ]
+    #     ],
+    # ]
+    # loops: typing.List[Loop]
+    # views: typing.Dict[typing.Union[discord.Message, discord.PartialMessage, str], discord.ui.View]
 
     def __init__(self, bot: Red) -> None:
         self.bot: Red = bot
+        self.data_path: Path = cog_data_path(cog_instance=self)
+
+        self.logs: typing.Dict[
+            str,
+            typing.List[
+                typing.Dict[
+                    str,
+                    typing.Optional[
+                        typing.Union[datetime.datetime, int, str, typing.Tuple[typing.Any]]
+                    ],
+                ]
+            ],
+        ] = {}
+        self.loops: typing.List[Loop] = []
+        self.views: typing.Dict[typing.Union[discord.Message, discord.PartialMessage, str], discord.ui.View] = {}  # `str` is for Views not linked to a message (in TicketTool for example).
+
+    async def cog_load(self) -> None:
+        # Init logger.
+        self.log: logging.Logger = CogsUtils.get_logger(cog=self)
+        # Add Dev Env values.
+        DevEnv.add_dev_env_values(bot=self.bot, cog=self)
+        # Wait until Red ready.
+        await self.bot.wait_until_red_ready()
+        # Get cog version.
+        try:
+            nb_commits, version, commit = await CogsUtils.get_cog_version(bot=self.bot, cog=self)
+            self.__version__: float = version
+            self.__commit__: str = commit
+        except (
+            RuntimeError,
+            asyncio.TimeoutError,
+            ValueError,
+            TypeError,  # `TypeError: <class 'extension.extension.Cog'> is a built-in class` is when the cog failed to load.
+        ):
+            pass
+        except Exception as e:  # Really doesn't matter if this fails, so fine with debug level.
+            self.log.debug(
+                f"Something went wrong checking `{self.qualified_name}` version.",
+                exc_info=e,
+            )
+        # Check updates.
+        try:
+            (
+                to_update,
+                local_commit,
+                online_commit,
+                online_commit_for_each_files,
+            ) = await CogsUtils.check_if_to_update(bot=self.bot, cog=self)
+            if to_update:
+                self.log.warning(
+                    f"Your `{self.qualified_name}` cog, from `{self.__repo_name__}`, is out of date."
+                    " You can update your cogs with the '[p]cog update' command in Discord."
+                )
+            else:
+                self.log.debug(f"{self.qualified_name} cog is up to date.")
+        except (
+            RuntimeError,
+            asyncio.TimeoutError,
+            ValueError,
+            asyncio.LimitOverrunError,
+        ):
+            pass
+        except Exception as e:  # Really doesn't matter if this fails, so fine with debug level.
+            self.log.debug(
+                f"Something went wrong checking if `{self.qualified_name}` cog is up to date.",
+                exc_info=e,
+            )
+        # Add SharedCog.
+        if self.qualified_name != "AAA3A_utils":
+            try:
+                old_cog = await self.bot.remove_cog("AAA3A_utils")
+                AAA3A_utils = SharedCog(self.bot)
+                try:
+                    if getattr(old_cog, "sentry", None) is not None:
+                        AAA3A_utils.sentry = old_cog.sentry
+                        AAA3A_utils.sentry.cog = AAA3A_utils
+                    AAA3A_utils.loops = old_cog.loops
+                except AttributeError:
+                    pass
+                await self.bot.add_cog(
+                    AAA3A_utils, override=True
+                )  # `override` shouldn't be required...
+            except discord.ClientException:  # Cog already loaded.
+                pass
+            except Exception as e:
+                self.log.debug("Error when adding the `AAA3A_utils` cog.", exc_info=e)
+            else:
+                await AAA3A_utils.sentry.maybe_send_owners(self)
+        # Modify hybrid commands.
+        asyncio.create_task(CogsUtils.add_hybrid_commands(bot=self.bot, cog=self))
+
+    async def cog_unload(self) -> None:
+        # Close logger.
+        CogsUtils.close_logger(self.log)
+        # Remove Dev Env values.
+        DevEnv.remove_dev_env_values(bot=self.bot, cog=self)
+        # Stop loops.
+        for loop in self.loops.copy():
+            if self.qualified_name == "AAA3A_utils" and loop.name == "Sentry Helper":
+                continue
+            loop.stop_all()
+        # Stop views.
+        for view in self.views.values():
+            if not view.is_finished():
+                await view.on_timeout()
+                view.stop()
+            try:
+                self.bot.persistent_views.remove(view)
+            except ValueError:
+                pass
+        self.views.clear()
+        # Remove SharedCog.
+        AAA3A_utils: SharedCog = self.bot.get_cog("AAA3A_utils")
+        if AAA3A_utils is not None:
+            if AAA3A_utils.sentry is not None:
+                await AAA3A_utils.sentry.cog_unload(self)
+            if not CogsUtils.at_least_one_cog_loaded(self.bot):
+                try:
+                    discord.utils.get(AAA3A_utils.loops, name="Sentry Helper").stop_all()
+                except ValueError:
+                    pass
+                await self.bot.remove_cog("AAA3A_utils")
 
     def format_help_for_context(self, ctx: commands.Context) -> str:
         """Thanks Simbad!"""
         text = super().format_help_for_context(ctx)
         s = "s" if len(self.__authors__) > 1 else ""
         text = (
-            f"{text}\n\n**Author{s}**: {humanize_list(self.__authors__)}\n**Cog version**:"
-            f" {self.__version__}\n**Cog commit**: {self.__commit__}\n**Utils version**:"
-            f" {__version__}"
+            f"{text}"
+            f"\n\n**Author{s}**: {humanize_list(self.__authors__)}"
+            f"\n**Cog version**: {self.__version__}"
+            f"\n**Cog commit**: `{self.__commit__}`"
+            f"\n**Repo name**: {self.__repo_name__}"
+            f"\n**Utils version**: {self.__utils_version__}"
         )
         if self.qualified_name not in ["AAA3A_utils"]:
             text += (
@@ -124,9 +263,6 @@ class Cog(commands.Cog):
     async def red_get_data_for_user(self, *args, **kwargs) -> typing.Dict[typing.Any, typing.Any]:
         """Nothing to get."""
         return {}
-
-    async def cog_unload(self) -> None:
-        self.cogsutils._end()
 
     async def cog_before_invoke(self, ctx: commands.Context) -> Context:
         if isinstance(ctx.command, commands.Group):
@@ -157,11 +293,13 @@ class Cog(commands.Cog):
                 await context.interaction.response.defer(ephemeral=False, thinking=True)
             except (discord.InteractionResponded, discord.NotFound):
                 pass
-        context._typing = context.channel.typing()
-        try:
-            await context._typing.__aenter__()
-        except discord.InteractionResponded:
-            pass
+        # Typing automatically.
+        if ctx.cog.qualified_name not in ["CmdChannel", "Sudo"] and (not (isinstance(getattr(ctx.cog, "settings", None), Settings)) or ctx.command not in ctx.cog.settings.commands.values()):
+            context._typing = context.channel.typing()
+            try:
+                await context._typing.__aenter__()
+            except discord.InteractionResponded:
+                pass
         return context
 
     async def cog_after_invoke(self, ctx: commands.Context) -> Context:
@@ -185,9 +323,6 @@ class Cog(commands.Cog):
         return context
 
     async def cog_command_error(self, ctx: commands.Context, error: Exception) -> None:
-        # if not hasattr(self, "cogsutils"):
-        #     await ctx.bot.on_command_error(ctx=ctx, error=error, unhandled_by_cog=True)
-        #     return
         AAA3A_utils = ctx.bot.get_cog("AAA3A_utils")
         is_command_error = isinstance(
             error, (commands.CommandInvokeError, commands.HybridCommandError)
@@ -241,7 +376,7 @@ class Cog(commands.Cog):
             exception_log += "".join(
                 traceback.format_exception(type(error), error, error.__traceback__)
             )
-            exception_log = getattr(self, "cogsutils", AAA3A_utils.cogsutils).replace_var_paths(exception_log)
+            exception_log = CogsUtils.replace_var_paths(exception_log)
             ctx.bot._last_exception = exception_log
             if not no_sentry:
                 await AAA3A_utils.sentry.send_command_error(ctx, error)
@@ -262,7 +397,7 @@ class Cog(commands.Cog):
             await ctx.bot.on_command_error(ctx, error=error, unhandled_by_cog=True)
 
 
-def verbose_forbidden_exception(ctx: commands.Context, error: discord.Forbidden) -> None:
+def verbose_forbidden_exception(ctx: commands.Context, error: discord.Forbidden) -> None:  # A little useless now.
     if not isinstance(error, discord.Forbidden):
         return ValueError(error)
     method = error.response.request_info.method

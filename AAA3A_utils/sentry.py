@@ -12,6 +12,9 @@ import sentry_sdk
 from redbot.core import __version__ as red_version
 from redbot.core.utils.common_filters import INVITE_URL_RE
 
+from .cogsutils import CogsUtils
+from .loop import Loop
+
 SNOWFLAKE_REGEX = r"\b\d{17,20}\b"
 IP_V4_REGEX = (
     r"(\b25[0-5]|\b2[0-4][0-9]|\b[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}"
@@ -87,12 +90,12 @@ __all__ = ["SentryHelper"]
 
 
 class SentryHelper:
-    def __init__(self, cog: commands.Cog) -> None:
+    def __init__(self, bot: Red, cog: commands.Cog) -> None:
         if cog.qualified_name != "AAA3A_utils":
             raise ValueError(cog.qualified_name)
+        self.bot: Red = bot
         self.cog: commands.Cog = cog
-        self.cogsutils = cog.cogsutils
-        self.bot: Red = cog.cogsutils.bot
+
         self.last_errors: typing.Dict[
             str, typing.Dict[str, typing.Union[commands.Context, Exception]]
         ] = {}
@@ -117,8 +120,13 @@ class SentryHelper:
         self.config.register_global(**self.sentry_global)
 
         asyncio.create_task(self._async_init())
-        self.cogsutils.create_loop(
-            function=self.periodic_session_restart, name="Sentry Helper", hours=1
+        self.cog.loops.append(
+            Loop(
+                cog=self.cog,
+                name="Sentry Helper",
+                function=self.periodic_session_restart,
+                hours=1,
+            )
         )
 
         self.dont_send_reminders: bool = False
@@ -243,20 +251,20 @@ class SentryHelper:
             """
             if isinstance(d, typing.Dict):
                 return {
-                    self.cogsutils.replace_var_paths(regex_stuff(k.replace(token, "[BOT-TOKEN]")))
+                    CogsUtils.replace_var_paths(regex_stuff(k.replace(token, "[BOT-TOKEN]")))
                     if isinstance(k, str)
                     else k: recursive_replace(v, token)
                     for k, v in d.items()
                 }
             elif isinstance(d, typing.List):
                 return [
-                    self.cogsutils.replace_var_paths(regex_stuff(recursive_replace(i, token)))
+                    CogsUtils.replace_var_paths(regex_stuff(recursive_replace(i, token)))
                     if isinstance(i, str)
                     else recursive_replace(i, token)
                     for i in d
                 ]
             return (
-                self.cogsutils.replace_var_paths(regex_stuff(d.replace(token, "[BOT_TOKEN]")))
+                CogsUtils.replace_var_paths(regex_stuff(d.replace(token, "[BOT_TOKEN]")))
                 if isinstance(d, str)
                 else d
             )
@@ -297,7 +305,7 @@ class SentryHelper:
             return self.hubs[cog.qualified_name]
         if getattr(cog, "__version__", None) is None and getattr(cog, "__commit__", None) is None:
             try:
-                nb_commits, version, commit = await self.cogsutils.get_cog_version(cog)
+                nb_commits, version, commit = await CogsUtils.get_cog_version(bot=self.bot, cog=self.cog)
                 cog.__version__ = version
                 cog.__commit__ = commit
             except Exception:
