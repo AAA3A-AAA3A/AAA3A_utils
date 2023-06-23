@@ -54,7 +54,7 @@ from .views import (
     UserSelect,
 )  # NOQA
 
-Cog: typing.Any = None
+Cog: commands.Cog = None
 
 __all__ = ["DevSpace", "DevEnv"]
 

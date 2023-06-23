@@ -1,7 +1,6 @@
 from .cog import Cog
 from .cogsutils import CogsUtils
 from .context import Context
-from . import dev  # `AttributeError: module 'AAA3A_utils' has no attribute 'dev'`
 from .dev import DevEnv, DevSpace
 from .loop import Loop
 from .menus import Menu, Reactions
@@ -21,6 +20,8 @@ from .views import (
     UserSelect,
 )  # NOQA
 
+from . import dev
+dev.Cog = Cog
 from . import cog
 cog.DevEnv = DevEnv
 cog.SharedCog = SharedCog
