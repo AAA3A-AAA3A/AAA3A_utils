@@ -135,7 +135,11 @@ class Cog(commands.Cog):
         self.log: logging.Logger = CogsUtils.get_logger(cog=self)
         # Add Dev Env values.
         DevEnv.add_dev_env_values(bot=self.bot, cog=self)
-        # Wait until Red ready.
+        # Prevent Red `(timeout)` error.
+        asyncio.create_task(self.cog_load_new_task())
+
+    async def cog_load_new_task(self) -> None:
+        # Wait until Red ready. But `(timeout)` when cog loading when bot starting...
         await self.bot.wait_until_red_ready()
         # Get cog version.
         try:
@@ -203,7 +207,7 @@ class Cog(commands.Cog):
             else:
                 await AAA3A_utils.sentry.maybe_send_owners(self)
         # Modify hybrid commands.
-        asyncio.create_task(CogsUtils.add_hybrid_commands(bot=self.bot, cog=self))
+        await CogsUtils.add_hybrid_commands(bot=self.bot, cog=self)
 
     async def cog_unload(self) -> None:
         # Close logger.
