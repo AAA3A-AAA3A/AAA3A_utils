@@ -360,7 +360,7 @@ class CogsUtils:
         for _object in cog.walk_commands():
             if isinstance(_object, (commands.HybridCommand, commands.HybridGroup)):
                 if _object.app_command is not None:
-                    _object.app_command.description = _object.app_command.description[:100]
+                    _object.app_command.description = _object.app_command.description.split("\n")[0][:100]
                 if _object.parent is not None and not _object.parent.invoke_without_command:
                     _object.checks.extend(_object.parent.checks)
         await bot.tree.red_check_enabled()
