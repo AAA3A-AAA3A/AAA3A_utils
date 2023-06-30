@@ -363,7 +363,7 @@ class Cog(commands.Cog):
                 message = message.replace("{command}", ctx.command.qualified_name)
             if (
                 not no_sentry
-                and not AAA3A_utils.sentry.sentry_enabled
+                and getattr(AAA3A_utils.sentry, "display_sentry_manual_command", True)
                 and await AAA3A_utils.senderrorwithsentry.can_run(ctx)
                 and not getattr(AAA3A_utils.senderrorwithsentry, "__is_dev__", False)
             ):

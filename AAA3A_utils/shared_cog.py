@@ -226,6 +226,18 @@ class SharedCog(Cog, name="AAA3A_utils"):
         More details: https://aaa3a-cogs.readthedocs.io/en/latest/repo_telemetry.html
         """
         await self.config.sentry.sentry_enabled.set(state)
+        self.sentry.sentry_enabled = state
+        self.display_sentry_manual_command = not self.sentry.sentry_enabled and (await self.sentry.config.sentry.display_sentry_manual_command())
+
+    @commands.is_owner()
+    @AAA3A_utils.command(hidden=False)
+    async def displaysentrymanualcommand(self, ctx: commands.Context, state: bool) -> None:
+        """Enable or disable displaying the command `[p]AAA3A_utils senderrorwithsentry` in commands errors.
+
+        Defaults is `True`.
+        """
+        await self.config.sentry.display_sentry_manual_command.set(state)
+        self.sentry.display_sentry_manual_command = not self.sentry.sentry_enabled and state
 
     @commands.is_owner()
     @AAA3A_utils.command()

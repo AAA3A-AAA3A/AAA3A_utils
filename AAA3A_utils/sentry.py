@@ -100,7 +100,8 @@ class SentryHelper:
             str, typing.Dict[str, typing.Union[commands.Context, Exception]]
         ] = {}
 
-        self.sentry_enabled: typing.Optional[bool] = None
+        self.sentry_enabled: bool = None
+        self.display_sentry_manual_command: bool = None
         self.send_reminders: bool = True
         self.uuid: typing.Optional[str] = None
         self.hubs: typing.Dict[str, sentry_sdk.Hub] = {}
@@ -112,6 +113,7 @@ class SentryHelper:
             "sentry": {
                 "version": 1,
                 "sentry_enabled": False,
+                "display_sentry_manual_command": True,
                 "master_msg_sent": False,
                 "uuid": None,
                 "cogs_notified": [],
@@ -133,8 +135,8 @@ class SentryHelper:
         self.ready: asyncio.Event = asyncio.Event()
 
     async def _async_init(self) -> None:
-        sentry_enabled = await self.config.sentry.sentry_enabled()
-        self.sentry_enabled = sentry_enabled
+        self.sentry_enabled = await self.config.sentry.sentry_enabled()
+        self.display_sentry_manual_command = not self.sentry_enabled and (await self.config.sentry.display_sentry_manual_command())
         # always set it, really doesn't do much
         uuid = await self.config.sentry.uuid()
         if uuid is None:
