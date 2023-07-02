@@ -313,6 +313,8 @@ class Menu(discord.ui.View):
     async def send_as_file(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:
+        await interaction.response.defer(ephemeral=True, thinking=True)
+
         def cleanup_code(content):
             """Automatically removes code blocks from the code."""
             # remove ˋˋˋpy\n````
@@ -329,7 +331,7 @@ class Menu(discord.ui.View):
                 pages[i] = page[len(self.prefix):]
         all_text = [cleanup_code(cleanup_ansi(page)) for page in pages]
         all_text = (f"{self.prefix}\n\n" if self.prefix is not None else "") + "\n".join(all_text)
-        await interaction.response.send_message(
+        await interaction.followup.send(
             file=text_to_file(
                 all_text,
                 filename=f"Menu_{interaction.message.channel.id}-{interaction.message.id}.txt",
