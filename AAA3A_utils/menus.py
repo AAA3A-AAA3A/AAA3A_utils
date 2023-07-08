@@ -66,10 +66,6 @@ class Menu(discord.ui.View):
             "choose_page": "choose_page",
         }
         self.controls: typing.Dict[str, str] = controls.copy()
-        if len(self.pages) > 1:
-            self.disabled_controls: typing.List[str] = []
-        else:
-            self.disabled_controls: typing.List[str] = ["send_as_file", "choose_page"]
         self.extra_items: typing.List[discord.ui.Item] = []
         self.members: typing.Optional[typing.List[int]] = (
             members if members is None else [getattr(member, "id", member) for member in members]
@@ -94,6 +90,10 @@ class Menu(discord.ui.View):
             ]
         if not isinstance(self.pages[0], (typing.Dict, discord.Embed, str)):
             raise RuntimeError("Pages must be of type typing.Dict, discord.Embed or str.")
+        if len(self.pages) > 1:
+            self.disabled_controls: typing.List[str] = []
+        else:
+            self.disabled_controls: typing.List[str] = ["send_as_file", "choose_page"]
 
         self._source: self._SimplePageSource = self._SimplePageSource(items=self.pages)
         if not self._source.is_paginating():
@@ -356,14 +356,14 @@ class Menu(discord.ui.View):
                 _self.add_item(_self.item)
 
             async def on_submit(_self, interaction: discord.Interaction):
-                # Too late
+                # Too late.
                 if self._is_done.is_set():
                     await interaction.response.send_message(
                         _("Too late. The Menu is already finished."),
                         ephemeral=True,
                     )
                     return
-                # Int
+                # Integer.
                 try:
                     page = int(_self.item.value)
                 except ValueError:
@@ -372,7 +372,7 @@ class Menu(discord.ui.View):
                         ephemeral=True,
                     )
                     return
-                # Min-Max
+                # Minimum-Maximum.
                 _max = len(self.pages)
                 if page < 1 or page > _max:
                     await interaction.response.send_message(
@@ -380,7 +380,7 @@ class Menu(discord.ui.View):
                         ephemeral=True,
                     )
                     return
-                # Edit
+                # Change the page.
                 self._current_page = page - 1
                 await self.change_page(interaction)
 

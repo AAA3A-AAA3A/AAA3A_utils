@@ -174,5 +174,6 @@ class Context:
         #     return await self.original_context.send_interactive(
         #         messages=messages, box_lang=box_lang, timeout=timeout
         #     )
-        await Menu(pages=messages, lang=box_lang).start(self)
-        return []
+        menu = Menu(pages=messages, lang=box_lang)
+        await menu.start(self)
+        return [menu._message]

@@ -19,9 +19,6 @@ from .context import Context, is_dev
 from .loop import Loop
 from .version import __version__ as __utils_version__
 from .settings import Settings
-# from .dev import DevEnv
-# from .shared_cog import SharedCog
-DevEnv: dict = None
 SharedCog: commands.Cog = None
 
 __all__ = ["Cog"]
@@ -133,8 +130,6 @@ class Cog(commands.Cog):
     async def cog_load(self) -> None:
         # Init logger.
         self.log: logging.Logger = CogsUtils.get_logger(cog=self)
-        # Add Dev Env values.
-        DevEnv.add_dev_env_values(bot=self.bot, cog=self)
         # Prevent Red `(timeout)` error.
         asyncio.create_task(self.cog_load_new_task())
 
@@ -212,8 +207,6 @@ class Cog(commands.Cog):
     async def cog_unload(self) -> None:
         # Close logger.
         CogsUtils.close_logger(self.log)
-        # Remove Dev Env values.
-        DevEnv.remove_dev_env_values(bot=self.bot, cog=self)
         # Stop loops.
         for loop in self.loops.copy():
             if self.qualified_name == "AAA3A_utils" and loop.name == "Sentry Helper":
@@ -319,10 +312,10 @@ class Cog(commands.Cog):
             and hasattr(context._typing.task, "cancel")
         ):
             context._typing.task.cancel()
-        if not context.command_failed:
-            await context.tick()
-        else:
+        if context.command_failed:
             await context.tick(reaction="❌")
+        elif getattr(ctx.cog, "qualified_name", None) != "Dev" or ctx.command.qualified_name not in ["eval", "debug"]:
+            await context.tick()
         # from .menus import Menu
         # await Menu(pages=str("\n".join([str((x.function, x.frame)) for x in __import__("inspect").stack(30)])), lang="py").start(context)
         return context
@@ -389,7 +382,7 @@ class Cog(commands.Cog):
             if error.message:
                 message = error.message
                 message = warning(message)
-                await ctx.send(message)
+                await ctx.send(message, delete_after=3 if "delete_after" in error.args else None)
         elif isinstance(error, commands.CheckFailure) and not isinstance(
             error, commands.BotMissingPermissions
         ):

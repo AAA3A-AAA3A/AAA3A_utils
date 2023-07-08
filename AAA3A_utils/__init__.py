@@ -1,7 +1,6 @@
 from .cog import Cog
 from .cogsutils import CogsUtils
 from .context import Context
-from .dev import DevEnv, DevSpace
 from .loop import Loop
 from .menus import Menu, Reactions
 
@@ -20,10 +19,7 @@ from .views import (
     UserSelect,
 )  # NOQA
 
-from . import dev
-dev.Cog = Cog
 from . import cog
-cog.DevEnv = DevEnv
 cog.SharedCog = SharedCog
 
 from .version import __version__
@@ -34,8 +30,6 @@ __all__ = [
     "CogsUtils",
     "Loop",
     "SharedCog",
-    "DevEnv",
-    "DevSpace",
     "Cog",
     "Menu",
     "Context",
