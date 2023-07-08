@@ -28,6 +28,9 @@ def _(untranslated: str) -> str:
     return untranslated
 
 
+replacement_var_paths: bool = True
+
+
 class CogsUtils:
     """Utils for AAA3A-cogs!"""
 
@@ -57,6 +60,8 @@ class CogsUtils:
     @classmethod
     def replace_var_paths(cls, text: str, reverse: typing.Optional[bool] = False) -> str:
         if not reverse:
+            if not replacement_var_paths:
+                return text
             for env_var in ["USERPROFILE", "HOME", "USERNAME", "COMPUTERNAME"]:
                 if env_var in os.environ:
                     regex = re.compile(re.escape(os.environ[env_var]), re.I)

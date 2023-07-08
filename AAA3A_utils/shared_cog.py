@@ -32,6 +32,7 @@ from rich.console import Console
 from rich.table import Table
 
 from AAA3A_utils.cog import Cog
+from . import cogsutils
 from .cogsutils import CogsUtils
 from .menus import Menu
 from .sentry import SentryHelper
@@ -94,6 +95,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
             "cogs_with_slash": [],
             "ignored_slash_commands": [],
             "sentry": {},
+            "replacement_var_paths": True,
         }
         self.config.register_global(**self.AAA3A_utils_global)
 
@@ -109,6 +111,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
         if self.sentry is None:
             self.sentry = SentryHelper(bot=self.bot, cog=self)
         self._session: aiohttp.ClientSession = aiohttp.ClientSession()
+        cogsutils.replacement_var_paths = await self.config.replacement_var_paths()
 
     async def cog_unload(self) -> None:
         if self._session is not None:
@@ -196,7 +199,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
         await Menu(pages=embeds).start(ctx)
 
     @commands.is_owner()
-    @AAA3A_utils.command()
+    @AAA3A_utils.command(aliases=["clearconfig"])
     async def resetconfig(
         self, ctx: commands.Context, cog: str, confirmation: bool = False
     ) -> None:
@@ -257,6 +260,16 @@ class SharedCog(Cog, name="AAA3A_utils"):
                 " without specific instructions."
             ).format(event_id=event_id)
         )
+
+    @commands.is_owner()
+    @AAA3A_utils.command()
+    async def replacementvarpaths(self, ctx: commands.Context, state: bool) -> None:
+        """Replace various var paths in texts sent by cog from AAA3A-cogs.
+
+        Defaults is `True`.
+        """
+        await self.config.replacement_var_paths.set(state)
+        cogsutils.replacement_var_paths = state
 
     @commands.is_owner()
     @AAA3A_utils.command()
