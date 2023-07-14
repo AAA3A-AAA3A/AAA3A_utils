@@ -17,6 +17,8 @@ from pathlib import Path
 from random import choice
 
 import aiohttp
+
+from redbot.core.utils.chat_formatting import humanize_list
 from redbot.logging import RotatingFileHandler
 
 from .views import ConfirmationAskView
@@ -689,6 +691,62 @@ class CogsUtils:
         """
         t = str(int(dt.timestamp()))
         return f"<t:{t}:{format}>"
+
+    @classmethod
+    def get_interval_string(
+        cls,
+        expires: typing.Optional[
+            typing.Union[
+                datetime.datetime, datetime.timedelta  # , dateutil.relativedelta.relativedelta
+            ]
+        ],
+        utc_now: datetime.datetime = None,
+        use_timestamp: bool = False,
+    ) -> str:
+        """
+        Get a string from a given duration.
+        """
+        if expires is None:
+            return "No future occurrence."
+        if use_timestamp:
+            expires = expires.replace(tzinfo=datetime.timezone.utc)
+            return f"<t:{int(expires.timestamp())}:R>"
+        if utc_now is None:
+            utc_now = datetime.datetime.now(datetime.timezone.utc)
+        if isinstance(expires, datetime.datetime):
+            delta = expires - utc_now
+        elif isinstance(expires, datetime.timedelta):
+            delta = expires
+        else:
+            try:
+                import dateutil
+            except ImportError:
+                pass
+            else:
+                if isinstance(expires, dateutil.relativedelta.relativedelta):
+                    delta = (utc_now + expires) - utc_now
+            delta = datetime.timedelta(seconds=expires)
+        result = []
+        total_secs = int(max(0, delta.total_seconds()))
+        years, rem = divmod(total_secs, 3600 * 24 * 365)
+        if years > 0:
+            result.append(f"{years} year" + ("s" if years > 1 else ""))
+        months, rem = divmod(rem, 3600 * 24 * 7 * 4)
+        if months > 0:
+            result.append(f"{months} month" + ("s" if months > 1 else ""))
+        weeks, rem = divmod(rem, 3600 * 24 * 7)
+        if weeks > 0:
+            result.append(f"{weeks} week" + ("s" if weeks > 1 else ""))
+        days, rem = divmod(rem, 3600 * 24)
+        if days > 0:
+            result.append(f"{days} day" + ("s" if days > 1 else ""))
+        hours, rem = divmod(rem, 3600)
+        if hours > 0:
+            result.append(f"{hours} hour" + ("s" if hours > 1 else ""))
+        mins, rem = divmod(rem, 60)
+        if mins > 0:
+            result.append(f"{mins} minute" + ("s" if mins > 1 else ""))
+        return humanize_list(result) if result else "just now"  # "0 minute"
 
     @classmethod
     def check_permissions_for(
