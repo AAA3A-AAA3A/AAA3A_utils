@@ -564,7 +564,7 @@ class CogsUtils:
         context.guild = channel.guild
         context.channel = channel
         if not context.valid:
-            if (alias_cog := bot.get_cog("Alias")) is not None:
+            if (alias_cog := bot.get_cog("Alias")) is not None and not await bot.cog_disabled_in_guild(alias_cog, context.guild):
                 alias = await alias_cog._aliases.get_alias(context.guild, context.invoked_with)
                 if alias:
                     async def command_callback(__, ctx: commands.Context):
@@ -573,7 +573,7 @@ class CogsUtils:
                     context.command.cog = alias_cog
                     context.command.params.clear()
                     context.command.requires.ready_event.set()
-            if not context.valid and (custom_commands_cog := bot.get_cog("CustomCommands")) is not None and not await self.bot.cog_disabled_in_guild(custom_commands_cog, context.guild):
+            if not context.valid and (custom_commands_cog := bot.get_cog("CustomCommands")) is not None and not await bot.cog_disabled_in_guild(custom_commands_cog, context.guild):
                 try:
                     raw_response, cooldowns = await custom_commands_cog.commandobj.get(
                         message=message, command=context.invoked_with
