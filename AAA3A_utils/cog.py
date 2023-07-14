@@ -382,7 +382,7 @@ class Cog(commands.Cog):
             if error.message:
                 message = error.message
                 message = warning(message)
-                await ctx.send(message, delete_after=3 if "delete_after" in error.args else None)
+                await ctx.send(message, delete_after=3 if "delete_after" in error.args else None, allowed_mentions=discord.AllowedMentions.none())
         elif isinstance(error, commands.CheckFailure) and not isinstance(
             error, commands.BotMissingPermissions
         ):
