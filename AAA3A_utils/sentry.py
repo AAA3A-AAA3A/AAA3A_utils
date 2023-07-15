@@ -136,7 +136,9 @@ class SentryHelper:
 
     async def _async_init(self) -> None:
         self.sentry_enabled = await self.config.sentry.sentry_enabled()
-        self.display_sentry_manual_command = not self.sentry_enabled and (await self.config.sentry.display_sentry_manual_command())
+        self.display_sentry_manual_command = not self.sentry_enabled and (
+            await self.config.sentry.display_sentry_manual_command()
+        )
         # always set it, really doesn't do much
         uuid = await self.config.sentry.uuid()
         if uuid is None:
@@ -307,7 +309,9 @@ class SentryHelper:
             return self.hubs[cog.qualified_name]
         if getattr(cog, "__version__", None) is None and getattr(cog, "__commit__", None) is None:
             try:
-                nb_commits, version, commit = await CogsUtils.get_cog_version(bot=self.bot, cog=self.cog)
+                nb_commits, version, commit = await CogsUtils.get_cog_version(
+                    bot=self.bot, cog=self.cog
+                )
                 cog.__version__ = version
                 cog.__commit__ = commit
             except Exception:

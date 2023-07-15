@@ -17,7 +17,6 @@ from pathlib import Path
 from random import choice
 
 import aiohttp
-
 from redbot.core.utils.chat_formatting import humanize_list
 from redbot.logging import RotatingFileHandler
 
@@ -104,7 +103,9 @@ class CogsUtils:
     #     return cog
 
     @classmethod
-    def get_logger(cls, name: typing.Optional[str] = None, cog: typing.Optional[commands.Cog] = None) -> logging.Logger:
+    def get_logger(
+        cls, name: typing.Optional[str] = None, cog: typing.Optional[commands.Cog] = None
+    ) -> logging.Logger:
         """
         Get a logger for a provided name or a provided cog.
         Thanks to @laggron42 on GitHub! (https://github.com/laggron42/Laggron-utils/blob/master/laggron_utils/logging.py)
@@ -118,7 +119,11 @@ class CogsUtils:
                 else logging.getLogger(f"red.AAA3A-cogs.{name}")
             )
 
-        logger = logging.getLogger(f"red.{cog.__repo_name__}.{cog.qualified_name}") if name is None else logging.getLogger(f"red.{cog.__repo_name__}.{cog.qualified_name}.{name}")
+        logger = (
+            logging.getLogger(f"red.{cog.__repo_name__}.{cog.qualified_name}")
+            if name is None
+            else logging.getLogger(f"red.{cog.__repo_name__}.{cog.qualified_name}.{name}")
+        )
 
         __log = partial(logging.Logger._log, logger)
 
@@ -160,6 +165,7 @@ class CogsUtils:
                 stack_info=stack_info,
                 stacklevel=stacklevel,
             )
+
         setattr(logger, "_log", _log)
 
         # Logging in a log file.
@@ -367,7 +373,9 @@ class CogsUtils:
         for _object in cog.walk_commands():
             if isinstance(_object, (commands.HybridCommand, commands.HybridGroup)):
                 if _object.app_command is not None:
-                    _object.app_command.description = _object.app_command.description.split("\n")[0][:100]
+                    _object.app_command.description = _object.app_command.description.split("\n")[
+                        0
+                    ][:100]
                 if _object.parent is not None and not _object.parent.invoke_without_command:
                     _object.checks.extend(_object.parent.checks)
         await bot.tree.red_check_enabled()
@@ -509,7 +517,7 @@ class CogsUtils:
         __is_mocked__: typing.Optional[bool] = True,
         message_id: typing.Optional[str] = "".join(choice(string.digits) for i in range(18)),
         timestamp: typing.Optional[datetime.datetime] = datetime.datetime.now(),
-        **kwargs
+        **kwargs,
     ) -> typing.Union[commands.Context, discord.Message]:
         """
         Invoke the specified command with the specified user in the specified channel.
@@ -566,16 +574,24 @@ class CogsUtils:
         context.guild = channel.guild
         context.channel = channel
         if not context.valid:
-            if (alias_cog := bot.get_cog("Alias")) is not None and not await bot.cog_disabled_in_guild(alias_cog, context.guild):
+            if (
+                alias_cog := bot.get_cog("Alias")
+            ) is not None and not await bot.cog_disabled_in_guild(alias_cog, context.guild):
                 alias = await alias_cog._aliases.get_alias(context.guild, context.invoked_with)
                 if alias:
+
                     async def command_callback(__, ctx: commands.Context):
                         await alias_cog.call_alias(ctx.message, ctx.prefix, alias)
+
                     context.command = commands.command(name=command)(command_callback)
                     context.command.cog = alias_cog
                     context.command.params.clear()
                     context.command.requires.ready_event.set()
-            if not context.valid and (custom_commands_cog := bot.get_cog("CustomCommands")) is not None and not await bot.cog_disabled_in_guild(custom_commands_cog, context.guild):
+            if (
+                not context.valid
+                and (custom_commands_cog := bot.get_cog("CustomCommands")) is not None
+                and not await bot.cog_disabled_in_guild(custom_commands_cog, context.guild)
+            ):
                 try:
                     raw_response, cooldowns = await custom_commands_cog.commandobj.get(
                         message=message, command=context.invoked_with
@@ -585,14 +601,20 @@ class CogsUtils:
                     elif isinstance(raw_response, str):
                         pass
                     if cooldowns:
-                        custom_commands_cog.test_cooldowns(context, context.invoked_with, cooldowns)
+                        custom_commands_cog.test_cooldowns(
+                            context, context.invoked_with, cooldowns
+                        )
                 except Exception:
                     pass
                 else:
+
                     async def command_callback(__, ctx: commands.Context):
                         # await custom_commands_cog.cc_callback(ctx)  # fake callback
                         del ctx.args[0]
-                        await custom_commands_cog.cc_command(*ctx.args, **ctx.kwargs, raw_response=raw_response)
+                        await custom_commands_cog.cc_command(
+                            *ctx.args, **ctx.kwargs, raw_response=raw_response
+                        )
+
                     context.command = commands.command(name=command)(command_callback)
                     context.command.cog = custom_commands_cog
                     context.command.requires.ready_event.set()
@@ -616,11 +638,7 @@ class CogsUtils:
         Create a discord.Webhook object. It tries to retrieve an existing webhook created by the bot or to create it itself.
         """
         hook = next(
-            (
-                webhook
-                for webhook in await channel.webhooks()
-                if webhook.user.id == bot.user.id
-            ),
+            (webhook for webhook in await channel.webhooks() if webhook.user.id == bot.user.id),
             None,
         )
         if hook is None:
@@ -769,16 +787,11 @@ class CogsUtils:
             new_check = {p: True for p in check}
             check = new_check
         return not any(
-            getattr(permissions, p, None) is not None  # Explicitly check whether the value is None.
+            getattr(permissions, p, None)
+            is not None  # Explicitly check whether the value is None.
             and (
-                (
-                    check[p]
-                    and not getattr(permissions, p)
-                )
-                or (
-                    not check[p]
-                    and getattr(permissions, p)
-                )
+                (check[p] and not getattr(permissions, p))
+                or (not check[p] and getattr(permissions, p))
             )
             for p in check
         )
@@ -853,7 +866,12 @@ class CogsUtils:
         return any(cog is not None for cog in cls.get_all_repo_cogs_objects(bot).values())
 
     @classmethod
-    def generate_key(cls, length: typing.Optional[int] = 10, existing_keys: typing.Optional[typing.Union[typing.List, typing.Set]] = None, strings_used: typing.Optional[typing.List] = None) -> str:
+    def generate_key(
+        cls,
+        length: typing.Optional[int] = 10,
+        existing_keys: typing.Optional[typing.Union[typing.List, typing.Set]] = None,
+        strings_used: typing.Optional[typing.List] = None,
+    ) -> str:
         """
         Generate a secret key, with the choice of characters, the number of characters and a list of existing keys.
         """
@@ -886,7 +904,10 @@ class CogsUtils:
 
     @classmethod
     async def check_in_listener(
-        cls, bot: Red, arg: typing.Union[discord.Message, discord.RawReactionActionEvent, discord.Interaction], allowed_by_whitelist_blacklist: bool = True
+        cls,
+        bot: Red,
+        arg: typing.Union[discord.Message, discord.RawReactionActionEvent, discord.Interaction],
+        allowed_by_whitelist_blacklist: bool = True,
     ) -> bool:
         """
         Check all parameters for the output of any listener.

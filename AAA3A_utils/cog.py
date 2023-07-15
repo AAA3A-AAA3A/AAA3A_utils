@@ -17,8 +17,9 @@ from redbot.core.utils.chat_formatting import humanize_list, inline, warning
 from .cogsutils import CogsUtils
 from .context import Context, is_dev
 from .loop import Loop
-from .version import __version__ as __utils_version__
 from .settings import Settings
+from .version import __version__ as __utils_version__
+
 SharedCog: commands.Cog = None
 
 __all__ = ["Cog"]
@@ -125,7 +126,9 @@ class Cog(commands.Cog):
             ],
         ] = {}
         self.loops: typing.List[Loop] = []
-        self.views: typing.Dict[typing.Union[discord.Message, discord.PartialMessage, str], discord.ui.View] = {}  # `str` is for Views not linked to a message (in TicketTool for example).
+        self.views: typing.Dict[
+            typing.Union[discord.Message, discord.PartialMessage, str], discord.ui.View
+        ] = {}  # `str` is for Views not linked to a message (in TicketTool for example).
 
     async def cog_load(self) -> None:
         # Init logger.
@@ -292,7 +295,10 @@ class Cog(commands.Cog):
             except (discord.InteractionResponded, discord.NotFound):
                 pass
         # Typing automatically.
-        if ctx.cog.qualified_name not in ["CmdChannel", "Sudo"] and (not (isinstance(getattr(ctx.cog, "settings", None), Settings)) or ctx.command not in ctx.cog.settings.commands.values()):
+        if ctx.cog.qualified_name not in ["CmdChannel", "Sudo"] and (
+            not (isinstance(getattr(ctx.cog, "settings", None), Settings))
+            or ctx.command not in ctx.cog.settings.commands.values()
+        ):
             context._typing = context.channel.typing()
             try:
                 await context._typing.__aenter__()
@@ -314,7 +320,9 @@ class Cog(commands.Cog):
             context._typing.task.cancel()
         if context.command_failed:
             await context.tick(reaction="❌")
-        elif getattr(ctx.cog, "qualified_name", None) != "Dev" or ctx.command.qualified_name not in ["eval", "debug"]:
+        elif getattr(
+            ctx.cog, "qualified_name", None
+        ) != "Dev" or ctx.command.qualified_name not in ["eval", "debug"]:
             await context.tick()
         # from .menus import Menu
         # await Menu(pages=str("\n".join([str((x.function, x.frame)) for x in __import__("inspect").stack(30)])), lang="py").start(context)
@@ -382,7 +390,11 @@ class Cog(commands.Cog):
             if error.message:
                 message = error.message
                 message = warning(message)
-                await ctx.send(message, delete_after=3 if "delete_after" in error.args else None, allowed_mentions=discord.AllowedMentions.none())
+                await ctx.send(
+                    message,
+                    delete_after=3 if "delete_after" in error.args else None,
+                    allowed_mentions=discord.AllowedMentions.none(),
+                )
         elif isinstance(error, commands.CheckFailure) and not isinstance(
             error, commands.BotMissingPermissions
         ):
@@ -395,7 +407,9 @@ class Cog(commands.Cog):
             await ctx.bot.on_command_error(ctx, error=error, unhandled_by_cog=True)
 
 
-def verbose_forbidden_exception(ctx: commands.Context, error: discord.Forbidden) -> None:  # A little useless now.
+def verbose_forbidden_exception(
+    ctx: commands.Context, error: discord.Forbidden
+) -> None:  # A little useless now.
     if not isinstance(error, discord.Forbidden):
         return ValueError(error)
     method = error.response.request_info.method

@@ -1,9 +1,9 @@
+from . import cog
 from .cog import Cog
 from .cogsutils import CogsUtils
 from .context import Context
 from .loop import Loop
 from .menus import Menu, Reactions
-
 from .sentry import SentryHelper
 from .settings import Settings
 from .shared_cog import SharedCog
@@ -19,7 +19,6 @@ from .views import (
     UserSelect,
 )  # NOQA
 
-from . import cog
 cog.SharedCog = SharedCog
 
 from .version import __version__
@@ -46,4 +45,3 @@ __all__ = [
     "Modal",
     "Reactions",
 ]
-

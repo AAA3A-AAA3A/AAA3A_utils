@@ -7,7 +7,6 @@ import asyncio
 import re
 
 from colorama import Fore
-
 from redbot.core.utils.chat_formatting import box, pagify, text_to_file
 from redbot.core.utils.menus import start_adding_reactions
 from redbot.core.utils.predicates import MessagePredicate, ReactionPredicate
@@ -80,13 +79,23 @@ class Menu(discord.ui.View):
             self.pages: typing.List[str] = list(
                 pagify(
                     self.pages,
-                    shorten_by=len(f"```{lang or ''}\n\n```") + (len(f"{self.prefix}\n") if self.prefix is not None else 0)
+                    shorten_by=len(f"```{lang or ''}\n\n```")
+                    + (len(f"{self.prefix}\n") if self.prefix is not None else 0),
                 )
             )
         self.lang: typing.Optional[str] = lang
-        if (self.prefix is not None or lang is not None) and all(isinstance(page, str) for page in self.pages):
+        if (self.prefix is not None or lang is not None) and all(
+            isinstance(page, str) for page in self.pages
+        ):
             self.pages: typing.List[str] = [
-                (self.prefix or "") + "\n" + (box(page[: 2000 - len(f"```{self.lang}\n\n```")], self.lang) if self.lang is not None else page) for page in self.pages
+                (self.prefix or "")
+                + "\n"
+                + (
+                    box(page[: 2000 - len(f"```{self.lang}\n\n```")], self.lang)
+                    if self.lang is not None
+                    else page
+                )
+                for page in self.pages
             ]
         if not isinstance(self.pages[0], (typing.Dict, discord.Embed, str)):
             raise RuntimeError("Pages must be of type typing.Dict, discord.Embed or str.")
@@ -258,7 +267,7 @@ class Menu(discord.ui.View):
         for i in range(len(self.pages)):
             __, kwargs = await self.get_page(i)
             if self.prefix is not None and i != 0 and kwargs["content"] is not None:
-                kwargs["content"] = kwargs["content"][len(self.prefix):]
+                kwargs["content"] = kwargs["content"][len(self.prefix) :]
             await interaction.channel.send(**kwargs)
 
     @discord.ui.button(emoji="📩", custom_id="send_interactive")
@@ -270,7 +279,7 @@ class Menu(discord.ui.View):
         for i in range(len(self.pages)):
             current, kwargs = await self.get_page(i)
             if self.prefix is not None and i != 0 and kwargs["content"] is not None:
-                kwargs["content"] = kwargs["content"][len(self.prefix):]
+                kwargs["content"] = kwargs["content"][len(self.prefix) :]
             msg = await self.ctx.send(**kwargs)
             ret.append(msg)
             n_remaining = len(self.pages) - current
@@ -323,12 +332,14 @@ class Menu(discord.ui.View):
             return content.strip("` \n")
 
         if not self.ctx.channel.permissions_for(self.ctx.me).attach_files:
-            await interaction.response.send_message(_("I don't have the permission to attach files in this channel."), ephemeral=True)
+            await interaction.response.send_message(
+                _("I don't have the permission to attach files in this channel."), ephemeral=True
+            )
             return
         pages = self.pages.copy()
         if self.prefix is not None:
             for i, page in enumerate(pages):
-                pages[i] = page[len(self.prefix):]
+                pages[i] = page[len(self.prefix) :]
         all_text = [cleanup_code(cleanup_ansi(page)) for page in pages]
         all_text = (f"{self.prefix}\n\n" if self.prefix is not None else "") + "\n".join(all_text)
         await interaction.followup.send(
