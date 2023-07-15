@@ -715,6 +715,7 @@ class CogsUtils:
             utc_now = datetime.datetime.now(datetime.timezone.utc)
         if isinstance(expires, datetime.datetime):
             delta = expires - utc_now
+            # delta.seconds = 0
         elif isinstance(expires, datetime.timedelta):
             delta = expires
         else:
@@ -743,9 +744,12 @@ class CogsUtils:
         hours, rem = divmod(rem, 3600)
         if hours > 0:
             result.append(f"{hours} hour" + ("s" if hours > 1 else ""))
-        mins, rem = divmod(rem, 60)
-        if mins > 0:
-            result.append(f"{mins} minute" + ("s" if mins > 1 else ""))
+        minutes, rem = divmod(rem, 60)
+        if minutes > 0:
+            result.append(f"{minutes} minute" + ("s" if minutes > 1 else ""))
+        seconds = rem
+        if seconds > 0:
+            result.append(f"{seconds} second" + ("s" if seconds > 1 else ""))
         return humanize_list(result) if result else "just now"  # "0 minute"
 
     @classmethod
