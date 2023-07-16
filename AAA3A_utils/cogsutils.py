@@ -740,11 +740,12 @@ class CogsUtils:
             try:
                 import dateutil
             except ImportError:
-                pass
+                delta = datetime.timedelta(seconds=expires)
             else:
                 if isinstance(expires, dateutil.relativedelta.relativedelta):
                     delta = (utc_now + expires) - utc_now
-            delta = datetime.timedelta(seconds=expires)
+                else:
+                    delta = datetime.timedelta(seconds=expires)
         result = []
         total_secs = int(max(0, delta.total_seconds()))
         years, rem = divmod(total_secs, 3600 * 24 * 365)
