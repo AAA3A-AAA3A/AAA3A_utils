@@ -732,7 +732,7 @@ class CogsUtils:
         if utc_now is None:
             utc_now = datetime.datetime.now(datetime.timezone.utc)
         if isinstance(expires, datetime.datetime):
-            delta = expires - utc_now
+            delta = utc_now - expires
             # delta.seconds = 0
         elif isinstance(expires, datetime.timedelta):
             delta = expires
