@@ -11,7 +11,7 @@ import git
 from git import Repo
 
 # git -C %USERPROFILE%\Documents\GitHub\AAA3A_utils rev-list HEAD --count AAA3A_utils
-VERSION = 5.4
+VERSION = 5.5
 
 if VERSION is None:
     utils_repo_clone_location = Path(
@@ -59,7 +59,9 @@ all_cogs = [
     "CmdChannel",
     "CodeSnippets",
     "CommandsButtons",
+    "ConsoleLogs",
     "CtxVar",
+    "Dev",
     "Dictionary",
     "DiscordEdit",
     "DiscordModals",
@@ -71,13 +73,13 @@ all_cogs = [
     "GetDocs",
     "GetLoc",
     "GistsHandler",
+    "GuildStats",
     "Ip",
     "LintCodes",
     "Medicat",
     "MemberPrefix",
     "MemoryGame",
     "Minecraft",
-    "UrlButtons",
     "ReactToCommand",
     "Recipes",
     "Reminders",
@@ -87,8 +89,10 @@ all_cogs = [
     "SimpleSanction",
     "SplitOrStealGame",
     "Sudo",
+    "TempRoles",
     "TicketTool",
     "TransferChannel",
+    "UrlButtons",
 ]
 cog_folders = [cog.lower() for cog in all_cogs]
 for cog in cog_folders:
