@@ -101,8 +101,6 @@ class SharedCog(Cog, name="AAA3A_utils"):
 
         self.sentry: SentryHelper = None
 
-        self._session: aiohttp.ClientSession = None
-
         self.telemetrywithsentry.__is_dev__: bool = True
         self.getallfor.__is_dev__: bool = True
 
@@ -110,13 +108,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
         await super().cog_load()
         if self.sentry is None:
             self.sentry = SentryHelper(bot=self.bot, cog=self)
-        self._session: aiohttp.ClientSession = aiohttp.ClientSession()
         cogsutils.replacement_var_paths = await self.config.replacement_var_paths()
-
-    async def cog_unload(self) -> None:
-        if self._session is not None:
-            await self._session.close()
-        await super().cog_unload()
 
     async def red_delete_data_for_user(self, *args, **kwargs) -> None:
         """Nothing to delete."""
