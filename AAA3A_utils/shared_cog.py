@@ -14,7 +14,6 @@ import traceback
 from io import StringIO
 from pathlib import Path
 
-import aiohttp
 import pip
 from AAA3A_utils.cog import Cog
 from redbot import version_info as red_version_info
