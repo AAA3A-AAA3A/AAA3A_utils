@@ -3,6 +3,8 @@ from redbot.core.bot import Red  # isort:skip
 import discord  # isort:skip
 import typing  # isort:skip
 
+import random
+
 from redbot.core.utils import can_user_react_in
 
 from .cogsutils import CogsUtils
@@ -80,7 +82,7 @@ class Context:
         self,
         *,
         message: typing.Optional[str] = None,
-        reaction: typing.Optional[str] = commands.context.TICK,
+        reaction: typing.Optional[str] = commands.context.TICK if not hasattr(commands.context, "TICKS") else random.choice(commands.context.TICKS),
     ) -> bool:
         """Add a tick reaction to the command message.
 
