@@ -82,7 +82,9 @@ class Context:
         self,
         *,
         message: typing.Optional[str] = None,
-        reaction: typing.Optional[str] = commands.context.TICK if not hasattr(commands.context, "MORE_TICKS") else random.choice(list(commands.context.MORE_TICKS)),
+        reaction: typing.Optional[str] = commands.context.TICK
+        if not hasattr(commands.context, "MORE_TICKS")
+        else random.choice(list(commands.context.MORE_TICKS)),
     ) -> bool:
         """Add a tick reaction to the command message.
 
