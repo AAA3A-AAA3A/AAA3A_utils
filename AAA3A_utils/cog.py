@@ -74,7 +74,7 @@ async def unsupported(ctx: commands.Context) -> None:
         "you want to continue?"
     )
     try:
-        result = await ctx.bot.get_cog("AAA3A_utils").cogsutils.ConfirmationAsk(
+        result = await CogsUtils.ConfirmationAsk(
             ctx, content=content
         )
     except TimeoutError:
