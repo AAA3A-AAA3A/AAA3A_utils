@@ -333,6 +333,8 @@ class Settings:
                     settings[setting]["usage"] = usage.lower()
                 else:
                     settings[setting]["usage"] = setting.replace(" ", "_").lower()
+            if "aliases" not in settings[setting]:
+                settings[setting]["aliases"] = []
             if "no_slash" not in settings[setting]:
                 settings[setting]["no_slash"] = False
             settings[setting]["param"] = discord.ext.commands.parameters.Parameter(
@@ -597,6 +599,7 @@ class Settings:
                         if self.use_profiles_system
                         else f"<{_usage}>",
                         help=_help,
+                        aliases=self.settings[setting]["aliases"],
                         with_app_command=False,
                     )(command)
                 else:
@@ -606,6 +609,7 @@ class Settings:
                         if self.use_profiles_system
                         else f"<{_usage}>",
                         help=_help,
+                        aliases=self.settings[setting]["aliases"],
                     )(command)
 
                 command.name = name
