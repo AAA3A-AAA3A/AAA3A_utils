@@ -110,7 +110,7 @@ class Loop:
         next_iteration = datetime.datetime.fromtimestamp(time, tz=datetime.timezone.utc) - now
         seconds_to_sleep = (next_iteration).total_seconds()
         if self.interval > 60 and hasattr(self.cog, "log"):
-            self.cog.log.debug(
+            self.cog.log.verbose(
                 f"Sleeping for {seconds_to_sleep} seconds until {self.name} loop next iteration"
                 f" ({self.iteration_count + 1})..."
             )
@@ -131,12 +131,12 @@ class Loop:
                 total = round(end - start, 1)
                 if hasattr(self.cog, "log"):
                     if self.iteration_count == 1:
-                        self.cog.log.debug(
+                        self.cog.log.verbose(
                             f"{self.name} initial iteration finished in {total}s"
                             f" ({self.iteration_count})."
                         )
                     elif self.interval > 60:
-                        self.cog.log.debug(
+                        self.cog.log.verbose(
                             f"{self.name} iteration finished in {total}s ({self.iteration_count})."
                         )
             except Exception as e:
