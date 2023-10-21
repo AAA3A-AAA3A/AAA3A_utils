@@ -321,8 +321,8 @@ class Settings:
                 settings[setting]["description"] = f"Set `{label}`."
             if "usage" not in settings[setting]:
                 if (
-                    settings[setting]["converter"]
-                    in discord.ext.commands.converter.CONVERTER_MAPPING
+                    not isinstance(settings[setting]["converter"], commands.Greedy)
+                    and settings[setting]["converter"] in discord.ext.commands.converter.CONVERTER_MAPPING
                 ):
                     x = settings[setting]["converter"].__name__.replace(" ", "_")
                     usage = x[0]
@@ -575,19 +575,32 @@ class Settings:
 
                 if not self.use_profiles_system:
 
-                    async def command(_self, ctx: commands.Context, *, value: _converter):
-                        await self.command(ctx, key=None, value=value)
+                    if not isinstance(_converter, commands.Greedy):
+                        async def command(_self, ctx: commands.Context, *, value: _converter):
+                            await self.command(ctx, key=None, value=value)
+                    else:
+                        async def command(_self, ctx: commands.Context, value: _converter):
+                            await self.command(ctx, key=None, value=list(value))
 
                 else:
 
-                    async def command(
-                        _self,
-                        ctx: commands.Context,
-                        profile: ProfileConverter,
-                        *,
-                        value: _converter,
-                    ):
-                        await self.command(ctx, key=None, value=value, profile=profile)
+                    if not isinstance(_converter, commands.Greedy):
+                        async def command(
+                            _self,
+                            ctx: commands.Context,
+                            profile: ProfileConverter,
+                            *,
+                            value: _converter,
+                        ):
+                            await self.command(ctx, key=None, value=value, profile=profile)
+                    else:
+                        async def command(
+                            _self,
+                            ctx: commands.Context,
+                            profile: ProfileConverter,
+                            value: _converter,
+                        ):
+                            await self.command(ctx, key=None, value=list(value), profile=profile)
 
                 command.__qualname__ = f"{self.cog.qualified_name}.settings_{name}"
                 if self.settings[setting]["no_slash"] and isinstance(
@@ -676,29 +689,25 @@ class Settings:
             try:
                 await self.set_raw(
                     key=key,
-                    value=getattr(value, "id", None) or getattr(value, "value", None) or value,
+                    value=[getattr(v, "id", None) or getattr(v, "value", None) or v for v in value] if isinstance(value, typing.List) else getattr(value, "id", None) or getattr(value, "value", None) or value,
                     _object=_object,
                     profile=profile,
                 )
             except self.NotExistingPanel:
-                await ctx.send("This profile don't exist.")
-                return
+                raise commands.UserFeedbackCheckFailure(_("This profile don't exist."))
         else:
             try:
                 await self.clear_raw(key=key, _object=_object, profile=profile)
             except self.NotExistingPanel:
-                await ctx.send("This profile don't exist.")
-                return
+                raise commands.UserFeedbackCheckFailure(_("This profile don't exist."))
 
     async def add_profile(self, ctx: commands.Context, profile: str) -> None:
         if len(profile) > 10:
-            await ctx.send(_("The name of a profile must be less than or equal to 10 characters."))
-            return
+            raise commands.UserFeedbackCheckFailure(_("The name of a profile must be less than or equal to 10 characters."))
         data = self.get_data(ctx=ctx)
         profiles = await data.get_raw(*self.global_path)
         if profile.lower() in profiles:
-            await ctx.send(_("This profile already exists."))
-            return
+            raise commands.UserFeedbackCheckFailure(_("This profile already exists."))
         await data.set_raw(
             *self.global_path,
             profile.lower(),
@@ -707,13 +716,11 @@ class Settings:
 
     async def clone_profile(self, ctx: commands.Context, old_profile: str, profile: str) -> None:
         if len(profile) > 10:
-            await ctx.send(_("The name of a profile must be less than or equal to 10 characters."))
-            return
+            raise commands.UserFeedbackCheckFailure(_("The name of a profile must be less than or equal to 10 characters."))
         data = self.get_data(ctx=ctx)
         profiles = await data.get_raw(*self.global_path)
         if profile in profiles:
-            await ctx.send(_("This profile already exists."))
-            return
+            raise commands.UserFeedbackCheckFailure(_("This profile already exists."))
         await data.set_raw(
             *self.global_path, profile, value=await data.get_raw(*self.global_path, old_profile)
         )
@@ -752,13 +759,11 @@ class Settings:
 
     async def rename_profile(self, ctx: commands.Context, old_profile: str, profile: str) -> None:
         if len(profile) > 10:
-            await ctx.send(_("The name of a profile must be less than or equal to 10 characters."))
-            return
+            raise commands.UserFeedbackCheckFailure(_("The name of a profile must be less than or equal to 10 characters."))
         data = self.get_data(ctx=ctx)
         profiles = await data.get_raw(*self.global_path)
         if profile in profiles:
-            await ctx.send(_("A panel with this name already exists."))
-            return
+            raise commands.UserFeedbackCheckFailure(_("A panel with this name already exists."))
         await data.set_raw(
             *self.global_path, profile, value=await data.get_raw(*self.global_path, old_profile)
         )
