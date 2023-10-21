@@ -573,52 +573,70 @@ class CogsUtils:
         context.author = author
         context.guild = channel.guild
         context.channel = channel
-        if not context.valid:
-            if (
-                alias_cog := bot.get_cog("Alias")
-            ) is not None and not await bot.cog_disabled_in_guild(alias_cog, context.guild):
-                alias = await alias_cog._aliases.get_alias(context.guild, context.invoked_with)
-                if alias:
 
-                    async def command_callback(__, ctx: commands.Context):
-                        await alias_cog.call_alias(ctx.message, ctx.prefix, alias)
+        if (  # Red's Alias
+            not context.valid
+            and (alias_cog := bot.get_cog("Alias")) is not None
+            and not await bot.cog_disabled_in_guild(alias_cog, context.guild)
+        ):
+            alias = await alias_cog._aliases.get_alias(context.guild, context.invoked_with)
+            if alias is not None:
 
-                    context.command = commands.command(name=command)(command_callback)
-                    context.command.cog = alias_cog
-                    context.command.params.clear()
-                    context.command.requires.ready_event.set()
-            if (
-                not context.valid
-                and (custom_commands_cog := bot.get_cog("CustomCommands")) is not None
-                and not await bot.cog_disabled_in_guild(custom_commands_cog, context.guild)
-            ):
-                try:
-                    raw_response, cooldowns = await custom_commands_cog.commandobj.get(
-                        message=message, command=context.invoked_with
-                    )
-                    if isinstance(raw_response, list):
-                        raw_response = random.choice(raw_response)
-                    elif isinstance(raw_response, str):
-                        pass
-                    if cooldowns:
-                        custom_commands_cog.test_cooldowns(
-                            context, context.invoked_with, cooldowns
-                        )
-                except Exception:
+                async def command_callback(__, ctx: commands.Context):
+                    await alias_cog.call_alias(ctx.message, ctx.prefix, alias)
+
+                context.command = commands.command(name=command)(command_callback)
+                context.command.cog = alias_cog
+                context.command.params.clear()
+                context.command.requires.ready_event.set()
+        if (  # Red's CustomCommands
+            not context.valid
+            and (custom_commands_cog := bot.get_cog("CustomCommands")) is not None
+            and not await bot.cog_disabled_in_guild(custom_commands_cog, context.guild)
+        ):
+            try:
+                raw_response, cooldowns = await custom_commands_cog.commandobj.get(
+                    message=message, command=context.invoked_with
+                )
+                if isinstance(raw_response, list):
+                    raw_response = random.choice(raw_response)
+                elif isinstance(raw_response, str):
                     pass
-                else:
+            except Exception:
+                pass
+            else:
 
-                    async def command_callback(__, ctx: commands.Context):
-                        # await custom_commands_cog.cc_callback(ctx)  # fake callback
-                        del ctx.args[0]
-                        await custom_commands_cog.cc_command(
-                            *ctx.args, **ctx.kwargs, raw_response=raw_response
-                        )
+                async def command_callback(__, ctx: commands.Context):
+                    # await custom_commands_cog.cc_callback(ctx)  # fake callback
+                    try:
+                        if cooldowns:
+                            custom_commands_cog.test_cooldowns(
+                                context, context.invoked_with, cooldowns
+                            )
+                    except Exception:
+                        return
+                    del ctx.args[0]
+                    await custom_commands_cog.cc_command(
+                        *ctx.args, **ctx.kwargs, raw_response=raw_response
+                    )
 
-                    context.command = commands.command(name=command)(command_callback)
-                    context.command.cog = custom_commands_cog
-                    context.command.requires.ready_event.set()
-                    context.command.params = custom_commands_cog.prepare_args(raw_response)
+                context.command = commands.command(name=command)(command_callback)
+                context.command.cog = custom_commands_cog
+                context.command.requires.ready_event.set()
+                context.command.params = custom_commands_cog.prepare_args(raw_response)
+        if (  # Phen/Lemon's Tags
+            not context.valid
+            and (tags_cog := bot.get_cog("Tags")) is not None
+            and not await bot.cog_disabled_in_guild(tags_cog, context.guild)
+        ):
+            tag = tags_cog.get_tag(context.guild, context.invoked_with, check_global=True)
+            if tag is not None:
+                message.content = f"{prefix}invoketag {command}"
+                context: commands.Context = await bot.get_context(message)
+                context.author = author
+                context.guild = channel.guild
+                context.channel = channel
+
         if __is_mocked__:
             context.__is_mocked__ = True
         context.__dict__.update(**kwargs)
