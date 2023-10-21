@@ -340,6 +340,7 @@ class Cog(commands.Cog):
             if e is not None and isinstance(e, commands.BotMissingPermissions):
                 error = e
                 is_command_error = False
+                
         if is_command_error:
             uuid = uuid4().hex
             no_sentry = AAA3A_utils is None or getattr(AAA3A_utils, "sentry", None) is None
