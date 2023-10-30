@@ -907,14 +907,8 @@ class Settings:
             else await data.get_raw(*self.global_path)
         )
         one_l = list(self.settings)
-        two_l = []
+        two_l = discord.utils.as_chunks(one_l, max_size=5)
         three_l = {}
-        while True:
-            lst = one_l[:5]
-            one_l = one_l[5:]
-            two_l.append(lst)
-            if one_l == []:
-                break
         for i, l in enumerate(two_l, start=1):
             three_l[i] = l
 
@@ -1087,7 +1081,7 @@ class Settings:
             view=view_button,
         )
         await view_button.wait()
-        for i, button in enumerate(buttons):
+        for i in range(len(buttons)):
             buttons[i]["disabled"] = True
         await message.edit(view=Buttons(timeout=None, buttons=buttons))
         return config
