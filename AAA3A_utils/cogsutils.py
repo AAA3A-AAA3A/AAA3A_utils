@@ -576,6 +576,7 @@ class CogsUtils:
 
         if (  # Red's Alias
             not context.valid
+            and context.prefix is not None
             and (alias_cog := bot.get_cog("Alias")) is not None
             and not await bot.cog_disabled_in_guild(alias_cog, context.guild)
         ):
@@ -591,6 +592,7 @@ class CogsUtils:
                 context.command.requires.ready_event.set()
         if (  # Red's CustomCommands
             not context.valid
+            and context.prefix is not None
             and (custom_commands_cog := bot.get_cog("CustomCommands")) is not None
             and not await bot.cog_disabled_in_guild(custom_commands_cog, context.guild)
         ):
@@ -626,12 +628,13 @@ class CogsUtils:
                 context.command.params = custom_commands_cog.prepare_args(raw_response)
         if (  # Phen/Lemon's Tags
             not context.valid
+            and context.prefix is not None
             and (tags_cog := bot.get_cog("Tags")) is not None
             and not await bot.cog_disabled_in_guild(tags_cog, context.guild)
         ):
             tag = tags_cog.get_tag(context.guild, context.invoked_with, check_global=True)
             if tag is not None:
-                message.content = f"{prefix}invoketag {command}"
+                message.content = f"{context.prefix}invoketag {command}"
                 context: commands.Context = await bot.get_context(message)
                 context.author = author
                 context.guild = channel.guild
