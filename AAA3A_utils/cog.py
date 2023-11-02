@@ -214,6 +214,7 @@ class Cog(commands.Cog):
         for loop in self.loops.copy():
             if self.qualified_name == "AAA3A_utils" and loop.name == "Sentry Helper":
                 continue
+            await loop.execute()  # Maybe is it a loop who save data... Might execute it a last time.
             loop.stop_all()
         # Stop views.
         for view in self.views.values():

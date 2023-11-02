@@ -122,42 +122,7 @@ class Loop:
         if hasattr(self.cog, "log"):
             self.cog.log.debug(f"{self.name} loop has started.")
         while True:
-            try:
-                start = time.monotonic()
-                self.iteration_start()
-                self.last_result = await self.function(**self.function_kwargs)
-                self.iteration_finish()
-                end = time.monotonic()
-                total = round(end - start, 1)
-                if hasattr(self.cog, "log"):
-                    if self.iteration_count == 1:
-                        self.cog.log.verbose(
-                            f"{self.name} initial iteration finished in {total}s"
-                            f" ({self.iteration_count})."
-                        )
-                    elif self.interval > 60:
-                        self.cog.log.verbose(
-                            f"{self.name} iteration finished in {total}s ({self.iteration_count})."
-                        )
-            except Exception as e:
-                if hasattr(self.cog, "log"):
-                    if self.iteration_count == 1:
-                        self.cog.log.exception(
-                            (
-                                f"Something went wrong in the {self.name} loop"
-                                f" ({self.iteration_count})."
-                            ),
-                            exc_info=e,
-                        )
-                    else:
-                        self.cog.log.exception(
-                            (
-                                f"Something went wrong in the {self.name} loop iteration"
-                                f" ({self.iteration_count})."
-                            ),
-                            exc_info=e,
-                        )
-                self.iteration_error(e)
+            await self.execute()
             if self.maybe_stop():
                 return
             if not self.wait_raw:
@@ -179,6 +144,44 @@ class Loop:
                     await self.wait_until_iteration()
             else:
                 await self.sleep_until_next()
+
+    async def execute(self) -> None:
+        try:
+            start = time.monotonic()
+            self.iteration_start()
+            self.last_result: typing.Any = await self.function(**self.function_kwargs)
+            self.iteration_finish()
+            end = time.monotonic()
+            total = round(end - start, 1)
+            if hasattr(self.cog, "log"):
+                if self.iteration_count == 1:
+                    self.cog.log.verbose(
+                        f"{self.name} initial iteration finished in {total}s"
+                        f" ({self.iteration_count})."
+                    )
+                elif self.interval > 60:
+                    self.cog.log.verbose(
+                        f"{self.name} iteration finished in {total}s ({self.iteration_count})."
+                    )
+        except Exception as e:
+            if hasattr(self.cog, "log"):
+                if self.iteration_count == 1:
+                    self.cog.log.exception(
+                        (
+                            f"Something went wrong in the {self.name} loop"
+                            f" ({self.iteration_count})."
+                        ),
+                        exc_info=e,
+                    )
+                else:
+                    self.cog.log.exception(
+                        (
+                            f"Something went wrong in the {self.name} loop iteration"
+                            f" ({self.iteration_count})."
+                        ),
+                        exc_info=e,
+                    )
+            self.iteration_error(e)
 
     def maybe_stop(self) -> bool:
         if self.stop:
