@@ -216,9 +216,9 @@ class Loop:
 
     def __repr__(self) -> str:
         return (
-            f"<friendly_name={self.name} iteration_count={self.iteration_count} "
-            f"currently_running={self.currently_running} last_iteration={self.last_iteration} "
-            f"next_iteration={self.next_iteration} integrity={self.integrity}>"
+            f"<friendly_name={self.name!r} iteration_count={self.iteration_count} "
+            f"currently_running={self.currently_running} last_iteration={self.last_iteration!r} "
+            f"next_iteration={self.next_iteration!r} integrity={self.integrity}>"
         )
 
     @property
