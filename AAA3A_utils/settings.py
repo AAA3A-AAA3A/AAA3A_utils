@@ -570,7 +570,7 @@ class Settings:
                     default_value = default_value.get(x, {})
                 if default_value == {}:
                     default_value = discord.utils.MISSING
-                _help += f"\n\nDefault value: {default_value}\nDev: {repr(_converter)}"
+                _help += f"\n\nDefault value: `{default_value}`\nDev: `{repr(_converter)}`"
                 _usage = self.settings[setting]["usage"]
 
                 if not self.use_profiles_system:
