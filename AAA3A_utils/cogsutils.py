@@ -515,13 +515,15 @@ class CogsUtils:
         dispatch_message: typing.Optional[bool] = False,
         invoke: typing.Optional[bool] = True,
         __is_mocked__: typing.Optional[bool] = True,
-        message_id: typing.Optional[str] = "".join(choice(string.digits) for i in range(18)),
-        timestamp: typing.Optional[datetime.datetime] = datetime.datetime.now(),
+        created_at: typing.Optional[datetime.datetime] = None,
         **kwargs,
     ) -> typing.Union[commands.Context, discord.Message]:
         """
         Invoke the specified command with the specified user in the specified channel.
         """
+        if created_at is None:
+            created_at = datetime.datetime.now(tz=datetime.timezone.utc)
+        message_id = discord.utils.time_snowflake(created_at)
         if prefix == "/":  # For hybrid and slash commands.
             prefix = None
         if prefix is None:
@@ -542,7 +544,7 @@ class CogsUtils:
                 "bot": author.bot,
             }
             channel_id = channel.id
-            timestamp = str(timestamp).replace(" ", "T") + "+00:00"
+            timestamp = str(created_at).replace(" ", "T") + "+00:00"
             data = {
                 "id": message_id,
                 "type": 0,
@@ -562,7 +564,7 @@ class CogsUtils:
                 "components": [],
                 "referenced_message": None,
             }
-            message = discord.Message(channel=channel, state=bot._connection, data=data)
+            message: discord.Message = discord.Message(channel=channel, state=bot._connection, data=data)
         else:
             message = copy(message)
             message.author = author
