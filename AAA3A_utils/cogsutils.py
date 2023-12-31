@@ -653,7 +653,7 @@ class CogsUtils:
             if dispatch_message:
                 message.content = old_content
                 bot.dispatch("message", message)
-        return context if context.valid else message
+        return context
 
     @classmethod
     async def get_hook(cls, bot: Red, channel: discord.TextChannel) -> discord.Webhook:
