@@ -1,6 +1,6 @@
 [tool.black]
     line-length = 99
-    target-version = ['py38']
+    target-version = ["py38"]
     include = '\.py$'
     exclude = '''
     /(
@@ -19,11 +19,11 @@
     '''
 
 [tool.isort]
-    profile = 'black'
+    profile = "black"
     line_length = 99
     atomic = true
     src_paths = ["isort", "test"]
     multi_line_output = 7
     order_by_type = true
-    sections = ['FUTURE','STDLIB','FIRSTPARTY','THIRDPARTY','LOCALFOLDER']
-    known_third_party = ['discord', 'redbot']
+    sections = ["FUTURE","STDLIB","FIRSTPARTY","THIRDPARTY","LOCALFOLDER"]
+    known_third_party = ["discord", "redbot"]
