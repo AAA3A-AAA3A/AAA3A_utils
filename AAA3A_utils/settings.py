@@ -292,7 +292,7 @@ class Settings:
         global_path: typing.List = None,
         use_profiles_system: typing.Optional[bool] = False,
         can_edit: bool = True,
-        commands_group: typing.Optional[typing.Union[commands.Group, str]] = None,
+        commands_group: typing.Optional[typing.Union[commands.Group, commands.HybridGroup, str]] = None,
     ) -> None:
         if global_path is None:
             global_path = []
@@ -304,8 +304,8 @@ class Settings:
         self.global_path: typing.List[str] = global_path
         self.use_profiles_system: bool = use_profiles_system
         self.can_edit: bool = can_edit
-        self.commands_group: commands.Group = commands_group
-        self.commands: typing.Dict[str, commands.Command] = {}
+        self.commands_group: typing.Union[commands.Group, commands.HybridGroup] = commands_group
+        self.commands: typing.Dict[str, typing.Union[commands.Command, commands.HybridCommand]] = {}
         self.commands_added: asyncio.Event = asyncio.Event()
         for setting in settings:
             if "path" not in settings[setting]:
@@ -335,6 +335,8 @@ class Settings:
                     settings[setting]["usage"] = setting.replace(" ", "_").lower()
             if "aliases" not in settings[setting]:
                 settings[setting]["aliases"] = []
+            if "hidden" not in settings[setting]:
+                settings[setting]["hidden"] = False
             if "no_slash" not in settings[setting]:
                 settings[setting]["no_slash"] = False
             settings[setting]["param"] = discord.ext.commands.parameters.Parameter(
@@ -535,7 +537,7 @@ class Settings:
                     pass
         for name, command in to_add.items():
             command.__qualname__ = f"{self.cog.qualified_name}.settings_{name}"
-            command: commands.Command = self.commands_group.command(
+            command: typing.Union[commands.Command, commands.HybridCommand] = self.commands_group.command(
                 name=name, aliases=aliases.get(name, [])
             )(command)
             command.name = name
@@ -606,23 +608,25 @@ class Settings:
                 if self.settings[setting]["no_slash"] and isinstance(
                     self.commands_group, commands.HybridGroup
                 ):
-                    command: commands.Command = self.commands_group.command(
+                    command: typing.Union[commands.Command, commands.HybridCommand] = self.commands_group.command(
                         name=name,
                         usage=f"<profile> <{_usage}>"
                         if self.use_profiles_system
                         else f"<{_usage}>",
                         help=_help,
                         aliases=self.settings[setting]["aliases"],
+                        hidden=self.settings[setting]["hidden"],
                         with_app_command=False,
                     )(command)
                 else:
-                    command: commands.Command = self.commands_group.command(
+                    command: typing.Union[commands.Command, commands.HybridCommand] = self.commands_group.command(
                         name=name,
                         usage=f"<profile> <{_usage}>"
                         if self.use_profiles_system
                         else f"<{_usage}>",
                         help=_help,
                         aliases=self.settings[setting]["aliases"],
+                        hidden=self.settings[setting]["hidden"],
                     )(command)
 
                 command.name = name

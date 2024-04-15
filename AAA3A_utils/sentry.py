@@ -194,7 +194,7 @@ class SentryHelper:
         except Exception as e:
             if manually:
                 raise e
-            self.cog.log.error("Sending an error to Sentry failed.", exc_info=e)
+            self.cog.logger.error("Sending an error to Sentry failed.", exc_info=e)
             return False
 
     def remove_sensitive_data(self, event: dict, hint: typing.Optional[dict] = {}) -> typing.Dict:

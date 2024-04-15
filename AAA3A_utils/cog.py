@@ -95,7 +95,7 @@ class Cog(commands.Cog):
 
     # bot: Red
     # data_path: Path
-    # log: logging.Logger
+    # logger: logging.Logger
     # logs: typing.Dict[
     #     str,
     #     typing.List[
@@ -132,7 +132,7 @@ class Cog(commands.Cog):
 
     async def cog_load(self) -> None:
         # Init logger.
-        self.log: logging.Logger = CogsUtils.get_logger(cog=self)
+        self.logger: logging.Logger = CogsUtils.get_logger(cog=self)
         # Prevent Red `(timeout)` error.
         asyncio.create_task(self.cog_load_new_task())
 
@@ -152,7 +152,7 @@ class Cog(commands.Cog):
         ):
             pass
         except Exception as e:  # Really doesn't matter if this fails, so fine with debug level.
-            self.log.debug(
+            self.logger.debug(
                 f"Something went wrong checking `{self.qualified_name}` version.",
                 exc_info=e,
             )
@@ -165,12 +165,12 @@ class Cog(commands.Cog):
                 online_commit_for_each_files,
             ) = await CogsUtils.check_if_to_update(bot=self.bot, cog=self)
             if to_update:
-                self.log.warning(
+                self.logger.warning(
                     f"Your `{self.qualified_name}` cog, from `{self.__repo_name__}`, is out of date."
                     " You can update your cogs with the '[p]cog update' command in Discord."
                 )
             else:
-                self.log.debug(f"{self.qualified_name} cog is up to date.")
+                self.logger.debug(f"{self.qualified_name} cog is up to date.")
         except (
             RuntimeError,
             asyncio.TimeoutError,
@@ -179,7 +179,7 @@ class Cog(commands.Cog):
         ):
             pass
         except Exception as e:  # Really doesn't matter if this fails, so fine with debug level.
-            self.log.debug(
+            self.logger.debug(
                 f"Something went wrong checking if `{self.qualified_name}` cog is up to date.",
                 exc_info=e,
             )
@@ -201,7 +201,7 @@ class Cog(commands.Cog):
             except discord.ClientException:  # Cog already loaded.
                 pass
             except Exception as e:
-                self.log.debug("Error when adding the `AAA3A_utils` cog.", exc_info=e)
+                self.logger.debug("Error when adding the `AAA3A_utils` cog.", exc_info=e)
             else:
                 await AAA3A_utils.sentry.maybe_send_owners(self)
         # Modify hybrid commands.
@@ -209,7 +209,7 @@ class Cog(commands.Cog):
 
     async def cog_unload(self) -> None:
         # Close logger.
-        CogsUtils.close_logger(self.log)
+        CogsUtils.close_logger(self.logger)
         # Stop loops.
         for loop in self.loops.copy():
             if self.qualified_name == "AAA3A_utils" and loop.name == "Sentry Helper":
@@ -376,7 +376,7 @@ class Cog(commands.Cog):
                 )
             await ctx.send(message)
             asyncio.create_task(ctx.bot._delete_delay(ctx))
-            self.log.exception(
+            self.logger.exception(
                 f"Exception in {_type} command '{ctx.command.qualified_name}'.",
                 exc_info=error.original,
             )
@@ -411,7 +411,7 @@ class Cog(commands.Cog):
 
 def verbose_forbidden_exception(
     ctx: commands.Context, error: discord.Forbidden
-) -> None:  # A little useless now.
+) -> commands.BotMissingPermissions:  # A little useless now.
     if not isinstance(error, discord.Forbidden):
         return ValueError(error)
     method = error.response.request_info.method

@@ -109,8 +109,8 @@ class Loop:
         time = math.ceil(time / self.interval) * self.interval
         next_iteration = datetime.datetime.fromtimestamp(time, tz=datetime.timezone.utc) - now
         seconds_to_sleep = (next_iteration).total_seconds()
-        if self.interval > 60 and hasattr(self.cog, "log"):
-            self.cog.log.verbose(
+        if self.interval > 60 and hasattr(self.cog, "logger"):
+            self.cog.logger.verbose(
                 f"Sleeping for {seconds_to_sleep} seconds until {self.name} loop next iteration"
                 f" ({self.iteration_count + 1})..."
             )
@@ -119,8 +119,8 @@ class Loop:
     async def loop(self) -> None:
         await self.cog.bot.wait_until_red_ready()
         await asyncio.sleep(1)
-        if hasattr(self.cog, "log"):
-            self.cog.log.debug(f"{self.name} loop has started.")
+        if hasattr(self.cog, "logger"):
+            self.cog.logger.debug(f"{self.name} loop has started.")
         while True:
             await self.execute()
             if self.maybe_stop():
@@ -153,20 +153,20 @@ class Loop:
             self.iteration_finish()
             end = time.monotonic()
             total = round(end - start, 1)
-            if hasattr(self.cog, "log"):
+            if hasattr(self.cog, "logger"):
                 if self.iteration_count == 1:
-                    self.cog.log.verbose(
+                    self.cog.logger.verbose(
                         f"{self.name} initial iteration finished in {total}s"
                         f" ({self.iteration_count})."
                     )
                 elif self.interval > 60:
-                    self.cog.log.verbose(
+                    self.cog.logger.verbose(
                         f"{self.name} iteration finished in {total}s ({self.iteration_count})."
                     )
         except Exception as e:
-            if hasattr(self.cog, "log"):
+            if hasattr(self.cog, "logger"):
                 if self.iteration_count == 1:
-                    self.cog.log.exception(
+                    self.cog.logger.exception(
                         (
                             f"Something went wrong in the {self.name} loop"
                             f" ({self.iteration_count})."
@@ -174,7 +174,7 @@ class Loop:
                         exc_info=e,
                     )
                 else:
-                    self.cog.log.exception(
+                    self.cog.logger.exception(
                         (
                             f"Something went wrong in the {self.name} loop iteration"
                             f" ({self.iteration_count})."
@@ -208,8 +208,8 @@ class Loop:
         self.task.cancel()
         # if self.loops.get(self.name) == self:
         #     del self.cog.loops[self.cog.loops.index(self)]
-        if hasattr(self.cog, "log"):
-            self.cog.log.debug(
+        if hasattr(self.cog, "logger"):
+            self.cog.logger.debug(
                 f"{self.name} loop has been stopped after {self.iteration_count} iteration(s)."
             )
         return self

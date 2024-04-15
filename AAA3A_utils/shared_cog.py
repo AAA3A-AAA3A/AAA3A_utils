@@ -154,7 +154,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
             data = list(cog.logs.get(level))
         result = []
         for log in data:
-            name = cog.log.name
+            name = cog.logger.name
             time = log["time"]
             asctime = time.strftime("%Y-%m-%d %H:%M:%S")
             levelname = log["levelname"]
