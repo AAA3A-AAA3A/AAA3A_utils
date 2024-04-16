@@ -315,7 +315,7 @@ class Settings:
             if "command_name" not in settings[setting]:
                 settings[setting]["command_name"] = setting.replace("_", "").lower()
             if "label" not in settings[setting]:
-                settings[setting]["label"] = setting.replace("_", " ").capitalize()
+                settings[setting]["label"] = setting.replace("_", " ").title()
             if "description" not in settings[setting]:
                 label = settings[setting]["label"]
                 settings[setting]["description"] = f"Set `{label}`."
@@ -951,9 +951,8 @@ class Settings:
                         f" converter:\n{box(e, lang='py')}"
                     )
                     return None
-                if (
-                    getattr(value, "id", None) or getattr(value, "value", None) or value
-                ) == values[custom_id]["value"]:
+                value = getattr(value, "id", None) or getattr(value, "value", None) or value
+                if value == values[custom_id]["value"]:
                     continue
                 assert self.settings[custom_id]["path"]
                 if len(self.settings[custom_id]["path"]) == 1:
@@ -961,9 +960,7 @@ class Settings:
                 else:
                     for x in self.settings[custom_id]["path"][:-1]:
                         c = config.get(x, {})
-                c[self.settings[custom_id]["path"][-1]] = (
-                    getattr(value, "id", None) or getattr(value, "value", None) or value
-                )
+                c[self.settings[custom_id]["path"][-1]] = value
 
         async def on_button(
             view: Buttons,
@@ -1009,10 +1006,14 @@ class Settings:
                                         for v in self.settings[setting]["converter"].__args__
                                     )
                                     if self.settings[setting]["converter"] is typing.Literal
-                                    else getattr(
-                                        self.settings[setting]["converter"],
-                                        "__name__",
-                                        "",
+                                    else (
+                                        f"Range[{self.settings[setting]['converter'].annotation.__name__}, {self.settings[setting]['converter'].start}, {self.settings[setting]['converter'].end}]"
+                                        if self.settings[setting]["converter"] is commands.Range else
+                                        getattr(
+                                            self.settings[setting]["converter"],
+                                            "__name__",
+                                            repr(self.settings[setting]["converter"]),
+                                        )
                                     )
                                 )
                                 + ")"
@@ -1090,12 +1091,11 @@ class Settings:
         await message.edit(view=Buttons(timeout=None, buttons=buttons))
         return config
 
-    @dashboard_page(name="settings", methods=["GET", "POST"])
+    @dashboard_page(name="settings", description="Set cog options.", methods=("GET", "POST"))
     async def rpc_callback_settings(
         self,
-        method: str,
         user: discord.User,
-        profile: typing.Optional[str] = None,
+        extra_kwargs: typing.Dict[str, typing.Any],
         **kwargs,
     ):
         if "guild" in kwargs:
@@ -1106,13 +1106,9 @@ class Settings:
                 channel=kwargs.get("channel", guild.text_channels[0]),
                 command=f"{self.commands_group.qualified_name}",
                 invoke=False,
+                __dashboard_fake__=True,
             )
             context.__dashboard_fake__ = True
-            if not await self.commands_group.can_run(context):
-                return {
-                    "status": 1,
-                    "error_message": "You are not allowed to access these settings.",
-                }
         else:
             context = await CogsUtils.invoke_command(
                 bot=self.bot,
@@ -1120,8 +1116,14 @@ class Settings:
                 channel=list(self.bot.get_all_channels())[0],
                 command=f"{self.commands_group.qualified_name}",
                 invoke=False,
+                __dashboard_fake__=True,
             )
-            context.__dashboard_fake__ = True
+        if not await self.commands_group.can_run(context):
+            return {
+                "status": 1,
+                "error_code": 403,
+                "error_message": "You are not allowed to access these settings.",
+            }
         try:
             if self.group == Config.GLOBAL:
                 _object = None
@@ -1135,177 +1137,134 @@ class Settings:
                 _object = kwargs["role"]
         except KeyError:
             return {"status": 1, "error_message": f"Missing `{self.group.lower()}_id` argument."}
-        values = await self.get_values(_object=_object, profile=profile)
         data = self.get_data(_object)
+
         if self.use_profiles_system:
             profiles = list(await data.get_raw(*self.global_path))
+            profile = extra_kwargs.get("profile")
             if profile is None:
-                web_content = """
-                {% extends "base-site.html" %}
-
-                {% block title %} {{ _('{COG_NAME} Config') }} {% endblock title %}
-
-                {% block content %}
-                <h2>{COG_NAME} Config</h2>
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="card">
-                            <div class="card-body">
-                                <div id="profiles-table">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% endblock content %}
-
-                {% block javascripts %}
-                <script>
-                    let currentUrlParams = new URLSearchParams(window.location.search);
-                    let profiles = {{ profiles | tojson }};
-                    let profileLinks = profiles.map(profile => {
-                        let linkUrlParams = new URLSearchParams(currentUrlParams);
-                        linkUrlParams.set("profile", profile);
-                        let linkUrl = `${window.location.pathname}?${linkUrlParams.toString()}`;
-                        let linkText = profile;
-                        return [`<a href="${linkUrl}">${linkText}</a>`];
-                    });
-                    $.showTableRegular(element=$("#profiles-table"), columns=["Profiles:"], data=profileLinks);
-                </script>
-                {% endblock javascripts %}
-                """.replace(
-                    "{COG_NAME}", self.cog.qualified_name
-                )
-                return {"status": 1, "web-content": web_content, "profiles": profiles}
+                source = """<h4>Profiles:</h4>
+                <ul>
+                    {% for profile in profiles %}
+                        <li><a href="{{ url_for_query(profile=profile) }}">{{ profile }}</a></li>
+                    {% endfor %}
+                </ul>"""
+                return {"status": 0, "web_content": {"source": source, "profiles": profiles}}
             elif profile.lower() not in profiles:
-                return {"status": 1, "error_message": "This profile does not exist."}
+                return {"status": 1, "error_code": 404, "error_message": "This profile does not exist."}
+        values = await self.get_values(_object=_object, profile=profile if self.use_profiles_system else None)
         config = (
             await data.get_raw(*self.global_path, profile)
             if self.use_profiles_system
             else await data.get_raw(*self.global_path)
         )
-        if method == "GET":
-            web_content = """
-            {% extends "base-site.html" %}
 
-            {% block title %} {{ _('{COG_NAME} Config') }} {% endblock title %}
-
-            {% block content %}
-            <h2>{COG_NAME} Config</h2>
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="card">
-                        <div class="card-body">
-                            <div id="settings-form">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endblock content %}
-
-            {% block javascripts %}
-            <script>
-                let fields = {{ fields | tojson }};
-                $.generateForm(element=$("#settings-form"), fields=fields, formID=null, resetForm=false);
-            </script>
-            {% endblock javascripts %}
-            """.replace(
-                "{COG_NAME}", self.cog.qualified_name
-            )
-            fields = []
-            for setting in list(self.settings):
-                field = {
-                    "label": (
-                        self.settings[setting]["label"]
-                        + " ("
-                        + (
-                            "|".join(
-                                f'"{v}"' if isinstance(v, str) else str(v)
-                                for v in self.settings[setting]["converter"].__args__
-                            )
-                            if self.settings[setting]["converter"] is typing.Literal
-                            else getattr(
+        import wtforms
+        class Form(kwargs["Form"]):
+            def __init__(self) -> None:
+                super().__init__(prefix="settings_form_")
+            submit: wtforms.SubmitField = wtforms.SubmitField(_("Save Modifications"))
+        for setting in list(self.settings):
+            field_kwargs = dict(
+                label=(
+                    self.settings[setting]["label"]
+                    + " ("
+                    + (
+                        "|".join(
+                            f'"{v}"' if isinstance(v, str) else str(v)
+                            for v in self.settings[setting]["converter"].__args__
+                        )
+                        if self.settings[setting]["converter"] is typing.Literal
+                        else (
+                            f"Range[{self.settings[setting]['converter'].annotation.__name__}, {self.settings[setting]['converter'].start}, {self.settings[setting]['converter'].end}]"
+                            if self.settings[setting]["converter"] is commands.Range else
+                            getattr(
                                 self.settings[setting]["converter"],
                                 "__name__",
-                                "",
+                                repr(self.settings[setting]["converter"]),
                             )
                         )
-                        + ")"
-                    ),
-                    "type": "text",
-                    "placeholder": str(values[setting]["default"]),
-                    "name": setting,  # custom id
-                }
-                if str(values[setting]["value"]) != str(values[setting]["default"]):
-                    field["value"] = (
-                        str(values[setting]["value"])
-                        if self.settings[setting]["converter"] is not CustomMessageConverter
-                        else json.dumps(values[setting]["value"])
                     )
-                # field["required"] = False
-                if not self.can_edit:
-                    field["disabled"] = True
-                fields.append(field)
-            return {"status": 0, "web-content": web_content, "fields": fields}
-        elif method == "POST":
-            _data = kwargs["data"]["form_data"]
-            errors = {}
+                    + "):"
+                ),
+                render_kw={"placeholder": str(values[setting]["default"])},
+                validators=[wtforms.validators.Optional(), kwargs["DpyObjectConverter"](self.settings[setting]["converter"], self.settings[setting]["param"])],
+            )
+            if self.settings[setting]["converter"] is bool:
+                field: wtforms.SelectField = wtforms.SelectField(
+                    choices=[("True", "True"), ("False", "False")], **field_kwargs,
+                )
+            elif self.settings[setting]["converter"] is typing.Literal:
+                field: wtforms.SelectField = wtforms.SelectField(
+                    choices=[
+                        (v, v) for v in self.settings[setting]["converter"].__args__
+                    ],
+                    **field_kwargs,
+                )
+            else:
+                if self.settings[setting]["converter"] is commands.Range:
+                    if self.settings[setting]["converter"].annotation is int:
+                        field_kwargs["validators"].append(wtforms.validators.NumberRange(min=self.settings[setting]["converter"].start, max=self.settings[setting]["converter"].end))
+                    elif self.settings[setting]["converter"].annotation is str:
+                        field_kwargs["validators"].append(wtforms.validators.Length(min=self.settings[setting]["converter"].start, max=self.settings[setting]["converter"].end))
+                field: wtforms.StringField = wtforms.StringField(**field_kwargs)
+            if not self.can_edit:
+                field.render_kw["disabled"] = True
+            setattr(Form, setting, field)
+        form = Form()
+        for setting in self.settings:
+            field = getattr(form, setting)
+            if str(values[setting]["value"]) != str(values[setting]["default"]) or isinstance(field, wtforms.SelectFieldBase):
+                default = (
+                    str(values[setting]["value"])
+                    if self.settings[setting]["converter"] is not CustomMessageConverter
+                    else json.dumps(values[setting]["value"])
+                )
+                field.default = default
+        source = "{{ form|safe }}"
+
+        if form.validate_on_submit() and await form.validate_dpy_converters():
             for setting in self.settings:
-                custom_id = setting
-                _input = _data[setting]
-                if _input == "":
-                    if len(self.settings[custom_id]["path"]) == 1:
+                value = getattr(form, setting).data
+                if value == "":
+                    if len(self.settings[setting]["path"]) == 1:
                         c = config
                     else:
-                        for x in self.settings[custom_id]["path"][:-1]:
+                        for x in self.settings[setting]["path"][:-1]:
                             c = config.get(x, {})
-                    c[self.settings[custom_id]["path"][-1]] = values[custom_id]["default"]
+                    c[self.settings[setting]["path"][-1]] = values[setting]["default"]
                     continue
-                if _input == values[custom_id]["value"]:
+                value = getattr(value, "id", None) or getattr(value, "value", None) or value
+                if value == values[setting]["value"]:
                     continue
-                try:
-                    value = await discord.ext.commands.converter.run_converters(
-                        context,
-                        converter=self.settings[custom_id]["converter"],
-                        argument=str(_input),
-                        param=self.settings[custom_id]["param"],
-                    )
-                except discord.ext.commands.errors.CommandError as e:
-                    errors[setting] = str(e)
-                    continue
-                if (
-                    getattr(value, "id", None) or getattr(value, "value", None) or value
-                ) == values[custom_id]["value"]:
-                    continue
-                assert self.settings[custom_id]["path"]
-                if len(self.settings[custom_id]["path"]) == 1:
+                assert self.settings[setting]["path"]
+                if len(self.settings[setting]["path"]) == 1:
                     c = config
                 else:
-                    for x in self.settings[custom_id]["path"][:-1]:
+                    for x in self.settings[setting]["path"][:-1]:
                         c = config.get(x, {})
-                c[self.settings[custom_id]["path"][-1]] = (
-                    getattr(value, "id", None) or getattr(value, "value", None) or value
-                )
-            if errors:
-                return {
-                    "status": 1,
-                    "notifications": [
-                        {
-                            "type": "warning",
-                            "message": "An error occurred when using the settings converters.",
-                        }
-                    ],
-                    "errors": errors,
-                }
+                c[self.settings[setting]["path"][-1]] = value
             if self.use_profiles_system:
                 await data.set_raw(*self.global_path, profile, value=config)
             else:
                 await data.set_raw(*self.global_path, value=config)
             return {
                 "status": 0,
-                "notifications": [{"type": "success", "message": "Data successfully saved."}],
+                "notifications": [{"message": "Data successfully saved.", "category": "success"}],
+                "redirect_url": kwargs["request_url"],
             }
+        elif form.submit.data and form.errors:
+            return {
+                "status": 1,
+                "notifications": [
+                    {
+                        "message": "An error occurred when using the settings converters.",
+                        "category": "danger",
+                    }
+                ],
+            }
+
+        return {"status": 0, "web_content": {"source": source, "form": form}}
 
     async def get_raw(
         self,
