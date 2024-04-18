@@ -91,10 +91,9 @@ class SharedCog(Cog, name="AAA3A_utils"):
                 ],
             ],
         ] = {
-            "cogs_with_slash": [],
-            "ignored_slash_commands": [],
             "sentry": {},
             "replacement_var_paths": True,
+            "counted_cogs": [],
         }
         self.config.register_global(**self.AAA3A_utils_global)
 

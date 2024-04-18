@@ -3,6 +3,7 @@ from redbot.core.bot import Red  # isort:skip
 import discord  # isort:skip
 import typing  # isort:skip
 
+import aiohttp
 import asyncio
 import datetime
 import logging
@@ -204,6 +205,21 @@ class Cog(commands.Cog):
                 self.logger.debug("Error when adding the `AAA3A_utils` cog.", exc_info=e)
             else:
                 await AAA3A_utils.sentry.maybe_send_owners(self)
+        # Count this cog (anonymous stats).
+        AAA3A_utils = self.bot.get_cog("AAA3A_utils")
+        counted_cogs = await AAA3A_utils.config.counted_cogs()
+        if self.qualified_name not in counted_cogs:
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(
+                        f"https://api.counterapi.dev/v1/AAA3A-cogs/{self.qualified_name}/up"
+                    ):
+                        pass
+            except Exception as e:
+                pass
+            else:
+                counted_cogs.append(self.qualified_name)
+                await AAA3A_utils.config.counted_cogs.set(counted_cogs)
         # Modify hybrid commands.
         await CogsUtils.add_hybrid_commands(bot=self.bot, cog=self)
 
