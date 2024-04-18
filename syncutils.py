@@ -11,12 +11,10 @@ import git
 from git import Repo
 
 # git -C %USERPROFILE%\Documents\GitHub\AAA3A_utils rev-list HEAD --count AAA3A_utils
-VERSION = 5.7
+VERSION = 6.3
 
 if VERSION is None:
-    utils_repo_clone_location = Path(
-        os.environ["USERPROFILE"] + "\\Documents\\GitHub\\AAA3A_utils_clone_for_sync"
-    )
+    utils_repo_clone_location = Path(os.environ["USERPROFILE"] + "\\Documents\\GitHub\\AAA3A_utils_clone_for_sync")
     utils_repo = Repo.clone_from(
         "https://github.com/AAA3A-AAA3A/AAA3A_utils.git", utils_repo_clone_location
     )
@@ -61,44 +59,49 @@ all_cogs = [
     "CommandsButtons",
     "ConsoleLogs",
     "CtxVar",
+    "Dashboard",
     "Dev",
-    "Dictionary",
+    "DevUtils",
     "DiscordEdit",
     "DiscordModals",
     "DiscordSearch",
     "Draw",
     "DropdownsTexts",
     "EditFile",
+    "EmbedUtils",
     "ExportChannel",
     "GetDocs",
     "GetLoc",
     "GistsHandler",
     "GuildStats",
     "Ip",
+    "LinkQuoter",
     "LintCodes",
     "Medicat",
     "MemberPrefix",
     "MemoryGame",
     "Minecraft",
+    "PresenceChart",
     "ReactToCommand",
     "Recipes",
-    "Reminders",
+    "Reminders"
     "RolesButtons",
     "RunCode",
     "Seen",
     "SimpleSanction",
+    "Snipe",
     "SplitOrStealGame",
     "Sudo",
     "TempRoles",
     "TicketTool",
     "TransferChannel",
     "UrlButtons",
+    "ViewPermissions",
+    "Webhook",
 ]
 cog_folders = [cog.lower() for cog in all_cogs]
 for cog in cog_folders:
-    destination = (
-        Path(os.environ["USERPROFILE"] + "\\Documents\\GitHub\\AAA3A-cogs") / cog / "AAA3A_utils"
-    )
+    destination = Path(os.environ["USERPROFILE"] + "\\Documents\\GitHub\\AAA3A-cogs") / cog / "AAA3A_utils"
     if destination.exists():
         shutil.rmtree(destination)
     if VERSION is None:
@@ -107,9 +110,6 @@ for cog in cog_folders:
         destination = Path(os.environ["USERPROFILE"] + "\\Documents\\GitHub\\AAA3A-cogs") / cog
         with open(destination / "utils_version.json", "w") as fp:
             fp.write(json.dumps({"needed_utils_version": VERSION}))
-        # with open(destination / "info.json", "w") as fp:
-        #     fp.write(json.dumps({"needed_utils_version": VERSION}))
-
 
 if VERSION is None:
     utils_repo.close()
