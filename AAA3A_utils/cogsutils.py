@@ -876,7 +876,7 @@ class CogsUtils:
         """
         cogs = {}
         for cog in bot.cogs.values():
-            if cog.qualified_name in ["CogGuide"]:
+            if cog.qualified_name in ("CogGuide"):
                 continue
             if getattr(cog, "__repo_name__", None) == "AAA3A-cogs":
                 cogs[cog.qualified_name] = cog
