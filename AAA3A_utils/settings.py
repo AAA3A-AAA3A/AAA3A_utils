@@ -1139,19 +1139,49 @@ class Settings:
             return {"status": 1, "error_message": f"Missing `{self.group.lower()}_id` argument."}
         data = self.get_data(_object)
 
+        import wtforms
+
         if self.use_profiles_system:
             profiles = list(await data.get_raw(*self.global_path))
             profile = extra_kwargs.get("profile")
             if profile is None:
+                class ProfileNameCheck:
+                    def __call__(self, form: wtforms.Form, field: wtforms.Field):
+                        if field.data.lower() in profiles:
+                            raise wtforms.validators.ValidationError("This profile alreadu exists.")
+                class AddProfileName(kwargs["Form"]):
+                    def __init__(self) -> None:
+                        super().__init__(prefix="add_profile_form_")
+                    profile: wtforms.StringField = wtforms.StringField(_("Profile Name:"), validators=[wtforms.validators.InputRequired(), wtforms.validators.Length(min=1, max=10), ProfileNameCheck()])
+                    submit: wtforms.SubmitField = wtforms.SubmitField(_("Add Profile"))
+                add_profile_form = AddProfileName()
+                if add_profile_form.validate_on_submit():
+                    profile = add_profile_form.profile.data.lower()
+                    await data.set_raw(*self.global_path, profile, value=self.config._defaults[self.group]["default_profile_settings"])
+                    return {"status": 0, "notifications": [{"message": "Profile successfully created.", "category": "success"}], "redirect_url": f"{kwargs['request_url']}?profile={profile}" if "?" not in kwargs["request_url"] else f"{kwargs['request_url']}&profile={profile}"}
                 source = """<h4>Profiles:</h4>
                 <ul>
                     {% for profile in profiles %}
                         <li><a href="{{ url_for_query(profile=profile) }}">{{ profile }}</a></li>
                     {% endfor %}
-                </ul>"""
-                return {"status": 0, "web_content": {"source": source, "profiles": profiles}}
+                </ul>
+                <div class="card">
+                    <div class="card-header" id="headingAddProfile">
+                        <a class="btn btn-link mb-0" data-toggle="collapse" data-target="#collapseAddProfile" aria-expanded="true" aria-controls="collapseAddProfile" style="width: 100%;">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h4 class="mb-0">{{ _("Add Profile") }}</h4>
+                                <h4><i class="fa fa-plus-circle"></i></h4>
+                            </div>
+                        </a>
+                    </div>
+                    <div id="collapseAddProfile" class="collapse card-body" aria-labelledby="headingAddProfile">
+                        {{ add_profile_form|safe }}
+                    </div>
+                </div>"""
+                return {"status": 0, "web_content": {"source": source, "profiles": profiles, "add_profile_form": add_profile_form}}
             elif profile.lower() not in profiles:
                 return {"status": 1, "error_code": 404, "error_message": "This profile does not exist."}
+
         values = await self.get_values(_object=_object, profile=profile if self.use_profiles_system else None)
         config = (
             await data.get_raw(*self.global_path, profile)
@@ -1159,7 +1189,6 @@ class Settings:
             else await data.get_raw(*self.global_path)
         )
 
-        import wtforms
         class Form(kwargs["Form"]):
             def __init__(self) -> None:
                 super().__init__(prefix="settings_form_")
@@ -1221,8 +1250,6 @@ class Settings:
                     else json.dumps(values[setting]["value"])
                 )
                 field.default = default
-        source = "{{ form|safe }}"
-
         if form.validate_on_submit() and await form.validate_dpy_converters():
             for setting in self.settings:
                 value = getattr(form, setting).data
@@ -1264,7 +1291,54 @@ class Settings:
                 ],
             }
 
-        return {"status": 0, "web_content": {"source": source, "form": form}}
+        class RemoveProfileForm(kwargs["Form"]):
+            def __init__(self) -> None:
+                super().__init__(prefix="remove_profile_form_")
+            submit: wtforms.SubmitField = wtforms.SubmitField(_("Remove Profile"))
+        remove_profile_form = RemoveProfileForm()
+        if remove_profile_form.validate_on_submit():
+            await data.clear_raw(*self.global_path, profile)
+            if self.cog.qualified_name == "TicketTool":
+                data = await self.cog.config.guild(guild).tickets.all()
+                to_remove = [
+                    channel for channel in data if data[channel].get("panel", "main") == profile
+                ]
+                for channel in to_remove:
+                    try:
+                        del data[channel]
+                    except KeyError:
+                        pass
+                await self.cog.config.guild(guild).tickets.set(data)
+            return {"status": 0, "notifications": [{"message": "Profile successfully removed.", "category": "success"}], "redirect_url": kwargs["request_url"].split("?")[0]}
+        remove_profile_form.submit.render_kw = {"onclick": "return confirmRemoveProfile(event);"}
+
+        source = """{{ form|safe }}
+
+        <br />
+        <div style="display: none;">{{ remove_profile_form|safe }}</div>
+        <a href="javascript:void(0);" onclick='this.parentElement.querySelector("#remove_profile_form_submit").click();' class="text-danger"><i class="fa fa-minus-circle" style="width: 1.3em; vertical-align: 0.5px;"></i> Remove Profile</a>
+        <script>
+            async function confirmRemoveProfile(event) {
+                if (confirmationDone) {
+                    return true;
+                }
+                let target_button = event.target;
+                event.preventDefault();
+                SwalAlert.fire({
+                    title: "Do you really want to remove this settings profile?",
+                    text: "You won't be able to restore it.",
+                    confirmButtonText: '{{ _("Yes, remove!") }}'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        confirmationDone = true;
+                        target_button.click();
+                    }
+                })
+                return false;
+            }
+        </script>
+        """
+        return {"status": 0, "web_content": {"source": source, "form": form, "remove_profile_form": remove_profile_form}}
 
     async def get_raw(
         self,
