@@ -113,11 +113,11 @@ class CustomMessageConverter(commands.Converter, dict):
                 del kwargs["embeds"]
             else:
                 raise commands.BadArgument(_("`embeds` field is not supported."))
-        for x in ["attachments", "files"]:
+        for x in ("attachments", "files"):
             if x in kwargs:
                 del kwargs[x]
         for x in kwargs:
-            if x not in ["content", "embed"]:
+            if x not in ("content", "embed"):
                 raise commands.BadArgument(_("`{x}` field is not supported.").format(x=x))
         if "content" not in kwargs and "embed" not in kwargs:
             raise commands.BadArgument(_("Missing `content` or `embed` field."))
@@ -1102,7 +1102,7 @@ class Settings:
             guild = kwargs["guild"]
             context = await CogsUtils.invoke_command(
                 bot=self.bot,
-                author=user,
+                author=guild.get_member(user.id) or user,
                 channel=kwargs.get("channel", guild.text_channels[0]),
                 command=f"{self.commands_group.qualified_name}",
                 invoke=False,
@@ -1112,8 +1112,8 @@ class Settings:
         else:
             context = await CogsUtils.invoke_command(
                 bot=self.bot,
-                author=user,
-                channel=list(self.bot.get_all_channels())[0],
+                author=user.mutual_guilds[0].get_member(user.id),
+                channel=user.mutual_guilds[0].text_channels[0],
                 command=f"{self.commands_group.qualified_name}",
                 invoke=False,
                 __dashboard_fake__=True,
