@@ -645,6 +645,8 @@ class Settings:
                 self.cog.__cog_commands__ = tuple(cog_commands)
                 self.commands[f"{name}"] = command
 
+        if self.commands_group.requires.privilege_level is commands.PrivilegeLevel.BOT_OWNER:
+            self.rpc_callback_settings.__dashboard_decorator_params__[1]["is_owner"] = True
         if self.group != Config.GLOBAL:
             self.rpc_callback_settings.__dashboard_decorator_params__[1]["context_ids"] = [
                 "guild_id",
