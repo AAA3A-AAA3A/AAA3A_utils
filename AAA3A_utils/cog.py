@@ -274,13 +274,13 @@ class Cog(commands.Cog):
             )
         return text
 
-    # async def red_delete_data_for_user(self, *args, **kwargs) -> None:
-    #     """Nothing to delete."""
-    #     return
+    async def red_delete_data_for_user(self, *args, **kwargs) -> None:
+        """Nothing to delete."""
+        return
 
-    # async def red_get_data_for_user(self, *args, **kwargs) -> typing.Dict[str, typing.Any]:
-    #     """Nothing to get."""
-    #     return {}
+    async def red_get_data_for_user(self, *args, **kwargs) -> typing.Dict[str, typing.Any]:
+        """Nothing to get."""
+        return {}
 
     async def cog_before_invoke(self, ctx: commands.Context) -> Context:
         if isinstance(ctx.command, commands.Group):
