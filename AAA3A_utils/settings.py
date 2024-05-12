@@ -717,7 +717,7 @@ class Settings:
         await data.set_raw(
             *self.global_path,
             profile.lower(),
-            value=self.config._defaults[self.group]["default_profile_settings"],
+            value=self.config._defaults[self.group].get("default_profile_settings", {}),
         )
 
     async def clone_profile(self, ctx: commands.Context, old_profile: str, profile: str) -> None:
