@@ -79,23 +79,11 @@ class SharedCog(Cog, name="AAA3A_utils"):
             force_registration=True,
             cog_name=self.qualified_name,
         )
-        self.AAA3A_utils_global: typing.Dict[
-            str,
-            typing.Union[
-                typing.List[str],
-                typing.Dict[
-                    str,
-                    typing.Dict[
-                        str, typing.Union[int, bool, typing.Optional[str], typing.List[str]]
-                    ],
-                ],
-            ],
-        ] = {
-            "sentry": {},
-            "replacement_var_paths": True,
-            "counted_cogs": [],
-        }
-        self.config.register_global(**self.AAA3A_utils_global)
+        self.config.register_global(
+            sentry={},
+            replacement_var_paths=True,
+            counted_cogs=[],
+        )
 
         self.sentry: SentryHelper = None
 
