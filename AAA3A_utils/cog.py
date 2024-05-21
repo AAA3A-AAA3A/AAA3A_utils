@@ -339,7 +339,7 @@ class Cog(commands.Cog):
             await context.tick(reaction="❌")
         elif getattr(
             ctx.cog, "qualified_name", None
-        ) != "Dev" or ctx.command.qualified_name not ("eval", "debug"):
+        ) != "Dev" or ctx.command.qualified_name not in ("eval", "debug"):
             await context.tick()
         # from .menus import Menu
         # await Menu(pages=str("\n".join([str((x.function, x.frame)) for x in __import__("inspect").stack(30)])), lang="py").start(context)
