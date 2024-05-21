@@ -63,7 +63,7 @@ class CogsUtils:
         if not reverse:
             if not replacement_var_paths:
                 return text
-            for env_var in ["USERPROFILE", "HOME", "USERNAME", "COMPUTERNAME"]:
+            for env_var in ("USERPROFILE", "HOME", "USERNAME", "COMPUTERNAME"):
                 if env_var in os.environ:
                     regex = re.compile(re.escape(os.environ[env_var]), re.I)
                     text = regex.sub(f"{{{env_var}}}", text)
@@ -76,7 +76,7 @@ class CogsUtils:
             class FakeDict(typing.Dict):
                 def __missing__(self, key: str) -> str:
                     if (
-                        key.upper() in {"USERPROFILE", "HOME", "USERNAME", "COMPUTERNAME"}
+                        key.upper() in ("USERPROFILE", "HOME", "USERNAME", "COMPUTERNAME")
                         and key.upper() in os.environ
                     ):
                         return os.environ[key.upper()]

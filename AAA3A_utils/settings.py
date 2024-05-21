@@ -95,7 +95,7 @@ class CustomMessageConverter(commands.Converter, dict):
                 raise
             kwargs = {
                 key: getattr(message, key)
-                for key in ["content", "embeds"]
+                for key in ("content", "embeds")
                 if getattr(message, key)
             }
         else:

@@ -107,22 +107,22 @@ class Menu(discord.ui.View):
         self._source: self._SimplePageSource = self._SimplePageSource(items=self.pages)
         if not self._source.is_paginating():
             for emoji, name in controls.items():
-                if name in ["left_page", "prev_page", "next_page", "right_page"]:
+                if name in ("left_page", "prev_page", "next_page", "right_page"):
                     del self.controls[emoji]
                     self.disabled_controls.append(name)
         if not self._source.is_paginating() or len(self.pages) > 3:
             for emoji, name in controls.items():
-                if name in ["send_all"]:
+                if name in ("send_all"):
                     del self.controls[emoji]
                     self.disabled_controls.append(name)
         if not self._source.is_paginating() or len(self.pages) <= 3:
             for emoji, name in controls.items():
-                if name in ["send_interactive"]:
+                if name in ("send_interactive"):
                     del self.controls[emoji]
                     self.disabled_controls.append(name)
         if not all(isinstance(page, str) for page in self.pages):
             for emoji, name in controls.items():
-                if name in ["send_as_file"]:
+                if name in ("send_as_file"):
                     del self.controls[emoji]
                     self.disabled_controls.append(name)
 

@@ -266,7 +266,7 @@ class Cog(commands.Cog):
             f"\n**Repo name**: {self.__repo_name__}"
             f"\n**Utils version**: {self.__utils_version__}"
         )
-        if self.qualified_name not in ["AAA3A_utils"]:
+        if self.qualified_name not in ("AAA3A_utils"):
             text += (
                 "\n**Cog documentation**:"
                 f" https://aaa3a-cogs.readthedocs.io/en/latest/cog_{self.qualified_name.lower()}.html\n**Translate"
@@ -312,7 +312,7 @@ class Cog(commands.Cog):
             except (discord.InteractionResponded, discord.NotFound):
                 pass
         # Typing automatically.
-        if ctx.cog.qualified_name not in ["CmdChannel", "Sudo"] and (
+        if ctx.cog.qualified_name not in ("CmdChannel", "Sudo") and (
             not (isinstance(getattr(ctx.cog, "settings", None), Settings))
             or ctx.command not in ctx.cog.settings.commands.values()
         ):
@@ -339,7 +339,7 @@ class Cog(commands.Cog):
             await context.tick(reaction="❌")
         elif getattr(
             ctx.cog, "qualified_name", None
-        ) != "Dev" or ctx.command.qualified_name not in ["eval", "debug"]:
+        ) != "Dev" or ctx.command.qualified_name not ("eval", "debug"):
             await context.tick()
         # from .menus import Menu
         # await Menu(pages=str("\n".join([str((x.function, x.frame)) for x in __import__("inspect").stack(30)])), lang="py").start(context)
