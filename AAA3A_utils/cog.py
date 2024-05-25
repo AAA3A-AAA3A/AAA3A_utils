@@ -210,7 +210,7 @@ class Cog(commands.Cog):
         counted_cogs = await AAA3A_utils.config.counted_cogs()
         if self.qualified_name not in counted_cogs:
             try:
-                async with aiohttp.ClientSession() as session:
+                async with aiohttp.ClientSession(raise_for_status=True) as session:
                     async with session.get(
                         f"https://api.counterapi.dev/v1/AAA3A-cogs/{self.qualified_name}/up"
                     ):
