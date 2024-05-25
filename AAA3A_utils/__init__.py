@@ -21,7 +21,7 @@ from .views import (
 
 cog.SharedCog = SharedCog
 
-from .version import __version__
+from .__version__ import __version__
 
 __author__ = "AAA3A"
 __version__ = __version__

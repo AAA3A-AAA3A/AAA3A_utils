@@ -19,7 +19,7 @@ from .cogsutils import CogsUtils
 from .context import Context, is_dev
 from .loop import Loop
 from .settings import Settings
-from .version import __version__ as __utils_version__
+from .__version__ import __version__ as __utils_version__
 
 SharedCog: commands.Cog = None
 

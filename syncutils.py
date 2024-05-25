@@ -11,7 +11,7 @@ import git
 from git import Repo
 
 # git -C %USERPROFILE%\Documents\GitHub\AAA3A_utils rev-list HEAD --count AAA3A_utils
-VERSION = 6.5
+VERSION = 6.6
 
 if VERSION is None:
     utils_repo_clone_location = Path(os.environ["USERPROFILE"] + "\\Documents\\GitHub\\AAA3A_utils_clone_for_sync")
@@ -45,7 +45,7 @@ if VERSION is None:
         fp.write(json.dumps({"latest_commit": str(commit)}))
 else:
     destination = Path(os.environ["USERPROFILE"] + "\\Documents\\GitHub\\AAA3A_utils\\AAA3A_utils")
-    with open(destination / "version.py", "w") as fp:
+    with open(destination / "__version__.py", "w") as fp:
         fp.write(f"__version__ = {VERSION}\n")
 
 all_cogs = [
