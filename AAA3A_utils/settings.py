@@ -77,7 +77,7 @@ if not hasattr(discord.utils, "MISSING"):
     discord.utils.MISSING = _MissingSentinel()
 
 
-class CustomMessageConverter(commands.Converter, dict):
+class CustomMessageConverter(commands.Converter, typing.Dict):
     def __init__(self, **kwargs) -> None:
         if "embed" in kwargs and not isinstance(kwargs["embed"], discord.Embed):
             kwargs["embed"] = discord.Embed.from_dict(kwargs["embed"])
@@ -170,13 +170,10 @@ class CustomMessageConverter(commands.Converter, dict):
         if (env := kwargs.pop("env", None)) is not None:
 
             class _Env(typing.Dict):
-                def __getitem__(self, key: str):
-                    return str(env.__getitem__(key))
-
-                def __missing__(self, key: str):
+                def __missing__(self, key: str) -> str:
                     return "{" + f"{key}" + "}"
 
-            _env = _Env()
+            _env = _Env(env)
             if "content" in _kwargs and _kwargs["content"] is not None:
                 _kwargs["content"] = _kwargs["content"].format_map(_env)
             if "embed" in _kwargs and _kwargs["embed"] is not None:
