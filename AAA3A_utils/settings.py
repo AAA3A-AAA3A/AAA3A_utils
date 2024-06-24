@@ -171,7 +171,7 @@ class CustomMessageConverter(commands.Converter, dict):
 
             class _Env(typing.Dict):
                 def __getitem__(self, key: str):
-                    return env.__getitem__(key)
+                    return str(env.__getitem__(key))
 
                 def __missing__(self, key: str):
                     return "{" + f"{key}" + "}"
