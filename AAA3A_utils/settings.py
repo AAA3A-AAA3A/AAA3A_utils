@@ -109,8 +109,7 @@ class CustomMessageConverter(commands.Converter, dict):
             if len(kwargs["embeds"]) == 0:
                 del kwargs["embeds"]
             elif len(kwargs["embeds"]) == 1 and "embed" not in kwargs:
-                kwargs["embed"] = kwargs["embeds"][0]
-                del kwargs["embeds"]
+                kwargs["embed"] = kwargs.pop("embeds")[0]
             else:
                 raise commands.BadArgument(_("`embeds` field is not supported."))
         for x in ("attachments", "files"):
@@ -198,7 +197,7 @@ class CustomMessageConverter(commands.Converter, dict):
         return await channel.send(**_kwargs)
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
-        kwargs = self.__dict__
+        kwargs = self.__dict__.copy()
         if "embed" in kwargs:
             kwargs["embed"] = kwargs["embed"].to_dict()
         return kwargs
