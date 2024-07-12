@@ -1228,6 +1228,33 @@ class Settings:
                     ],
                     **field_kwargs,
                 )
+            elif isinstance(self.settings[setting]["converter"], commands.Greedy) and self.settings[setting]["converter"].converter is typing.Literal:
+                field: wtforms.SelectMultipleField = wtforms.SelectMultipleField(
+                    choices=[
+                        (v, v) for v in self.settings[setting]["converter"].converter.__args__
+                    ],
+                    **field_kwargs,
+                )
+            elif self.settings[setting]["converter"] in (discord.TextChannel, discord.VoiceChannel, discord.CategoryChannel):
+                field: wtforms.SelectField = wtforms.SelectField(
+                    choices=kwargs["get_sorted_channels"](guild, (self.settings[setting]["converter"],)),
+                    **field_kwargs,
+                )
+            elif isinstance(self.settings[setting]["converter"], typing._UnionGenericAlias) and all(issubclass(c_type, discord.abc.GuildChannel) or c_type is discord.Thread for c_type in self.settings[setting]["converter"].__args__):
+                field: wtforms.SelectField = wtforms.SelectField(
+                    choices=kwargs["get_sorted_channels"](guild, self.settings[setting]["converter"].__args__),
+                    **field_kwargs,
+                )
+            elif self.settings[setting]["converter"] is discord.Role:
+                field: wtforms.SelectField = wtforms.SelectField(
+                    choices=kwargs["get_sorted_roles"](guild),
+                    **field_kwargs,
+                )
+            elif isinstance(self.settings[setting]["converter"], commands.Greedy) and self.settings[setting]["converter"].converter is discord.Role:
+                field: wtforms.SelectMultipleField = wtforms.SelectMultipleField(
+                    choices=kwargs["get_sorted_roles"](guild),
+                    **field_kwargs,
+                )
             else:
                 if self.settings[setting]["converter"] is commands.Range:
                     if self.settings[setting]["converter"].annotation is int:
@@ -1248,6 +1275,7 @@ class Settings:
                     else json.dumps(values[setting]["value"])
                 )
                 field.default = default
+
         if form.validate_on_submit() and await form.validate_dpy_converters():
             for setting in self.settings:
                 value = getattr(form, setting).data
