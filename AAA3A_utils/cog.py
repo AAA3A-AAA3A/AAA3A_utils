@@ -3,7 +3,6 @@ from redbot.core.bot import Red  # isort:skip
 import discord  # isort:skip
 import typing  # isort:skip
 
-import aiohttp
 import asyncio
 import datetime
 import logging
@@ -12,14 +11,15 @@ import traceback
 from pathlib import Path
 from uuid import uuid4
 
+import aiohttp
 from redbot.core.data_manager import cog_data_path
 from redbot.core.utils.chat_formatting import humanize_list, inline, warning
 
+from .__version__ import __version__ as __utils_version__
 from .cogsutils import CogsUtils
 from .context import Context, is_dev
 from .loop import Loop
 from .settings import Settings
-from .__version__ import __version__ as __utils_version__
 
 SharedCog: commands.Cog = None
 
@@ -75,9 +75,7 @@ async def unsupported(ctx: commands.Context) -> None:
         "you want to continue?"
     )
     try:
-        result = await CogsUtils.ConfirmationAsk(
-            ctx, content=content
-        )
+        result = await CogsUtils.ConfirmationAsk(ctx, content=content)
     except TimeoutError:
         await ctx.send("Timeout, aborting.")
         raise commands.CheckFailure("Confirmation timed out.")
@@ -357,7 +355,7 @@ class Cog(commands.Cog):
             if e is not None and isinstance(e, commands.BotMissingPermissions):
                 error = e
                 is_command_error = False
-                
+
         if is_command_error:
             uuid = uuid4().hex
             no_sentry = AAA3A_utils is None or getattr(AAA3A_utils, "sentry", None) is None

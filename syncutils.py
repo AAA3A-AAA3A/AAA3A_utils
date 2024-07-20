@@ -14,7 +14,9 @@ from git import Repo
 VERSION = 6.6
 
 if VERSION is None:
-    utils_repo_clone_location = Path(os.environ["USERPROFILE"] + "\\Documents\\GitHub\\AAA3A_utils_clone_for_sync")
+    utils_repo_clone_location = Path(
+        os.environ["USERPROFILE"] + "\\Documents\\GitHub\\AAA3A_utils_clone_for_sync"
+    )
     utils_repo = Repo.clone_from(
         "https://github.com/AAA3A-AAA3A/AAA3A_utils.git", utils_repo_clone_location
     )
@@ -101,7 +103,9 @@ all_cogs = [
 ]
 cog_folders = [cog.lower() for cog in all_cogs]
 for cog in cog_folders:
-    destination = Path(os.environ["USERPROFILE"] + "\\Documents\\GitHub\\AAA3A-cogs") / cog / "AAA3A_utils"
+    destination = (
+        Path(os.environ["USERPROFILE"] + "\\Documents\\GitHub\\AAA3A-cogs") / cog / "AAA3A_utils"
+    )
     if destination.exists():
         shutil.rmtree(destination)
     if VERSION is None:

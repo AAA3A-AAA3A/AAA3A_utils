@@ -425,20 +425,20 @@ class SharedCog(Cog, name="AAA3A_utils"):
                     return
             _repos = [repo]
         else:
-            _repos = [None]
+            _repos = []
         if cog is not None:
             _cogs = [cog]
         else:
-            _cogs = [None]
+            _cogs = []
         if command is not None:
             _commands = [command]
         else:
-            _commands = [None]
+            _commands = []
         if command is not None:
             object_command = ctx.bot.get_command(_commands[0])
             if object_command is None:
                 raise commands.UserFeedbackCheckFailure(
-                    _("The command `{command}` does not exist.")
+                    _("The command `{command}` does not exist.").format(command=command)
                 )
             _commands = [object_command]
         downloader_cog = ctx.bot.get_cog("Downloader")
@@ -486,7 +486,8 @@ class SharedCog(Cog, name="AAA3A_utils"):
         if all is not None:
             _repos = []
             for r in installed_cogs:
-                _repos.append(downloader_cog._repo_manager.get_repo(str(r)))
+                if (r := downloader_cog._repo_manager.get_repo(str(r))) is not None:
+                    _repos.append(r)
             _cogs = []
             for r in installed_cogs:
                 for c in installed_cogs[r]:

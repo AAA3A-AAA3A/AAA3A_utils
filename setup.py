@@ -7,7 +7,8 @@ with open("README.md", mode="r") as f:
     long_description = f.read()
 
 with open(
-    os.path.join(os.path.join(os.path.dirname(__file__), "AAA3A_utils"), "__version__.py"), mode="r"
+    os.path.join(os.path.join(os.path.dirname(__file__), "AAA3A_utils"), "__version__.py"),
+    mode="r",
 ) as file:
     content = file.read()
 __version__ = float(

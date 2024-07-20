@@ -564,7 +564,9 @@ class CogsUtils:
                 "components": [],
                 "referenced_message": None,
             }
-            message: discord.Message = discord.Message(channel=channel, state=bot._connection, data=data)
+            message: discord.Message = discord.Message(
+                channel=channel, state=bot._connection, data=data
+            )
         else:
             message = copy(message)
             message.author = author

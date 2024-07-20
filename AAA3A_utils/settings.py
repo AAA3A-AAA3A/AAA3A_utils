@@ -288,7 +288,9 @@ class Settings:
         global_path: typing.List = None,
         use_profiles_system: typing.Optional[bool] = False,
         can_edit: bool = True,
-        commands_group: typing.Optional[typing.Union[commands.Group, commands.HybridGroup, str]] = None,
+        commands_group: typing.Optional[
+            typing.Union[commands.Group, commands.HybridGroup, str]
+        ] = None,
     ) -> None:
         if global_path is None:
             global_path = []
@@ -301,7 +303,9 @@ class Settings:
         self.use_profiles_system: bool = use_profiles_system
         self.can_edit: bool = can_edit
         self.commands_group: typing.Union[commands.Group, commands.HybridGroup] = commands_group
-        self.commands: typing.Dict[str, typing.Union[commands.Command, commands.HybridCommand]] = {}
+        self.commands: typing.Dict[
+            str, typing.Union[commands.Command, commands.HybridCommand]
+        ] = {}
         self.commands_added: asyncio.Event = asyncio.Event()
         for setting in settings:
             if "path" not in settings[setting]:
@@ -318,7 +322,8 @@ class Settings:
             if "usage" not in settings[setting]:
                 if (
                     not isinstance(settings[setting]["converter"], commands.Greedy)
-                    and settings[setting]["converter"] in discord.ext.commands.converter.CONVERTER_MAPPING
+                    and settings[setting]["converter"]
+                    in discord.ext.commands.converter.CONVERTER_MAPPING
                 ):
                     x = settings[setting]["converter"].__name__.replace(" ", "_")
                     usage = x[0]
@@ -533,9 +538,9 @@ class Settings:
                     pass
         for name, command in to_add.items():
             command.__qualname__ = f"{self.cog.qualified_name}.settings_{name}"
-            command: typing.Union[commands.Command, commands.HybridCommand] = self.commands_group.command(
-                name=name, aliases=aliases.get(name, [])
-            )(command)
+            command: typing.Union[
+                commands.Command, commands.HybridCommand
+            ] = self.commands_group.command(name=name, aliases=aliases.get(name, []))(command)
             command.name = name
             command.cog = self.cog
             self.bot.dispatch("command_add", command)
@@ -572,17 +577,19 @@ class Settings:
                 _usage = self.settings[setting]["usage"]
 
                 if not self.use_profiles_system:
-
                     if not isinstance(_converter, commands.Greedy):
+
                         async def command(_self, ctx: commands.Context, *, value: _converter):
                             await self.command(ctx, key=None, value=value)
+
                     else:
+
                         async def command(_self, ctx: commands.Context, value: _converter):
                             await self.command(ctx, key=None, value=list(value))
 
                 else:
-
                     if not isinstance(_converter, commands.Greedy):
+
                         async def command(
                             _self,
                             ctx: commands.Context,
@@ -591,7 +598,9 @@ class Settings:
                             value: _converter,
                         ):
                             await self.command(ctx, key=None, value=value, profile=profile)
+
                     else:
+
                         async def command(
                             _self,
                             ctx: commands.Context,
@@ -604,7 +613,9 @@ class Settings:
                 if self.settings[setting]["no_slash"] and isinstance(
                     self.commands_group, commands.HybridGroup
                 ):
-                    command: typing.Union[commands.Command, commands.HybridCommand] = self.commands_group.command(
+                    command: typing.Union[
+                        commands.Command, commands.HybridCommand
+                    ] = self.commands_group.command(
                         name=name,
                         usage=f"<profile> <{_usage}>"
                         if self.use_profiles_system
@@ -613,9 +624,13 @@ class Settings:
                         aliases=self.settings[setting]["aliases"],
                         hidden=self.settings[setting]["hidden"],
                         with_app_command=False,
-                    )(command)
+                    )(
+                        command
+                    )
                 else:
-                    command: typing.Union[commands.Command, commands.HybridCommand] = self.commands_group.command(
+                    command: typing.Union[
+                        commands.Command, commands.HybridCommand
+                    ] = self.commands_group.command(
                         name=name,
                         usage=f"<profile> <{_usage}>"
                         if self.use_profiles_system
@@ -623,7 +638,9 @@ class Settings:
                         help=_help,
                         aliases=self.settings[setting]["aliases"],
                         hidden=self.settings[setting]["hidden"],
-                    )(command)
+                    )(
+                        command
+                    )
 
                 command.name = name
                 # command.brief = _help
@@ -691,7 +708,9 @@ class Settings:
             try:
                 await self.set_raw(
                     key=key,
-                    value=[getattr(v, "id", None) or getattr(v, "value", None) or v for v in value] if isinstance(value, typing.List) else getattr(value, "id", None) or getattr(value, "value", None) or value,
+                    value=[getattr(v, "id", None) or getattr(v, "value", None) or v for v in value]
+                    if isinstance(value, typing.List)
+                    else getattr(value, "id", None) or getattr(value, "value", None) or value,
                     _object=_object,
                     profile=profile,
                 )
@@ -705,7 +724,9 @@ class Settings:
 
     async def add_profile(self, ctx: commands.Context, profile: str) -> None:
         if len(profile) > 10:
-            raise commands.UserFeedbackCheckFailure(_("The name of a profile must be less than or equal to 10 characters."))
+            raise commands.UserFeedbackCheckFailure(
+                _("The name of a profile must be less than or equal to 10 characters.")
+            )
         data = self.get_data(ctx=ctx)
         profiles = await data.get_raw(*self.global_path)
         if profile.lower() in profiles:
@@ -718,7 +739,9 @@ class Settings:
 
     async def clone_profile(self, ctx: commands.Context, old_profile: str, profile: str) -> None:
         if len(profile) > 10:
-            raise commands.UserFeedbackCheckFailure(_("The name of a profile must be less than or equal to 10 characters."))
+            raise commands.UserFeedbackCheckFailure(
+                _("The name of a profile must be less than or equal to 10 characters.")
+            )
         data = self.get_data(ctx=ctx)
         profiles = await data.get_raw(*self.global_path)
         if profile in profiles:
@@ -761,7 +784,9 @@ class Settings:
 
     async def rename_profile(self, ctx: commands.Context, old_profile: str, profile: str) -> None:
         if len(profile) > 10:
-            raise commands.UserFeedbackCheckFailure(_("The name of a profile must be less than or equal to 10 characters."))
+            raise commands.UserFeedbackCheckFailure(
+                _("The name of a profile must be less than or equal to 10 characters.")
+            )
         data = self.get_data(ctx=ctx)
         profiles = await data.get_raw(*self.global_path)
         if profile in profiles:
@@ -1006,8 +1031,8 @@ class Settings:
                                     if self.settings[setting]["converter"] is typing.Literal
                                     else (
                                         f"Range[{self.settings[setting]['converter'].annotation.__name__}, {self.settings[setting]['converter'].start}, {self.settings[setting]['converter'].end}]"
-                                        if self.settings[setting]["converter"] is commands.Range else
-                                        getattr(
+                                        if self.settings[setting]["converter"] is commands.Range
+                                        else getattr(
                                             self.settings[setting]["converter"],
                                             "__name__",
                                             repr(self.settings[setting]["converter"]),
@@ -1143,20 +1168,45 @@ class Settings:
             profiles = list(await data.get_raw(*self.global_path))
             profile = extra_kwargs.get("profile")
             if profile is None:
+
                 class ProfileNameCheck:
                     def __call__(self, form: wtforms.Form, field: wtforms.Field):
                         if field.data.lower() in profiles:
-                            raise wtforms.validators.ValidationError("This profile alreadu exists.")
+                            raise wtforms.validators.ValidationError(
+                                "This profile alreadu exists."
+                            )
+
                 class AddProfileName(kwargs["Form"]):
                     def __init__(self) -> None:
                         super().__init__(prefix="add_profile_form_")
-                    profile: wtforms.StringField = wtforms.StringField(_("Profile Name:"), validators=[wtforms.validators.InputRequired(), wtforms.validators.Length(min=1, max=10), ProfileNameCheck()])
+
+                    profile: wtforms.StringField = wtforms.StringField(
+                        _("Profile Name:"),
+                        validators=[
+                            wtforms.validators.InputRequired(),
+                            wtforms.validators.Length(min=1, max=10),
+                            ProfileNameCheck(),
+                        ],
+                    )
                     submit: wtforms.SubmitField = wtforms.SubmitField(_("Add Profile"))
+
                 add_profile_form = AddProfileName()
                 if add_profile_form.validate_on_submit():
                     profile = add_profile_form.profile.data.lower()
-                    await data.set_raw(*self.global_path, profile, value=self.config._defaults[self.group]["default_profile_settings"])
-                    return {"status": 0, "notifications": [{"message": "Profile successfully created.", "category": "success"}], "redirect_url": f"{kwargs['request_url']}?profile={profile}" if "?" not in kwargs["request_url"] else f"{kwargs['request_url']}&profile={profile}"}
+                    await data.set_raw(
+                        *self.global_path,
+                        profile,
+                        value=self.config._defaults[self.group]["default_profile_settings"],
+                    )
+                    return {
+                        "status": 0,
+                        "notifications": [
+                            {"message": "Profile successfully created.", "category": "success"}
+                        ],
+                        "redirect_url": f"{kwargs['request_url']}?profile={profile}"
+                        if "?" not in kwargs["request_url"]
+                        else f"{kwargs['request_url']}&profile={profile}",
+                    }
                 source = """<h4>Profiles:</h4>
                 <ul>
                     {% for profile in profiles %}
@@ -1176,11 +1226,24 @@ class Settings:
                         {{ add_profile_form|safe }}
                     </div>
                 </div>"""
-                return {"status": 0, "web_content": {"source": source, "profiles": profiles, "add_profile_form": add_profile_form}}
+                return {
+                    "status": 0,
+                    "web_content": {
+                        "source": source,
+                        "profiles": profiles,
+                        "add_profile_form": add_profile_form,
+                    },
+                }
             elif profile.lower() not in profiles:
-                return {"status": 1, "error_code": 404, "error_message": "This profile does not exist."}
+                return {
+                    "status": 1,
+                    "error_code": 404,
+                    "error_message": "This profile does not exist.",
+                }
 
-        values = await self.get_values(_object=_object, profile=profile if self.use_profiles_system else None)
+        values = await self.get_values(
+            _object=_object, profile=profile if self.use_profiles_system else None
+        )
         config = (
             await data.get_raw(*self.global_path, profile)
             if self.use_profiles_system
@@ -1190,7 +1253,9 @@ class Settings:
         class Form(kwargs["Form"]):
             def __init__(self) -> None:
                 super().__init__(prefix="settings_form_")
+
             submit: wtforms.SubmitField = wtforms.SubmitField(_("Save Modifications"))
+
         for setting in list(self.settings):
             field_kwargs = dict(
                 label=(
@@ -1204,8 +1269,8 @@ class Settings:
                         if self.settings[setting]["converter"] is typing.Literal
                         else (
                             f"Range[{self.settings[setting]['converter'].annotation.__name__}, {self.settings[setting]['converter'].start}, {self.settings[setting]['converter'].end}]"
-                            if self.settings[setting]["converter"] is commands.Range else
-                            getattr(
+                            if self.settings[setting]["converter"] is commands.Range
+                            else getattr(
                                 self.settings[setting]["converter"],
                                 "__name__",
                                 repr(self.settings[setting]["converter"]),
@@ -1215,34 +1280,54 @@ class Settings:
                     + "):"
                 ),
                 render_kw={"placeholder": str(values[setting]["default"])},
-                validators=[wtforms.validators.Optional(), kwargs["DpyObjectConverter"](self.settings[setting]["converter"], self.settings[setting]["param"])],
+                validators=[
+                    wtforms.validators.Optional(),
+                    kwargs["DpyObjectConverter"](
+                        self.settings[setting]["converter"], self.settings[setting]["param"]
+                    ),
+                ],
             )
             if self.settings[setting]["converter"] is bool:
                 field: wtforms.SelectField = wtforms.SelectField(
-                    choices=[("True", "True"), ("False", "False")], **field_kwargs,
+                    choices=[("True", "True"), ("False", "False")],
+                    **field_kwargs,
                 )
             elif self.settings[setting]["converter"] is typing.Literal:
                 field: wtforms.SelectField = wtforms.SelectField(
-                    choices=[
-                        (v, v) for v in self.settings[setting]["converter"].__args__
-                    ],
+                    choices=[(v, v) for v in self.settings[setting]["converter"].__args__],
                     **field_kwargs,
                 )
-            elif isinstance(self.settings[setting]["converter"], commands.Greedy) and self.settings[setting]["converter"].converter is typing.Literal:
+            elif (
+                isinstance(self.settings[setting]["converter"], commands.Greedy)
+                and self.settings[setting]["converter"].converter is typing.Literal
+            ):
                 field: wtforms.SelectMultipleField = wtforms.SelectMultipleField(
                     choices=[
                         (v, v) for v in self.settings[setting]["converter"].converter.__args__
                     ],
                     **field_kwargs,
                 )
-            elif self.settings[setting]["converter"] in (discord.TextChannel, discord.VoiceChannel, discord.CategoryChannel):
+            elif self.settings[setting]["converter"] in (
+                discord.TextChannel,
+                discord.VoiceChannel,
+                discord.CategoryChannel,
+            ):
                 field: wtforms.SelectField = wtforms.SelectField(
-                    choices=kwargs["get_sorted_channels"](guild, (self.settings[setting]["converter"],)),
+                    choices=kwargs["get_sorted_channels"](
+                        guild, (self.settings[setting]["converter"],)
+                    ),
                     **field_kwargs,
                 )
-            elif isinstance(self.settings[setting]["converter"], typing._UnionGenericAlias) and all(issubclass(c_type, discord.abc.GuildChannel) or c_type is discord.Thread for c_type in self.settings[setting]["converter"].__args__):
+            elif isinstance(
+                self.settings[setting]["converter"], typing._UnionGenericAlias
+            ) and all(
+                issubclass(c_type, discord.abc.GuildChannel) or c_type is discord.Thread
+                for c_type in self.settings[setting]["converter"].__args__
+            ):
                 field: wtforms.SelectField = wtforms.SelectField(
-                    choices=kwargs["get_sorted_channels"](guild, self.settings[setting]["converter"].__args__),
+                    choices=kwargs["get_sorted_channels"](
+                        guild, self.settings[setting]["converter"].__args__
+                    ),
                     **field_kwargs,
                 )
             elif self.settings[setting]["converter"] is discord.Role:
@@ -1250,7 +1335,10 @@ class Settings:
                     choices=kwargs["get_sorted_roles"](guild),
                     **field_kwargs,
                 )
-            elif isinstance(self.settings[setting]["converter"], commands.Greedy) and self.settings[setting]["converter"].converter is discord.Role:
+            elif (
+                isinstance(self.settings[setting]["converter"], commands.Greedy)
+                and self.settings[setting]["converter"].converter is discord.Role
+            ):
                 field: wtforms.SelectMultipleField = wtforms.SelectMultipleField(
                     choices=kwargs["get_sorted_roles"](guild),
                     **field_kwargs,
@@ -1258,9 +1346,19 @@ class Settings:
             else:
                 if self.settings[setting]["converter"] is commands.Range:
                     if self.settings[setting]["converter"].annotation is int:
-                        field_kwargs["validators"].append(wtforms.validators.NumberRange(min=self.settings[setting]["converter"].start, max=self.settings[setting]["converter"].end))
+                        field_kwargs["validators"].append(
+                            wtforms.validators.NumberRange(
+                                min=self.settings[setting]["converter"].start,
+                                max=self.settings[setting]["converter"].end,
+                            )
+                        )
                     elif self.settings[setting]["converter"].annotation is str:
-                        field_kwargs["validators"].append(wtforms.validators.Length(min=self.settings[setting]["converter"].start, max=self.settings[setting]["converter"].end))
+                        field_kwargs["validators"].append(
+                            wtforms.validators.Length(
+                                min=self.settings[setting]["converter"].start,
+                                max=self.settings[setting]["converter"].end,
+                            )
+                        )
                 field: wtforms.StringField = wtforms.StringField(**field_kwargs)
             if not self.can_edit:
                 field.render_kw["disabled"] = True
@@ -1268,7 +1366,9 @@ class Settings:
         form = Form()
         for setting in self.settings:
             field = getattr(form, setting)
-            if str(values[setting]["value"]) != str(values[setting]["default"]) or isinstance(field, wtforms.SelectFieldBase):
+            if str(values[setting]["value"]) != str(values[setting]["default"]) or isinstance(
+                field, wtforms.SelectFieldBase
+            ):
                 default = (
                     str(values[setting]["value"])
                     if self.settings[setting]["converter"] is not CustomMessageConverter
@@ -1320,7 +1420,9 @@ class Settings:
         class RemoveProfileForm(kwargs["Form"]):
             def __init__(self) -> None:
                 super().__init__(prefix="remove_profile_form_")
+
             submit: wtforms.SubmitField = wtforms.SubmitField(_("Remove Profile"))
+
         remove_profile_form = RemoveProfileForm()
         if remove_profile_form.validate_on_submit():
             await data.clear_raw(*self.global_path, profile)
@@ -1335,7 +1437,13 @@ class Settings:
                     except KeyError:
                         pass
                 await self.cog.config.guild(guild).tickets.set(data)
-            return {"status": 0, "notifications": [{"message": "Profile successfully removed.", "category": "success"}], "redirect_url": kwargs["request_url"].split("?")[0]}
+            return {
+                "status": 0,
+                "notifications": [
+                    {"message": "Profile successfully removed.", "category": "success"}
+                ],
+                "redirect_url": kwargs["request_url"].split("?")[0],
+            }
         remove_profile_form.submit.render_kw = {"onclick": "return confirmRemoveProfile(event);"}
 
         source = """{{ form|safe }}
@@ -1364,7 +1472,14 @@ class Settings:
             }
         </script>
         """
-        return {"status": 0, "web_content": {"source": source, "form": form, "remove_profile_form": remove_profile_form}}
+        return {
+            "status": 0,
+            "web_content": {
+                "source": source,
+                "form": form,
+                "remove_profile_form": remove_profile_form,
+            },
+        }
 
     async def get_raw(
         self,
