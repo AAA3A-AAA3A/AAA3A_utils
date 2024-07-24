@@ -96,19 +96,6 @@ class ConfirmationAskView(discord.ui.View):
         self.stop()
 
     @discord.ui.button(
-        label=_("Yes"), emoji="✅", style=discord.ButtonStyle.success, custom_id="true_button"
-    )
-    async def true_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
-        if self.delete_message:
-            try:
-                await self._message.delete()
-            except discord.HTTPException:
-                pass
-        self._result = True
-        self.stop()
-
-    @discord.ui.button(
         label=_("No"), emoji="✖️", style=discord.ButtonStyle.danger, custom_id="false_button"
     )
     async def false_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -119,6 +106,19 @@ class ConfirmationAskView(discord.ui.View):
             except discord.HTTPException:
                 pass
         self._result = False
+        self.stop()
+
+    @discord.ui.button(
+        label=_("Yes"), emoji="✅", style=discord.ButtonStyle.success, custom_id="true_button"
+    )
+    async def true_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        if self.delete_message:
+            try:
+                await self._message.delete()
+            except discord.HTTPException:
+                pass
+        self._result = True
         self.stop()
 
 
