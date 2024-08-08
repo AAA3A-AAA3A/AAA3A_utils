@@ -82,7 +82,7 @@ class Loop:
         self.limit_exception: int = limit_exception
         self.stop_manually: bool = False
 
-        self.start_datetime: datetime.datetime = datetime.datetime.now(datetime.timezone.utc)
+        self.start_datetime: datetime.datetime = datetime.datetime.now(tz=datetime.timezone.utc)
         self.expected_interval = datetime.timedelta(seconds=self.interval)
         self.last_iteration: typing.Optional[datetime.datetime] = None
         self.next_iteration: typing.Optional[datetime.datetime] = None
@@ -104,7 +104,7 @@ class Loop:
 
     async def wait_until_iteration(self) -> None:
         """Sleep during the raw interval."""
-        now = datetime.datetime.now(datetime.timezone.utc)
+        now = datetime.datetime.now(tz=datetime.timezone.utc)
         time = now.timestamp()
         time = math.ceil(time / self.interval) * self.interval
         next_iteration = datetime.datetime.fromtimestamp(time, tz=datetime.timezone.utc) - now
@@ -228,7 +228,7 @@ class Loop:
         """
         if self.next_iteration is None:  # not started yet
             return False
-        return self.next_iteration > datetime.datetime.now(datetime.timezone.utc)
+        return self.next_iteration > datetime.datetime.now(tz=datetime.timezone.utc)
 
     @property
     def until_next(self) -> float:
@@ -241,7 +241,7 @@ class Loop:
             return 0.0
 
         raw_until_next = (
-            self.next_iteration - datetime.datetime.now(datetime.timezone.utc)
+            self.next_iteration - datetime.datetime.now(tz=datetime.timezone.utc)
         ).total_seconds()
         if raw_until_next > self.expected_interval.total_seconds():  # should never happen
             return self.expected_interval.total_seconds()
@@ -258,8 +258,8 @@ class Loop:
         """Register an iteration as starting."""
         self.iteration_count += 1
         self.currently_running = True
-        self.last_iteration = datetime.datetime.now(datetime.timezone.utc)
-        self.next_iteration = datetime.datetime.now(datetime.timezone.utc) + self.expected_interval
+        self.last_iteration = datetime.datetime.now(tz=datetime.timezone.utc)
+        self.next_iteration = datetime.datetime.now(tz=datetime.timezone.utc) + self.expected_interval
         # this isn't accurate, it will be "corrected" when finishing is called
 
     def iteration_finish(self) -> None:
@@ -277,7 +277,7 @@ class Loop:
 
     def get_debug_embed(self) -> discord.Embed:
         """Get an embed with many infomations on this loop."""
-        now: datetime.datetime = datetime.datetime.now(datetime.timezone.utc)
+        now: datetime.datetime = datetime.datetime.now(tz=datetime.timezone.utc)
 
         raw_table = Table("Key", "Value")
         raw_table.add_row("expected_interval", str(self.expected_interval))
@@ -310,8 +310,8 @@ class Loop:
             processed_table_str = "Loop hasn't started yet."
 
         datetime_table = Table("Key", "Value")
-        datetime_table.add_row("Start date-time", str(self.start_datetime))
-        datetime_table.add_row("Now date-time", str(now))
+        datetime_table.add_row("Start DateTime", str(self.start_datetime))
+        datetime_table.add_row("Now DateTime", str(now))
         datetime_table.add_row(
             "Runtime",
             (
@@ -338,27 +338,29 @@ class Loop:
         stopping_table_str = no_colour_rich_markup(stopping_table, lang="py")
 
         emoji = "✅" if self.integrity else "❌"
-        embed: discord.Embed = discord.Embed(title=f"{self.name} Loop: `{emoji}`")
-        embed.color = 0x00D26A if self.integrity else 0xF92F60
-        embed.timestamp = now
-        embed.add_field(name="Raw data", value=raw_table_str, inline=False)
+        embed: discord.Embed = discord.Embed(
+            title=f"{self.name} Loop: `{emoji}`",
+            color=discord.Color.green() if self.integrity else discord.Color.red(),
+            timestamp=now,
+        )
+        embed.add_field(name="Raw data:", value=raw_table_str, inline=False)
         embed.add_field(
-            name="Processed data",
+            name="Processed data:",
             value=processed_table_str,
             inline=False,
         )
         embed.add_field(
-            name="DateTime data",
+            name="DateTime data:",
             value=datetime_table_str,
             inline=False,
         )
         embed.add_field(
-            name="Function data",
+            name="Function data:",
             value=function_table_str,
             inline=False,
         )
         embed.add_field(
-            name="Stopping data",
+            name="Stopping data:",
             value=stopping_table_str,
             inline=False,
         )
@@ -366,6 +368,6 @@ class Loop:
         exc = CogsUtils.replace_var_paths(exc)
         if len(exc) > 1024:
             exc = list(pagify(exc, page_length=1024))[0] + "\n..."
-        embed.add_field(name="Exception", value=box(exc), inline=False)
+        embed.add_field(name="Exception:", value=box(exc), inline=False)
 
         return embed
