@@ -310,9 +310,13 @@ class Cog(commands.Cog):
             except (discord.InteractionResponded, discord.NotFound):
                 pass
         # Typing automatically.
-        if ctx.cog.qualified_name not in ("CmdChannel", "Sudo") and (
-            not (isinstance(getattr(ctx.cog, "settings", None), Settings))
-            or ctx.command not in ctx.cog.settings.commands.values()
+        if (
+            ctx.cog.qualified_name not in ("CmdChannel", "Sudo")
+            and (
+                not (isinstance(getattr(ctx.cog, "settings", None), Settings))
+                or ctx.command not in ctx.cog.settings.commands.values()
+            )
+            and ctx.command.qualified_name != "devutils stoptyping"
         ):
             context._typing = context.channel.typing()
             try:
