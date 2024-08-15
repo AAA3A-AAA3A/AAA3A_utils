@@ -1560,7 +1560,10 @@ class Settings:
                 profiles[profile]
             except KeyError:
                 raise self.NotExistingPanel(profile)
-            await data.clear_raw(*self.global_path, profile, *setting["path"])
+            default = await data.get_raw(*self.global_path[:-1], "default_profile_settings")
+            for x in setting["path"]:
+                default = default.get(x, {})
+            await data.set_raw(*self.global_path, profile, *setting["path"], value=default)
 
     def get_data(
         self,
