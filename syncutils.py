@@ -11,12 +11,11 @@ import git
 from git import Repo
 
 # git -C %USERPROFILE%\Documents\GitHub\AAA3A_utils rev-list HEAD --count AAA3A_utils
-VERSION = 6.7
+VERSION = 6.8
+BASE_PATH = Path(os.environ["USERPROFILE"]) / "Documents" / "GitHub"
 
 if VERSION is None:
-    utils_repo_clone_location = Path(
-        os.environ["USERPROFILE"] + "\\Documents\\GitHub\\AAA3A_utils_clone_for_sync"
-    )
+    utils_repo_clone_location = BASE_PATH / "AAA3A_utils_clone_for_sync"
     utils_repo = Repo.clone_from(
         "https://github.com/AAA3A-AAA3A/AAA3A_utils.git", utils_repo_clone_location
     )
@@ -46,72 +45,29 @@ if VERSION is None:
     with open(utils_location / "commit.json", "w") as fp:
         fp.write(json.dumps({"latest_commit": str(commit)}))
 else:
-    destination = Path(os.environ["USERPROFILE"] + "\\Documents\\GitHub\\AAA3A_utils\\AAA3A_utils")
-    with open(destination / "__version__.py", "w") as fp:
+    with open(BASE_PATH / "AAA3A_utils" / "AAA3A_utils" / "__version__.py", "w") as fp:
         fp.write(f"__version__ = {VERSION}\n")
 
 all_cogs = [
-    "AcronymGame",
-    "AntiNuke",
-    "AutoTraceback",
-    "Calculator",
-    "ClearChannel",
-    "CmdChannel",
-    "CodeSnippets",
-    "CommandsButtons",
-    "ConsoleLogs",
-    "CtxVar",
-    "Dashboard",
-    "Dev",
-    "DevUtils",
-    "DiscordEdit",
-    "DiscordModals",
-    "DiscordSearch",
-    "Draw",
-    "DropdownsTexts",
-    "EditFile",
-    "EmbedUtils",
-    "ExportChannel",
-    "GetDocs",
-    "GetLoc",
-    "GistsHandler",
-    "GuildStats",
-    "Ip",
-    "LinkQuoter",
-    "LintCodes",
-    "Medicat",
-    "MemberPrefix",
-    "MemoryGame",
-    "Minecraft",
-    "PresenceChart",
-    "ReactToCommand",
-    "Recipes",
-    "Reminders",
-    "RolesButtons",
-    "RunCode",
-    "Seen",
-    "SimpleSanction",
-    "Snipe",
-    "SplitOrStealGame",
-    "Sudo",
-    "TempRoles",
-    "TicketTool",
-    "TransferChannel",
-    "UrlButtons",
-    "ViewPermissions",
-    "Webhook",
+    path.name
+    for path in (BASE_PATH / "AAA3A-cogs").iterdir()
+    if (
+        path.is_dir()
+        and not path.name.startswith((".", "_"))
+        and path.name != "docs"
+    )
 ]
 cog_folders = [cog.lower() for cog in all_cogs]
 for cog in cog_folders:
     destination = (
-        Path(os.environ["USERPROFILE"] + "\\Documents\\GitHub\\AAA3A-cogs") / cog / "AAA3A_utils"
+        BASE_PATH / "AAA3A-cogs" / cog / "AAA3A_utils"
     )
     if destination.exists():
         shutil.rmtree(destination)
     if VERSION is None:
         shutil.copytree(utils_location, destination)
     else:
-        destination = Path(os.environ["USERPROFILE"] + "\\Documents\\GitHub\\AAA3A-cogs") / cog
+        destination = BASE_PATH / "AAA3A-cogs" / cog
         with open(destination / "utils_version.json", "w") as fp:
             fp.write(json.dumps({"needed_utils_version": VERSION}))
 
