@@ -159,8 +159,8 @@ class Menu(discord.ui.View):
             await self.change_page()
         for page in self.pages:
             if isinstance(page, typing.Dict) and "file" in page:
-                del page["file"]  # ValueError: I/O operation on closed file.
-                # page["attachments"] = [page.pop("file")]
+                # del page["file"]  # ValueError: I/O operation on closed file.
+                page["attachments"] = [page.pop("file")]
         if wait:
             await self._is_done.wait()
         return self._message
