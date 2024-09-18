@@ -189,6 +189,10 @@ class CustomMessageConverter(commands.Converter, typing.Dict):
                         embed._author["icon_url"] = embed._author["icon_url"].format_map(_env)
                 if getattr(embed, "_footer", None) is not None and "text" in embed._footer:
                     embed._footer["text"] = embed._footer["text"].format_map(_env)
+                if getattr(embed, "_thumbnail", None) is not None and "url" in embed._thumbnail:
+                    embed._thumbnail["url"] = embed._thumbnail["url"].format_map(_env)
+                if getattr(embed, "_image", None) is not None and "url" in embed._image:
+                    embed._image["url"] = embed._image["url"].format_map(_env)
                 _kwargs["embed"] = embed
         _kwargs.update(**kwargs)
         return await channel.send(**_kwargs)
