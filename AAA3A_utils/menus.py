@@ -140,6 +140,11 @@ class Menu(discord.ui.View):
         """
         self.ctx: commands.Context = ctx
         current, kwargs = await self.get_page(self._current_page)
+        if not self.ctx.channel.permissions_for(self.ctx.author).send_messages:
+            for emoji, name in self.controls.copy().items():
+                if name in ("send_all", "send_interactive"):
+                    del self.controls[emoji]
+                    self.disabled_controls.append(name)
         for button in self.children:
             if button.custom_id in self.disabled_controls:
                 self.remove_item(button)
