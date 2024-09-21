@@ -339,9 +339,10 @@ class Cog(commands.Cog):
             context._typing.task.cancel()
         if context.command_failed:
             await context.tick(reaction="❌")
-        elif getattr(
-            ctx.cog, "qualified_name", None
-        ) != "Dev" or ctx.command.qualified_name not in ("eval", "debug", "eshell"):
+        elif not (
+            getattr(ctx.cog, "qualified_name", None) == "Dev" and ctx.command.qualified_name in ("eval", "debug", "eshell")
+            or getattr(ctx.cog, "qualified_name", None) == "LinkQuoter" and getattr(ctx, "__is_mocked__", False)
+        ):
             await context.tick()
         # from .menus import Menu
         # await Menu(pages=str("\n".join([str((x.function, x.frame)) for x in __import__("inspect").stack(30)])), lang="py").start(context)
