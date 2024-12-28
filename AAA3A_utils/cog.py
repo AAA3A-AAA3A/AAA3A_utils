@@ -302,6 +302,7 @@ class Cog(commands.Cog):
                 __do_call = getattr(context.command.app_command, "_do_call")
 
                 async def _do_call(interaction, params):
+                    context: commands.Context = await Context.from_context(interaction)
                     await __do_call(interaction=context, params=params)
 
                 setattr(context.command.app_command, "_do_call", _do_call)
@@ -318,10 +319,13 @@ class Cog(commands.Cog):
             )
             and ctx.command.qualified_name != "devutils stoptyping"
         ):
-            context._typing = context.channel.typing()
             try:
-                await context._typing.__aenter__()
-            except discord.InteractionResponded:
+                context._typing = context.channel.typing()
+                try:
+                    await context._typing.__aenter__()
+                except discord.InteractionResponded:
+                    pass
+            except discord.Forbidden:
                 pass
         return context
 
