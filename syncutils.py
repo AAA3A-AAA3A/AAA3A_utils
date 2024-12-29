@@ -7,14 +7,13 @@ import os
 import shutil
 from pathlib import Path
 
-import git
-from git import Repo
-
 # git -C %USERPROFILE%\Documents\GitHub\AAA3A_utils rev-list HEAD --count AAA3A_utils
-VERSION = 6.8
+VERSION = 7.0
 BASE_PATH = Path(os.environ["USERPROFILE"]) / "Documents" / "GitHub"
 
 if VERSION is None:
+    import git
+    from git import Repo
     utils_repo_clone_location = BASE_PATH / "AAA3A_utils_clone_for_sync"
     utils_repo = Repo.clone_from(
         "https://github.com/AAA3A-AAA3A/AAA3A_utils.git", utils_repo_clone_location
@@ -51,17 +50,11 @@ else:
 all_cogs = [
     path.name
     for path in (BASE_PATH / "AAA3A-cogs").iterdir()
-    if (
-        path.is_dir()
-        and not path.name.startswith((".", "_"))
-        and path.name != "docs"
-    )
+    if (path.is_dir() and not path.name.startswith((".", "_")) and path.name != "docs")
 ]
 cog_folders = [cog.lower() for cog in all_cogs]
 for cog in cog_folders:
-    destination = (
-        BASE_PATH / "AAA3A-cogs" / cog / "AAA3A_utils"
-    )
+    destination = BASE_PATH / "AAA3A-cogs" / cog / "AAA3A_utils"
     if destination.exists():
         shutil.rmtree(destination)
     if VERSION is None:
