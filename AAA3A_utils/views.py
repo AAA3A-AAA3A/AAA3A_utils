@@ -278,9 +278,11 @@ class Dropdown(discord.ui.View):
             "min_values": min_values,
             "max_values": max_values,
             "_type": _type,
-            "options": ([(o.copy() if hasattr(o, "copy") else o) for o in options])
-            if isinstance(options, typing.List)
-            else options,
+            "options": (
+                ([(o.copy() if hasattr(o, "copy") else o) for o in options])
+                if isinstance(options, typing.List)
+                else options
+            ),
             "members": members,
             "check": check,
             "function": function,

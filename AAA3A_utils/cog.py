@@ -344,8 +344,10 @@ class Cog(commands.Cog):
         if context.command_failed:
             await context.tick(reaction="❌")
         elif not (
-            getattr(ctx.cog, "qualified_name", None) == "Dev" and ctx.command.qualified_name in ("eval", "debug", "eshell")
-            or getattr(ctx.cog, "qualified_name", None) == "LinkQuoter" and getattr(ctx, "__is_mocked__", False)
+            getattr(ctx.cog, "qualified_name", None) == "Dev"
+            and ctx.command.qualified_name in ("eval", "debug", "eshell")
+            or getattr(ctx.cog, "qualified_name", None) == "LinkQuoter"
+            and getattr(ctx, "__is_mocked__", False)
         ):
             await context.tick()
         # from .menus import Menu

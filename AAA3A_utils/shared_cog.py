@@ -286,9 +286,9 @@ class SharedCog(Cog, name="AAA3A_utils"):
                     attribute=name,
                     aliases=[],
                     annotation=param.annotation,
-                    default=param.default
-                    if param.default != inspect._empty
-                    else discord.utils.MISSING,
+                    default=(
+                        param.default if param.default != inspect._empty else discord.utils.MISSING
+                    ),
                     max_args=1,
                     override=False,
                 )

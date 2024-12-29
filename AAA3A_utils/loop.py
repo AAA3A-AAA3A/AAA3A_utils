@@ -259,7 +259,9 @@ class Loop:
         self.iteration_count += 1
         self.currently_running = True
         self.last_iteration = datetime.datetime.now(tz=datetime.timezone.utc)
-        self.next_iteration = datetime.datetime.now(tz=datetime.timezone.utc) + self.expected_interval
+        self.next_iteration = (
+            datetime.datetime.now(tz=datetime.timezone.utc) + self.expected_interval
+        )
         # this isn't accurate, it will be "corrected" when finishing is called
 
     def iteration_finish(self) -> None:

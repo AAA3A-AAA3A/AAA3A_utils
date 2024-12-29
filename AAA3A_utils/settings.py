@@ -307,9 +307,9 @@ class Settings:
         self.use_profiles_system: bool = use_profiles_system
         self.can_edit: bool = can_edit
         self.commands_group: typing.Union[commands.Group, commands.HybridGroup] = commands_group
-        self.commands: typing.Dict[
-            str, typing.Union[commands.Command, commands.HybridCommand]
-        ] = {}
+        self.commands: typing.Dict[str, typing.Union[commands.Command, commands.HybridCommand]] = (
+            {}
+        )
         self.commands_added: asyncio.Event = asyncio.Event()
         for setting in settings:
             if "path" not in settings[setting]:
@@ -542,9 +542,9 @@ class Settings:
                     pass
         for name, command in to_add.items():
             command.__qualname__ = f"{self.cog.qualified_name}.settings_{name}"
-            command: typing.Union[
-                commands.Command, commands.HybridCommand
-            ] = self.commands_group.command(name=name, aliases=aliases.get(name, []))(command)
+            command: typing.Union[commands.Command, commands.HybridCommand] = (
+                self.commands_group.command(name=name, aliases=aliases.get(name, []))(command)
+            )
             command.name = name
             command.cog = self.cog
             self.bot.dispatch("command_add", command)
@@ -617,33 +617,33 @@ class Settings:
                 if self.settings[setting]["no_slash"] and isinstance(
                     self.commands_group, commands.HybridGroup
                 ):
-                    command: typing.Union[
-                        commands.Command, commands.HybridCommand
-                    ] = self.commands_group.command(
-                        name=name,
-                        usage=f"<profile> <{_usage}>"
-                        if self.use_profiles_system
-                        else f"<{_usage}>",
-                        help=_help,
-                        aliases=self.settings[setting]["aliases"],
-                        hidden=self.settings[setting]["hidden"],
-                        with_app_command=False,
-                    )(
-                        command
+                    command: typing.Union[commands.Command, commands.HybridCommand] = (
+                        self.commands_group.command(
+                            name=name,
+                            usage=(
+                                f"<profile> <{_usage}>"
+                                if self.use_profiles_system
+                                else f"<{_usage}>"
+                            ),
+                            help=_help,
+                            aliases=self.settings[setting]["aliases"],
+                            hidden=self.settings[setting]["hidden"],
+                            with_app_command=False,
+                        )(command)
                     )
                 else:
-                    command: typing.Union[
-                        commands.Command, commands.HybridCommand
-                    ] = self.commands_group.command(
-                        name=name,
-                        usage=f"<profile> <{_usage}>"
-                        if self.use_profiles_system
-                        else f"<{_usage}>",
-                        help=_help,
-                        aliases=self.settings[setting]["aliases"],
-                        hidden=self.settings[setting]["hidden"],
-                    )(
-                        command
+                    command: typing.Union[commands.Command, commands.HybridCommand] = (
+                        self.commands_group.command(
+                            name=name,
+                            usage=(
+                                f"<profile> <{_usage}>"
+                                if self.use_profiles_system
+                                else f"<{_usage}>"
+                            ),
+                            help=_help,
+                            aliases=self.settings[setting]["aliases"],
+                            hidden=self.settings[setting]["hidden"],
+                        )(command)
                     )
 
                 command.name = name
@@ -712,9 +712,11 @@ class Settings:
             try:
                 await self.set_raw(
                     key=key,
-                    value=[getattr(v, "id", None) or getattr(v, "value", None) or v for v in value]
-                    if isinstance(value, typing.List)
-                    else getattr(value, "id", None) or getattr(value, "value", None) or value,
+                    value=(
+                        [getattr(v, "id", None) or getattr(v, "value", None) or v for v in value]
+                        if isinstance(value, typing.List)
+                        else getattr(value, "id", None) or getattr(value, "value", None) or value
+                    ),
                     _object=_object,
                     profile=profile,
                 )
@@ -878,12 +880,14 @@ class Settings:
                     value.replace("_", " ").title().replace(" ", ""),
                     repr(values[value]["default"]),
                     repr(values[value]["value"]),
-                    "|".join(
-                        f'"{v}"' if isinstance(v, str) else str(v)
-                        for v in self.settings[value]["converter"].__args__
-                    )
-                    if self.settings[value]["converter"] is typing.Literal
-                    else getattr(self.settings[value]["converter"], "__name__", ""),
+                    (
+                        "|".join(
+                            f'"{v}"' if isinstance(v, str) else str(v)
+                            for v in self.settings[value]["converter"].__args__
+                        )
+                        if self.settings[value]["converter"] is typing.Literal
+                        else getattr(self.settings[value]["converter"], "__name__", "")
+                    ),
                 )
         else:
             raw_table = Table("Key", "Default", "Value", "Converter", "Path")
@@ -892,15 +896,24 @@ class Settings:
                     value.replace("_", " ").title().replace(" ", ""),
                     repr(values[value]["default"]),
                     repr(values[value]["value"]),
-                    "|".join(
-                        f'"{v}"' if isinstance(v, str) else str(v)
-                        for v in self.settings[value]["converter"].__args__
-                    )
-                    if self.settings[value]["converter"] is typing.Literal
-                    else getattr(self.settings[value]["converter"], "__name__", ""),
-                    str([self.group] + self.global_path + [profile] + self.settings[value]["path"])
-                    if self.use_profiles_system
-                    else str([self.group] + self.global_path + self.settings[value]["path"]),
+                    (
+                        "|".join(
+                            f'"{v}"' if isinstance(v, str) else str(v)
+                            for v in self.settings[value]["converter"].__args__
+                        )
+                        if self.settings[value]["converter"] is typing.Literal
+                        else getattr(self.settings[value]["converter"], "__name__", "")
+                    ),
+                    (
+                        str(
+                            [self.group]
+                            + self.global_path
+                            + [profile]
+                            + self.settings[value]["path"]
+                        )
+                        if self.use_profiles_system
+                        else str([self.group] + self.global_path + self.settings[value]["path"])
+                    ),
                 )
         raw_table_str = no_colour_rich_markup(raw_table, no_box=True)
         message += raw_table_str
@@ -1048,13 +1061,15 @@ class Settings:
                             "style": self.settings[setting]["style"],
                             "placeholder": str(values[setting]["default"]),
                             "default": (
-                                str(values[setting]["value"])
-                                if self.settings[setting]["converter"]
-                                is not CustomMessageConverter
-                                else json.dumps(values[setting]["value"])
-                            )
-                            if str(values[setting]["value"]) != str(values[setting]["default"])
-                            else None,
+                                (
+                                    str(values[setting]["value"])
+                                    if self.settings[setting]["converter"]
+                                    is not CustomMessageConverter
+                                    else json.dumps(values[setting]["value"])
+                                )
+                                if str(values[setting]["value"]) != str(values[setting]["default"])
+                                else None
+                            ),
                             "required": False,
                             "custom_id": f"Settings_ModalConfig_{setting}",
                         }
@@ -1207,9 +1222,11 @@ class Settings:
                         "notifications": [
                             {"message": "Profile successfully created.", "category": "success"}
                         ],
-                        "redirect_url": f"{kwargs['request_url']}?profile={profile}"
-                        if "?" not in kwargs["request_url"]
-                        else f"{kwargs['request_url']}&profile={profile}",
+                        "redirect_url": (
+                            f"{kwargs['request_url']}?profile={profile}"
+                            if "?" not in kwargs["request_url"]
+                            else f"{kwargs['request_url']}&profile={profile}"
+                        ),
                     }
                 source = """<h4>Profiles:</h4>
                 <ul>

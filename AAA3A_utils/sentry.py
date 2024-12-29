@@ -255,16 +255,20 @@ class SentryHelper:
             """
             if isinstance(d, typing.Dict):
                 return {
-                    CogsUtils.replace_var_paths(regex_stuff(k.replace(token, "[BOT-TOKEN]")))
-                    if isinstance(k, str)
-                    else k: recursive_replace(v, token)
+                    (
+                        CogsUtils.replace_var_paths(regex_stuff(k.replace(token, "[BOT-TOKEN]")))
+                        if isinstance(k, str)
+                        else k
+                    ): recursive_replace(v, token)
                     for k, v in d.items()
                 }
             elif isinstance(d, typing.List):
                 return [
-                    CogsUtils.replace_var_paths(regex_stuff(recursive_replace(i, token)))
-                    if isinstance(i, str)
-                    else recursive_replace(i, token)
+                    (
+                        CogsUtils.replace_var_paths(regex_stuff(recursive_replace(i, token)))
+                        if isinstance(i, str)
+                        else recursive_replace(i, token)
+                    )
                     for i in d
                 ]
             return (

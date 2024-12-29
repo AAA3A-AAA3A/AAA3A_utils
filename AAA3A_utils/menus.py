@@ -49,9 +49,9 @@ class Menu(discord.ui.View):
             members = []
         super().__init__(timeout=timeout)
         self.ctx: commands.Context = None
-        self.pages: typing.List[
-            typing.Union[str, discord.Embed, typing.Dict[str, typing.Any]]
-        ] = pages
+        self.pages: typing.List[typing.Union[str, discord.Embed, typing.Dict[str, typing.Any]]] = (
+            pages
+        )
         self.delete_after_timeout: bool = delete_after_timeout
         controls: typing.Dict[str, str] = {
             "⏮️": "left_page",
