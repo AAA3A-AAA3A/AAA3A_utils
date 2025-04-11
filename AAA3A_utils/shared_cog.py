@@ -166,8 +166,8 @@ class SharedCog(Cog, name="AAA3A_utils"):
 
     @commands.is_owner()
     @AAA3A_utils.command()
-    async def getdebugloopsstatus(self, ctx: commands.Context, cog: str) -> None:
-        """Get debug loops status for a cog from AAA3A-cogs."""
+    async def getdebugloopstatus(self, ctx: commands.Context, cog: str) -> None:
+        """Get debug loop status for a cog from AAA3A-cogs."""
         cog = ctx.bot.get_cog(cog)
         if cog is None:
             raise commands.UserFeedbackCheckFailure(_("This cog is not installed or loaded."))
