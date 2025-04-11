@@ -1438,61 +1438,64 @@ class Settings:
                 ],
             }
 
-        class RemoveProfileForm(kwargs["Form"]):
-            def __init__(self) -> None:
-                super().__init__(prefix="remove_profile_form_")
+        source = """{{ form|safe }}"""
 
-            submit: wtforms.SubmitField = wtforms.SubmitField(_("Remove Profile"))
+        if self.use_profiles_system:
+            class RemoveProfileForm(kwargs["Form"]):
+                def __init__(self) -> None:
+                    super().__init__(prefix="remove_profile_form_")
 
-        remove_profile_form = RemoveProfileForm()
-        if remove_profile_form.validate_on_submit():
-            await data.clear_raw(*self.global_path, profile)
-            if self.cog.qualified_name == "TicketTool":
-                data = await self.cog.config.guild(guild).tickets.all()
-                to_remove = [
-                    channel for channel in data if data[channel].get("panel", "main") == profile
-                ]
-                for channel in to_remove:
-                    try:
-                        del data[channel]
-                    except KeyError:
-                        pass
-                await self.cog.config.guild(guild).tickets.set(data)
-            return {
-                "status": 0,
-                "notifications": [
-                    {"message": "Profile successfully removed.", "category": "success"}
-                ],
-                "redirect_url": kwargs["request_url"].split("?")[0],
-            }
-        remove_profile_form.submit.render_kw = {"onclick": "return confirmRemoveProfile(event);"}
+                submit: wtforms.SubmitField = wtforms.SubmitField(_("Remove Profile"))
 
-        source = """{{ form|safe }}
-
-        <br />
-        <div style="display: none;">{{ remove_profile_form|safe }}</div>
-        <a href="javascript:void(0);" onclick='this.parentElement.querySelector("#remove_profile_form_submit").click();' class="text-danger"><i class="fa fa-minus-circle" style="width: 1.3em; vertical-align: 0.5px;"></i> Remove Profile</a>
-        <script>
-            async function confirmRemoveProfile(event) {
-                if (confirmationDone) {
-                    return true;
+            remove_profile_form = RemoveProfileForm()
+            if remove_profile_form.validate_on_submit():
+                await data.clear_raw(*self.global_path, profile)
+                if self.cog.qualified_name == "TicketTool":
+                    data = await self.cog.config.guild(guild).tickets.all()
+                    to_remove = [
+                        channel for channel in data if data[channel].get("panel", "main") == profile
+                    ]
+                    for channel in to_remove:
+                        try:
+                            del data[channel]
+                        except KeyError:
+                            pass
+                    await self.cog.config.guild(guild).tickets.set(data)
+                return {
+                    "status": 0,
+                    "notifications": [
+                        {"message": "Profile successfully removed.", "category": "success"}
+                    ],
+                    "redirect_url": kwargs["request_url"].split("?")[0],
                 }
-                let target_button = event.target;
-                event.preventDefault();
-                SwalAlert.fire({
-                    title: "Do you really want to remove this settings profile?",
-                    text: "You won't be able to restore it.",
-                    confirmButtonText: '{{ _("Yes, remove!") }}'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        confirmationDone = true;
-                        target_button.click();
+            remove_profile_form.submit.render_kw = {"onclick": "return confirmRemoveProfile(event);"}
+            source += """
+
+            <br />
+            <div style="display: none;">{{ remove_profile_form|safe }}</div>
+            <a href="javascript:void(0);" onclick='this.parentElement.querySelector("#remove_profile_form_submit").click();' class="text-danger"><i class="fa fa-minus-circle" style="width: 1.3em; vertical-align: 0.5px;"></i> Remove Profile</a>
+            <script>
+                async function confirmRemoveProfile(event) {
+                    if (confirmationDone) {
+                        return true;
                     }
-                })
-                return false;
-            }
-        </script>
-        """
+                    let target_button = event.target;
+                    event.preventDefault();
+                    SwalAlert.fire({
+                        title: "Do you really want to remove this settings profile?",
+                        text: "You won't be able to restore it.",
+                        confirmButtonText: '{{ _("Yes, remove!") }}'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            confirmationDone = true;
+                            target_button.click();
+                        }
+                    })
+                    return false;
+                }
+            </script>
+            """
+
         return {
             "status": 0,
             "web_content": {
