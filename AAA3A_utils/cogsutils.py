@@ -17,6 +17,7 @@ from pathlib import Path
 from random import choice
 
 import aiohttp
+from redbot.core.commands.requires import PrivilegeLevel
 from redbot.core.utils.chat_formatting import humanize_list
 from redbot.logging import RotatingFileHandler
 
@@ -359,7 +360,7 @@ class CogsUtils:
             to_update = False
         else:
             path = Path(inspect.getsourcefile(cog.__class__))
-            if not path.parent.parent == (await bot._cog_mgr.install_path()):
+            if path.parent.parent != (await bot._cog_mgr.install_path()):
                 to_update = False
 
         return to_update, local_commit, online_commit  # , online_commit_for_each_files
@@ -376,8 +377,15 @@ class CogsUtils:
                     _object.app_command.description = _object.app_command.description.split("\n")[
                         0
                     ][:100]
-                if _object.parent is not None and not _object.parent.invoke_without_command:
+                if _object.parent is not None:
                     _object.checks.extend(_object.parent.checks)
+                    if _object.requires.privilege_level is PrivilegeLevel.NONE:
+                        _object.requires.privilege_level = _object.parent.requires.privilege_level
+                    if _object.requires.user_perms == discord.Permissions(0):
+                        _object.requires.user_perms = _object.parent.requires.user_perms
+                    if _object.requires.bot_perms == discord.Permissions(0):
+                        _object.requires.bot_perms = _object.parent.requires.bot_perms
+                    
         await bot.tree.red_check_enabled()
 
     @classmethod
