@@ -78,7 +78,8 @@ class ConfirmationAskView(discord.ui.View):
         return True
 
     async def on_timeout(self) -> None:
-        await self.ctx.send(self.timeout_message)
+        if self.timeout_message is not None:
+            await self.ctx.send(self.timeout_message)
         if not self.delete_after_timeout:
             for child in self.children:
                 child: discord.ui.Item
