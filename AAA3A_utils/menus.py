@@ -225,7 +225,7 @@ class Menu(discord.ui.View):
         if interaction is not None:
             try:
                 await interaction.response.defer()
-            except discord.HTTPException:
+            except (discord.HTTPException, discord.errors.InteractionResponded):
                 pass
         current, kwargs = await self.get_page(self._current_page)
         if choose_button := discord.utils.get(self.children, custom_id="choose_page"):
