@@ -87,6 +87,8 @@ class SharedCog(Cog, name="AAA3A_utils"):
 
         self.sentry: SentryHelper = None
 
+        self.senderrorwithsentry.__is_dev__: bool = True
+        self.displaysentrymanualcommand.__is_dev__: bool = True
         self.telemetrywithsentry.__is_dev__: bool = True
         self.getallfor.__is_dev__: bool = True
 
@@ -213,7 +215,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
         )
 
     @commands.is_owner()
-    @AAA3A_utils.command(hidden=False)
+    @AAA3A_utils.command(hidden=True)
     async def displaysentrymanualcommand(self, ctx: commands.Context, state: bool) -> None:
         """Enable or disable displaying the command `[p]AAA3A_utils senderrorwithsentry` in commands errors.
 
@@ -223,7 +225,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
         self.sentry.display_sentry_manual_command = not self.sentry.sentry_enabled and state
 
     @commands.is_owner()
-    @AAA3A_utils.command()
+    @AAA3A_utils.command(hidden=True)
     async def senderrorwithsentry(self, ctx: commands.Context, error: str) -> None:
         """Send a recent error to the developer of AAA3A's cogs with Sentry (use the code given when the error has been triggered).
 
