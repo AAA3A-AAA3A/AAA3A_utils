@@ -415,10 +415,16 @@ class Cog(commands.Cog):
                 await AAA3A_utils.sentry.send_command_error(ctx, error)
         elif isinstance(error, commands.UserFeedbackCheckFailure):
             if error.message:
-                message = error.message
-                message = warning(message)
+                message = warning(error.message)
                 await ctx.send(
                     message,
+                    delete_after=3 if "delete_after" in error.args else None,
+                    allowed_mentions=discord.AllowedMentions.none(),
+                )
+        elif isinstance(error, commands.BadArgument):
+            if error.message and ctx.interaction is not None:
+                await ctx.send(
+                    error.message,
                     delete_after=3 if "delete_after" in error.args else None,
                     allowed_mentions=discord.AllowedMentions.none(),
                 )
