@@ -8,7 +8,7 @@ import shutil
 from pathlib import Path
 
 # git -C %USERPROFILE%\Documents\GitHub\AAA3A_utils rev-list HEAD --count AAA3A_utils
-VERSION = 7.3
+VERSION = 7.4
 BASE_PATH = Path(os.environ["USERPROFILE"]) / "Documents" / "GitHub"
 
 if VERSION is None:
