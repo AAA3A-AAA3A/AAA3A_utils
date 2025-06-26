@@ -422,9 +422,9 @@ class Cog(commands.Cog):
                     allowed_mentions=discord.AllowedMentions.none(),
                 )
         elif isinstance(error, commands.BadArgument):
-            if error.message and ctx.interaction is not None:
+            if error.args and isinstance(error.args[0], str) and ctx.interaction is not None:
                 await ctx.send(
-                    error.message,
+                    error.args[0],
                     delete_after=3 if "delete_after" in error.args else None,
                     allowed_mentions=discord.AllowedMentions.none(),
                 )
