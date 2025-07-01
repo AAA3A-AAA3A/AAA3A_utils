@@ -61,33 +61,33 @@ class Loop:
         limit_exception: typing.Optional[int] = None,
         start_now: bool = True,
     ) -> None:
-        self.cog = cog
-        self.name = name
-        self.function = function
-        self.function_kwargs = function_kwargs or {}
-        self.interval = datetime.timedelta(
+        self.cog: commands.Cog = cog
+        self.name: str = name
+        self.function: typing.Callable = function
+        self.function_kwargs: typing.Dict[str, typing.Any] = function_kwargs or {}
+        self.interval: float = datetime.timedelta(
             days=days, hours=hours, minutes=minutes, seconds=seconds
         ).total_seconds()
-        self.wait_raw = wait_raw
-        self.limit_count = limit_count
-        self.limit_date = limit_date
-        self.limit_exception = limit_exception
-        self.stop_manually = False
+        self.wait_raw: bool = wait_raw
+        self.limit_count: typing.Optional[int] = limit_count
+        self.limit_date: typing.Optional[datetime.datetime] = limit_date
+        self.limit_exception: typing.Optional[int] = limit_exception
+        self.stop_manually: bool = False
 
-        self.start_datetime = datetime.datetime.now(tz=datetime.timezone.utc)
-        self.expected_interval = datetime.timedelta(seconds=self.interval)
-        self.last_iteration = None
-        self.next_iteration = None
-        self.currently_running = False
-        self.iteration_count = 0
-        self.last_result = None
-        self.last_iteration_duration = None
-        self.iteration_exception = 0
-        self.last_exc = "No exception has occurred yet."
-        self.last_exc_raw = None
-        self.stop = False
+        self.start_datetime: datetime.datetime = datetime.datetime.now(tz=datetime.timezone.utc)
+        self.expected_interval: datetime.timedelta = datetime.timedelta(seconds=self.interval)
+        self.last_iteration: typing.Optional[datetime.datetime] = None
+        self.next_iteration: typing.Optional[datetime.datetime] = None
+        self.currently_running: bool = False
+        self.iteration_count: int = 0
+        self.last_result: typing.Any = None
+        self.last_iteration_duration: typing.Optional[float] = None
+        self.iteration_exception: int = 0
+        self.last_exc: str = "No exception has occurred yet."
+        self.last_exc_raw: typing.Optional[BaseException] = None
+        self.stop: bool = False
 
-        self.task = None
+        self.task: typing.Optional[asyncio.Task] = None
         if start_now:
             self.start()
 
@@ -135,14 +135,14 @@ class Loop:
             await self.wait_until_iteration()
 
     async def execute(self) -> None:
+        start = time.monotonic()
+        self.iteration_start()
         try:
-            start = time.monotonic()
-            self.iteration_start()
             self.last_result = await self.function(**self.function_kwargs)
-            self.iteration_finish()
-            self.log_iteration_time(start)
         except Exception as e:
             self.handle_iteration_error(e)
+        self.iteration_finish()
+        self.log_iteration_time(start)
 
     def maybe_stop(self) -> bool:
         """Check if the loop should stop."""
@@ -249,6 +249,11 @@ class Loop:
             ("next_iteration", str(self.next_iteration)),
             ("wait_raw", str(self.wait_raw)),
         ]
+        processed_data = [
+            ("Seconds until next iteration", str(self.until_next)),
+            ("Seconds since last iteration", str(self.last_iteration_duration)),
+            ("Raw interval", str(self.interval)),
+        ]
         datetime_data = [
             ("Start DateTime", str(self.start_datetime)),
             ("Now DateTime", str(now)),
@@ -273,6 +278,7 @@ class Loop:
             timestamp=now,
         )
         embed.add_field(name="Raw data:", value=create_table(raw_data), inline=False)
+        embed.add_field(name="Processed data:", value=create_table(processed_data), inline=False)
         embed.add_field(name="DateTime data:", value=create_table(datetime_data), inline=False)
         embed.add_field(name="Function data:", value=create_table(function_data), inline=False)
         embed.add_field(name="Stopping data:", value=create_table(stopping_data), inline=False)
