@@ -31,7 +31,7 @@ from redbot.core.utils.chat_formatting import (
 from rich.console import Console
 from rich.table import Table
 
-from . import cogsutils
+from . import cogsutils, cog
 from .cogsutils import CogsUtils
 from .menus import Menu
 from .sentry import SentryHelper
@@ -82,6 +82,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
         self.config.register_global(
             sentry={},
             replacement_var_paths=True,
+            tick_after_command_execution=True,
             counted_cogs=[],
         )
 
@@ -97,6 +98,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
         if self.sentry is None:
             self.sentry = SentryHelper(bot=self.bot, cog=self)
         cogsutils.replacement_var_paths = await self.config.replacement_var_paths()
+        cog.tick_after_command_execution = await self.config.tick_after_command_execution()
 
     async def red_delete_data_for_user(self, *args, **kwargs) -> None:
         """Nothing to delete."""
@@ -112,7 +114,6 @@ class SharedCog(Cog, name="AAA3A_utils"):
         """All commands to manage all the cogs from AAA3A-cogs repo."""
         pass
 
-    @commands.is_owner()
     @AAA3A_utils.command()
     async def getlogs(self, ctx: commands.Context, cog: str, level: str = "all") -> None:
         """Get logs for a cog from AAA3A-cogs"""
@@ -166,7 +167,6 @@ class SharedCog(Cog, name="AAA3A_utils"):
             )
         await Menu(pages=result).start(ctx)
 
-    @commands.is_owner()
     @AAA3A_utils.command()
     async def getdebugloopstatus(self, ctx: commands.Context, cog: str) -> None:
         """Get debug loop status for a cog from AAA3A-cogs."""
@@ -178,7 +178,6 @@ class SharedCog(Cog, name="AAA3A_utils"):
         embeds = [loop.get_debug_embed() for loop in cog.loops]
         await Menu(pages=embeds).start(ctx)
 
-    @commands.is_owner()
     @AAA3A_utils.command(aliases=["clearconfig"])
     async def resetconfig(
         self, ctx: commands.Context, cog: str, confirmation: bool = False
@@ -201,7 +200,6 @@ class SharedCog(Cog, name="AAA3A_utils"):
                 return
         await getattr(cog, "config").clear_all()
 
-    @commands.is_owner()
     @AAA3A_utils.command(hidden=True)
     async def telemetrywithsentry(self, ctx: commands.Context, state: bool) -> None:
         """Enable or disable Telemetry with Sentry for all cogs from AAA3A-cogs.
@@ -214,7 +212,6 @@ class SharedCog(Cog, name="AAA3A_utils"):
             await self.sentry.config.sentry.display_sentry_manual_command()
         )
 
-    @commands.is_owner()
     @AAA3A_utils.command(hidden=True)
     async def displaysentrymanualcommand(self, ctx: commands.Context, state: bool) -> None:
         """Enable or disable displaying the command `[p]AAA3A_utils senderrorwithsentry` in commands errors.
@@ -224,7 +221,6 @@ class SharedCog(Cog, name="AAA3A_utils"):
         await self.config.sentry.display_sentry_manual_command.set(state)
         self.sentry.display_sentry_manual_command = not self.sentry.sentry_enabled and state
 
-    @commands.is_owner()
     @AAA3A_utils.command(hidden=True)
     async def senderrorwithsentry(self, ctx: commands.Context, error: str) -> None:
         """Send a recent error to the developer of AAA3A's cogs with Sentry (use the code given when the error has been triggered).
@@ -243,7 +239,6 @@ class SharedCog(Cog, name="AAA3A_utils"):
             ).format(event_id=event_id)
         )
 
-    @commands.is_owner()
     @AAA3A_utils.command()
     async def replacementvarpaths(self, ctx: commands.Context, state: bool) -> None:
         """Replace various var paths in texts sent by cog from AAA3A-cogs.
@@ -253,7 +248,15 @@ class SharedCog(Cog, name="AAA3A_utils"):
         await self.config.replacement_var_paths.set(state)
         cogsutils.replacement_var_paths = state
 
-    @commands.is_owner()
+    @AAA3A_utils.command()
+    async def tickaftercommandexecution(self, ctx: commands.Context, state: bool) -> None:
+        """Enable or disable sending a tick after each command from AAA3A-cogs.
+
+        Defaults is `True`.
+        """
+        await self.config.tick_after_command_execution.set(state)
+        cog.tick_after_command_execution = state
+
     @AAA3A_utils.command()
     async def flags(self, ctx: commands.Context, *, content: str) -> None:
         """Use any command with flags."""
@@ -398,7 +401,6 @@ class SharedCog(Cog, name="AAA3A_utils"):
         except Exception:
             pass
 
-    @commands.is_owner()
     @AAA3A_utils.command()
     async def getallfor(
         self,

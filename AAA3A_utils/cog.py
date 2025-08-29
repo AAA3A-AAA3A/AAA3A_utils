@@ -22,6 +22,7 @@ from .loop import Loop
 from .settings import Settings
 
 SharedCog: commands.Cog = None
+tick_after_command_execution: bool = True
 
 __all__ = ["Cog"]
 
@@ -348,6 +349,7 @@ class Cog(commands.Cog):
             and ctx.command.qualified_name in ("eval", "debug", "eshell")
             or getattr(ctx.cog, "qualified_name", None) == "LinkQuoter"
             and getattr(ctx, "__is_mocked__", False)
+            or not tick_after_command_execution
         ):
             await context.tick()
         # from .menus import Menu
