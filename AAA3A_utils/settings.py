@@ -11,11 +11,12 @@ import json
 from copy import deepcopy
 from io import StringIO
 
+from rich.console import Console
+from rich.table import Table
+
 from redbot.core import Config
 from redbot.core.bot import Red
 from redbot.core.utils.chat_formatting import box
-from rich.console import Console
-from rich.table import Table
 
 from .cogsutils import CogsUtils
 from .menus import Menu
@@ -39,7 +40,7 @@ def dashboard_page(*args, **kwargs):
 
 
 def no_colour_rich_markup(
-    *objects: typing.Any, lang: str = "", no_box: typing.Optional[bool] = False
+    *objects: typing.Any, lang: str = "", no_box: bool | None = False,
 ) -> str:
     """
     Slimmed down version of rich_markup which ensure no colours (/ANSI) can exist
@@ -77,7 +78,7 @@ if not hasattr(discord.utils, "MISSING"):
     discord.utils.MISSING = _MissingSentinel()
 
 
-class CustomMessageConverter(commands.Converter, typing.Dict):
+class CustomMessageConverter(commands.Converter, dict):
     def __init__(self, **kwargs) -> None:
         if "embed" in kwargs and not isinstance(kwargs["embed"], discord.Embed):
             kwargs["embed"] = discord.Embed.from_dict(kwargs["embed"])
@@ -85,7 +86,7 @@ class CustomMessageConverter(commands.Converter, typing.Dict):
         self.__dict__.update(**kwargs)
 
     async def convert(
-        self, ctx: commands.Context, argument: str
+        self, ctx: commands.Context, argument: str,
     ) -> typing.Any:  # typing_extensions.Self
         if not argument.startswith("{"):
             # If argument is not a JSON, convert it with MessageConverter.
@@ -94,16 +95,14 @@ class CustomMessageConverter(commands.Converter, typing.Dict):
             except commands.BadArgument:
                 raise
             kwargs = {
-                key: getattr(message, key)
-                for key in ("content", "embeds")
-                if getattr(message, key)
+                key: getattr(message, key) for key in ("content", "embeds") if getattr(message, key)
             }
         else:
             try:
                 kwargs = json.loads(argument)
             except json.JSONDecodeError:
                 raise commands.BadArgument(_("Invalid JSON format."))
-        if not isinstance(kwargs, typing.Dict):
+        if not isinstance(kwargs, dict):
             raise commands.BadArgument(_("Invalid type, expected `dict`."))
         if "embeds" in kwargs:
             if len(kwargs["embeds"]) == 0:
@@ -123,12 +122,12 @@ class CustomMessageConverter(commands.Converter, typing.Dict):
         if "embed" in kwargs:
             embed = kwargs["embed"]
             if not isinstance(embed, discord.Embed):
-                if not isinstance(embed, (typing.Dict)):
+                if not isinstance(embed, (dict)):
                     raise commands.BadArgument(_("Invalid type for `embed`, expected `dict`."))
                 for x in embed:
                     if embed[x] is None:
                         del embed[x]
-                    elif isinstance(embed[x], typing.Dict):
+                    elif isinstance(embed[x], dict):
                         for y in embed[x]:
                             if embed[x][y] is None:
                                 del embed[x][y]
@@ -143,8 +142,8 @@ class CustomMessageConverter(commands.Converter, typing.Dict):
                 raise commands.BadArgument(
                     _(
                         "Embed size exceeds Discord limit of 6000 characters, provided one of"
-                        " {length}."
-                    ).format(length=length)
+                        " {length}.",
+                    ).format(length=length),
                 )
             kwargs["embed"] = embed
         # Attempt to send message.
@@ -153,7 +152,7 @@ class CustomMessageConverter(commands.Converter, typing.Dict):
                 message = await ctx.send(**kwargs)
             except discord.HTTPException as e:
                 raise commands.BadArgument(
-                    _("Invalid message params (error when sending message).\n{e}").format(e=e)
+                    _("Invalid message params (error when sending message).\n{e}").format(e=e),
                 )
         self.__dict__.update(**kwargs)
         return self
@@ -161,7 +160,7 @@ class CustomMessageConverter(commands.Converter, typing.Dict):
     async def send_message(
         self,
         ctx: commands.Context,
-        channel: typing.Optional[discord.abc.Messageable] = None,
+        channel: discord.abc.Messageable | None = None,
         **kwargs,
     ):
         if channel is None:
@@ -169,7 +168,7 @@ class CustomMessageConverter(commands.Converter, typing.Dict):
         _kwargs = self.__dict__.copy()
         if (env := kwargs.pop("env", None)) is not None:
 
-            class _Env(typing.Dict):
+            class _Env(dict):
                 def __missing__(self, key: str) -> str:
                     return "{" + f"{key}" + "}"
 
@@ -197,7 +196,7 @@ class CustomMessageConverter(commands.Converter, typing.Dict):
         _kwargs.update(**kwargs)
         return await channel.send(**_kwargs)
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> dict[str, typing.Any]:
         kwargs = self.__dict__.copy()
         if "embed" in kwargs:
             kwargs["embed"] = kwargs["embed"].to_dict()
@@ -223,10 +222,10 @@ class CustomMessageConverter(commands.Converter, typing.Dict):
     def __contains__(self, key: str) -> bool:
         return key in self.__dict__
 
-    def __iter__(self) -> typing.Iterator[typing.Tuple[str, typing.Any]]:
+    def __iter__(self) -> typing.Iterator[tuple[str, typing.Any]]:
         yield from self.__dict__.items()
 
-    def __reversed__(self) -> typing.Dict:
+    def __reversed__(self) -> dict:
         return self.__dict__.__reversed__()
 
     def __getattr__(self, attr: str) -> typing.Any:
@@ -265,17 +264,17 @@ class CustomMessageConverter(commands.Converter, typing.Dict):
     def values(self):
         return self.__dict__.values()
 
-    def get(self, key: str, _default: typing.Optional[typing.Any] = None) -> typing.Any:
+    def get(self, key: str, _default: typing.Any | None = None) -> typing.Any:
         return self.__dict__.get(key, _default)
 
-    def pop(self, key: str, _default: typing.Optional[typing.Any] = None) -> typing.Any:
+    def pop(self, key: str, _default: typing.Any | None = None) -> typing.Any:
         return self.__dict__.pop(key, _default)
 
     def popitem(self) -> typing.Any:
         return self.__dict__.popitem()
 
     def _update_with_defaults(
-        self, defaults: typing.Iterable[typing.Tuple[str, typing.Any]]
+        self, defaults: typing.Iterable[tuple[str, typing.Any]],
     ) -> None:
         for key, value in defaults:
             self.__dict__.setdefault(key, value)
@@ -288,13 +287,11 @@ class Settings:
         cog: commands.Cog,
         config: Config,
         group: str,
-        settings: typing.Dict[str, typing.Dict[str, typing.Any]],
-        global_path: typing.List = None,
-        use_profiles_system: typing.Optional[bool] = False,
+        settings: dict[str, dict[str, typing.Any]],
+        global_path: list = None,
+        use_profiles_system: bool | None = False,
         can_edit: bool = True,
-        commands_group: typing.Optional[
-            typing.Union[commands.Group, commands.HybridGroup, str]
-        ] = None,
+        commands_group: commands.Group | commands.HybridGroup | str | None = None,
     ) -> None:
         if global_path is None:
             global_path = []
@@ -303,13 +300,11 @@ class Settings:
         self.cog: commands.Cog = cog
         self.config: Config = config
         self.group: str = group
-        self.global_path: typing.List[str] = global_path
+        self.global_path: list[str] = global_path
         self.use_profiles_system: bool = use_profiles_system
         self.can_edit: bool = can_edit
-        self.commands_group: typing.Union[commands.Group, commands.HybridGroup] = commands_group
-        self.commands: typing.Dict[str, typing.Union[commands.Command, commands.HybridCommand]] = (
-            {}
-        )
+        self.commands_group: commands.Group | commands.HybridGroup = commands_group
+        self.commands: dict[str, commands.Command | commands.HybridCommand] = {}
         self.commands_added: asyncio.Event = asyncio.Event()
         for setting in settings:
             if "path" not in settings[setting]:
@@ -353,9 +348,9 @@ class Settings:
                 settings[setting]["style"] = discord.TextStyle.short
             elif isinstance(settings[setting]["style"], int):
                 settings[setting]["style"] = discord.TextStyle(settings[setting]["style"])
-        self.settings: typing.Dict[str, typing.Dict[str, typing.Any]] = settings
+        self.settings: dict[str, dict[str, typing.Any]] = settings
 
-    async def add_commands(self, force: typing.Optional[bool] = False) -> None:
+    async def add_commands(self, force: bool | None = False) -> None:
         if not isinstance(self.commands_group, commands.Group):
             name = "set" + (
                 self.commands_group
@@ -370,7 +365,7 @@ class Settings:
                         else self.cog.qualified_name.lower()
                     )
                     + "set"
-                )
+                ),
             ]
             _help = f"Commands to edit {self.cog.qualified_name}'s settings."
             if force:
@@ -381,7 +376,7 @@ class Settings:
 
             commands_group.__qualname__ = f"{self.cog.qualified_name}.{name}"
             commands_group: commands.Group = commands.admin_or_permissions(administrator=True)(
-                commands.hybrid_group(name=name, aliases=aliases, help=_help)(commands_group)
+                commands.hybrid_group(name=name, aliases=aliases, help=_help)(commands_group),
             )
             commands_group.name = name
             # commands_group.brief = _help
@@ -405,9 +400,7 @@ class Settings:
                     _object = None
                 elif self.group == Config.GUILD:
                     _object = ctx.guild
-                elif self.group == Config.MEMBER:
-                    _object = ctx.author
-                elif self.group == Config.CHANNEL:
+                elif self.group == Config.MEMBER or self.group == Config.CHANNEL:
                     _object = ctx.author
                 elif self.group == Config.ROLE:
                     _object = ctx.author.top_role
@@ -432,13 +425,13 @@ class Settings:
                 await self.command(ctx, key=key, value=discord.utils.MISSING)
 
             async def show_settings(
-                _self, ctx: commands.Context, with_dev: typing.Optional[bool] = False
+                _self, ctx: commands.Context, with_dev: bool | None = False,
             ):
                 """Show all settings for the cog with defaults and values."""
                 await self.show_settings(ctx, with_dev=with_dev)
 
             async def modal_config(
-                _self, ctx: commands.Context, confirmation: typing.Optional[bool] = False
+                _self, ctx: commands.Context, confirmation: bool | None = False,
             ):
                 """Set all settings for the cog with a Discord Modal."""
                 await self.send_modal(ctx, confirmation=confirmation)
@@ -451,7 +444,7 @@ class Settings:
         else:
 
             async def reset_setting(
-                _self, ctx: commands.Context, profile: ProfileConverter, setting: str
+                _self, ctx: commands.Context, profile: ProfileConverter, setting: str,
             ):
                 """Reset a setting."""
                 for _setting in self.settings:
@@ -466,7 +459,7 @@ class Settings:
                 _self,
                 ctx: commands.Context,
                 profile: ProfileConverter,
-                with_dev: typing.Optional[bool] = False,
+                with_dev: bool | None = False,
             ):
                 """Show all settings for the cog with defaults and values."""
                 await self.show_settings(ctx, profile=profile, with_dev=with_dev)
@@ -475,7 +468,7 @@ class Settings:
                 _self,
                 ctx: commands.Context,
                 profile: ProfileConverter,
-                confirmation: typing.Optional[bool] = False,
+                confirmation: bool | None = False,
             ):
                 """Set all settings for the cog with a Discord Modal."""
                 await self.send_modal(ctx, profile=profile, confirmation=confirmation)
@@ -485,7 +478,7 @@ class Settings:
                 await self.add_profile(ctx, profile=profile)
 
             async def clone_profile(
-                _self, ctx: commands.Context, old_profile: ProfileConverter, profile: str
+                _self, ctx: commands.Context, old_profile: ProfileConverter, profile: str,
             ):
                 """Clone an existing profile with his settings."""
                 await self.clone_profile(ctx, old_profile=old_profile, profile=profile)
@@ -494,13 +487,13 @@ class Settings:
                 _self,
                 ctx: commands.Context,
                 profile: ProfileConverter,
-                confirmation: typing.Optional[bool] = False,
+                confirmation: bool | None = False,
             ):
                 """Remove an existing profile."""
                 await self.remove_profile(ctx, profile=profile, confirmation=confirmation)
 
             async def rename_profile(
-                _self, ctx: commands.Context, old_profile: ProfileConverter, profile: str
+                _self, ctx: commands.Context, old_profile: ProfileConverter, profile: str,
             ):
                 """Rename an existing profile."""
                 await self.rename_profile(ctx, old_profile=old_profile, profile=profile)
@@ -542,7 +535,7 @@ class Settings:
                     pass
         for name, command in to_add.items():
             command.__qualname__ = f"{self.cog.qualified_name}.settings_{name}"
-            command: typing.Union[commands.Command, commands.HybridCommand] = (
+            command: commands.Command | commands.HybridCommand = (
                 self.commands_group.command(name=name, aliases=aliases.get(name, []))(command)
             )
             command.name = name
@@ -615,9 +608,9 @@ class Settings:
 
                 command.__qualname__ = f"{self.cog.qualified_name}.settings_{name}"
                 if self.settings[setting]["no_slash"] and isinstance(
-                    self.commands_group, commands.HybridGroup
+                    self.commands_group, commands.HybridGroup,
                 ):
-                    command: typing.Union[commands.Command, commands.HybridCommand] = (
+                    command: commands.Command | commands.HybridCommand = (
                         self.commands_group.command(
                             name=name,
                             usage=(
@@ -632,7 +625,7 @@ class Settings:
                         )(command)
                     )
                 else:
-                    command: typing.Union[commands.Command, commands.HybridCommand] = (
+                    command: commands.Command | commands.HybridCommand = (
                         self.commands_group.command(
                             name=name,
                             usage=(
@@ -675,14 +668,10 @@ class Settings:
     async def command(
         self,
         ctx: commands.Context,
-        key: typing.Optional[str] = None,
-        value: typing.Optional[typing.Any] = None,
-        _object: typing.Optional[
-            typing.Union[
-                discord.Guild, discord.Member, discord.abc.Messageable, discord.Role, discord.User
-            ]
-        ] = None,
-        profile: typing.Optional[str] = None,
+        key: str | None = None,
+        value: typing.Any | None = None,
+        _object: discord.Guild | discord.Member | discord.abc.Messageable | discord.Role | discord.User | None = None,
+        profile: str | None = None,
     ) -> None:
         if key is None:
             for setting in self.settings:
@@ -698,9 +687,7 @@ class Settings:
                 _object = None
             elif self.group == Config.GUILD:
                 _object = ctx.guild
-            elif self.group == Config.MEMBER:
-                _object = ctx.author
-            elif self.group == Config.CHANNEL:
+            elif self.group == Config.MEMBER or self.group == Config.CHANNEL:
                 _object = ctx.author
             elif self.group == Config.ROLE:
                 _object = ctx.author.top_role
@@ -714,7 +701,7 @@ class Settings:
                     key=key,
                     value=(
                         [getattr(v, "id", None) or getattr(v, "value", None) or v for v in value]
-                        if isinstance(value, typing.List)
+                        if isinstance(value, list)
                         else getattr(value, "id", None) or getattr(value, "value", None) or value
                     ),
                     _object=_object,
@@ -731,7 +718,7 @@ class Settings:
     async def add_profile(self, ctx: commands.Context, profile: str) -> None:
         if len(profile) > 20:
             raise commands.UserFeedbackCheckFailure(
-                _("The name of a profile must be less than or equal to 20 characters.")
+                _("The name of a profile must be less than or equal to 20 characters."),
             )
         data = self.get_data(ctx=ctx)
         profiles = await data.get_raw(*self.global_path)
@@ -746,20 +733,20 @@ class Settings:
     async def clone_profile(self, ctx: commands.Context, old_profile: str, profile: str) -> None:
         if len(profile) > 20:
             raise commands.UserFeedbackCheckFailure(
-                _("The name of a profile must be less than or equal to 20 characters.")
+                _("The name of a profile must be less than or equal to 20 characters."),
             )
         data = self.get_data(ctx=ctx)
         profiles = await data.get_raw(*self.global_path)
         if profile in profiles:
             raise commands.UserFeedbackCheckFailure(_("This profile already exists."))
         await data.set_raw(
-            *self.global_path, profile, value=await data.get_raw(*self.global_path, old_profile)
+            *self.global_path, profile, value=await data.get_raw(*self.global_path, old_profile),
         )
         if self.cog.qualified_name == "TicketTool":
             await data.set_raw(*self.global_path, profile, "last_nb", value=0)
 
     async def remove_profile(
-        self, ctx: commands.Context, profile: str, confirmation: typing.Optional[bool] = False
+        self, ctx: commands.Context, profile: str, confirmation: bool | None = False,
     ) -> None:
         if not confirmation:
             embed: discord.Embed = discord.Embed()
@@ -768,7 +755,7 @@ class Settings:
                 embed.description = _(
                     "All tickets associated with this profile will be removed from the Config, but"
                     " the channels will still exist. Commands related to the tickets will no"
-                    " longer work."
+                    " longer work.",
                 )
             embed.color = 0xF00020
             response = await CogsUtils.ConfirmationAsk(ctx, embed=embed)
@@ -791,14 +778,14 @@ class Settings:
     async def rename_profile(self, ctx: commands.Context, old_profile: str, profile: str) -> None:
         if len(profile) > 20:
             raise commands.UserFeedbackCheckFailure(
-                _("The name of a profile must be less than or equal to 20 characters.")
+                _("The name of a profile must be less than or equal to 20 characters."),
             )
         data = self.get_data(ctx=ctx)
         profiles = await data.get_raw(*self.global_path)
         if profile in profiles:
             raise commands.UserFeedbackCheckFailure(_("A panel with this name already exists."))
         await data.set_raw(
-            *self.global_path, profile, value=await data.get_raw(*self.global_path, old_profile)
+            *self.global_path, profile, value=await data.get_raw(*self.global_path, old_profile),
         )
         await data.clear_raw(*self.global_path, old_profile)
         if self.cog.qualified_name == "TicketTool":
@@ -842,22 +829,16 @@ class Settings:
     async def show_settings(
         self,
         ctx: commands.Context,
-        _object: typing.Optional[
-            typing.Union[
-                discord.Guild, discord.Member, discord.abc.Messageable, discord.Role, discord.User
-            ]
-        ] = None,
-        profile: typing.Optional[str] = None,
-        with_dev: typing.Optional[bool] = False,
+        _object: discord.Guild | discord.Member | discord.abc.Messageable | discord.Role | discord.User | None = None,
+        profile: str | None = None,
+        with_dev: bool | None = False,
     ) -> None:
         if _object is None:
             if self.group == Config.GLOBAL:
                 _object = None
             elif self.group == Config.GUILD:
                 _object = ctx.guild
-            elif self.group == Config.MEMBER:
-                _object = ctx.author
-            elif self.group == Config.CHANNEL:
+            elif self.group == Config.MEMBER or self.group == Config.CHANNEL:
                 _object = ctx.author
             elif self.group == Config.ROLE:
                 _object = ctx.author.top_role
@@ -909,7 +890,7 @@ class Settings:
                             [self.group]
                             + self.global_path
                             + [profile]
-                            + self.settings[value]["path"]
+                            + self.settings[value]["path"],
                         )
                         if self.use_profiles_system
                         else str([self.group] + self.global_path + self.settings[value]["path"])
@@ -922,22 +903,16 @@ class Settings:
     async def send_modal(
         self,
         ctx: commands.Context,
-        _object: typing.Optional[
-            typing.Union[
-                discord.Guild, discord.Member, discord.abc.Messageable, discord.Role, discord.User
-            ]
-        ] = None,
-        profile: typing.Optional[str] = None,
-        confirmation: typing.Optional[bool] = False,
+        _object: discord.Guild | discord.Member | discord.abc.Messageable | discord.Role | discord.User | None = None,
+        profile: str | None = None,
+        confirmation: bool | None = False,
     ) -> None:
         if _object is None:
             if self.group == Config.GLOBAL:
                 _object = None
             elif self.group == Config.GUILD:
                 _object = ctx.guild
-            elif self.group == Config.MEMBER:
-                _object = ctx.author
-            elif self.group == Config.CHANNEL:
+            elif self.group == Config.MEMBER or self.group == Config.CHANNEL:
                 _object = ctx.author
             elif self.group == Config.ROLE:
                 _object = ctx.author.top_role
@@ -957,7 +932,7 @@ class Settings:
             three_l[i] = l
 
         async def on_modal(
-            view: Modal, interaction: discord.Interaction, inputs: typing.List, config: typing.Dict
+            view: Modal, interaction: discord.Interaction, inputs: list, config: dict,
         ):
             if not interaction.response.is_done():
                 await interaction.response.defer()
@@ -988,9 +963,9 @@ class Settings:
                 except discord.ext.commands.errors.CommandError as e:
                     await ctx.send(
                         f"An error occurred when using the `{_input.label}`"
-                        f" converter:\n{box(e, lang='py')}"
+                        f" converter:\n{box(e, lang='py')}",
                     )
-                    return None
+                    return
                 value = getattr(value, "id", None) or getattr(value, "value", None) or value
                 if value == values[custom_id]["value"]:
                     continue
@@ -1005,8 +980,8 @@ class Settings:
         async def on_button(
             view: Buttons,
             interaction: discord.Interaction,
-            config: typing.Dict,
-            three_l: typing.Dict,
+            config: dict,
+            three_l: dict,
         ):
             if interaction.data["custom_id"] == "Settings_ModalConfig_cancel":
                 if not interaction.response.is_done():
@@ -1019,7 +994,7 @@ class Settings:
                     embed: discord.Embed = discord.Embed()
                     embed.title = _(
                         "⚙️ Do you want to replace the entire Config of {cog.qualified_name} with"
-                        " what you specified?"
+                        " what you specified?",
                     ).format(cog=self.cog)
                     if await CogsUtils.ConfirmationAsk(ctx, embed=embed):
                         if self.use_profiles_system:
@@ -1111,7 +1086,7 @@ class Settings:
                     "emoji": "⚙️",
                     "disabled": False,
                     "custom_id": f"Settings_ModalConfig_configure_{i}",
-                }
+                },
             )
         view_button = Buttons(
             timeout=360,
@@ -1123,7 +1098,7 @@ class Settings:
         )
         message = await ctx.send(
             _("Click on the buttons below to fully set up the cog {cog.qualified_name}.").format(
-                cog=self.cog
+                cog=self.cog,
             ),
             view=view_button,
         )
@@ -1137,7 +1112,7 @@ class Settings:
     async def rpc_callback_settings(
         self,
         user: discord.User,
-        extra_kwargs: typing.Dict[str, typing.Any],
+        extra_kwargs: dict[str, typing.Any],
         **kwargs,
     ):
         if "guild" in kwargs:
@@ -1191,9 +1166,7 @@ class Settings:
                 class ProfileNameCheck:
                     def __call__(self, form: wtforms.Form, field: wtforms.Field):
                         if field.data.lower() in profiles:
-                            raise wtforms.validators.ValidationError(
-                                "This profile alreadu exists."
-                            )
+                            raise wtforms.validators.ValidationError("This profile alreadu exists.")
 
                 class AddProfileName(kwargs["Form"]):
                     def __init__(self) -> None:
@@ -1220,7 +1193,7 @@ class Settings:
                     return {
                         "status": 0,
                         "notifications": [
-                            {"message": "Profile successfully created.", "category": "success"}
+                            {"message": "Profile successfully created.", "category": "success"},
                         ],
                         "redirect_url": (
                             f"{kwargs['request_url']}?profile={profile}"
@@ -1255,7 +1228,7 @@ class Settings:
                         "add_profile_form": add_profile_form,
                     },
                 }
-            elif profile.lower() not in profiles:
+            if profile.lower() not in profiles:
                 return {
                     "status": 1,
                     "error_code": 404,
@@ -1263,7 +1236,7 @@ class Settings:
                 }
 
         values = await self.get_values(
-            _object=_object, profile=profile if self.use_profiles_system else None
+            _object=_object, profile=profile if self.use_profiles_system else None,
         )
         config = (
             await data.get_raw(*self.global_path, profile)
@@ -1278,8 +1251,8 @@ class Settings:
             submit: wtforms.SubmitField = wtforms.SubmitField(_("Save Modifications"))
 
         for setting in list(self.settings):
-            field_kwargs = dict(
-                label=(
+            field_kwargs = {
+                "label": (
                     self.settings[setting]["label"]
                     + " ("
                     + (
@@ -1300,14 +1273,14 @@ class Settings:
                     )
                     + "):"
                 ),
-                render_kw={"placeholder": str(values[setting]["default"])},
-                validators=[
+                "render_kw": {"placeholder": str(values[setting]["default"])},
+                "validators": [
                     wtforms.validators.Optional(),
                     kwargs["DpyObjectConverter"](
-                        self.settings[setting]["converter"], self.settings[setting]["param"]
+                        self.settings[setting]["converter"], self.settings[setting]["param"],
                     ),
                 ],
-            )
+            }
             if self.settings[setting]["converter"] is bool:
                 field: wtforms.SelectField = wtforms.SelectField(
                     choices=[("True", "True"), ("False", "False")],
@@ -1335,19 +1308,17 @@ class Settings:
             ):
                 field: wtforms.SelectField = wtforms.SelectField(
                     choices=kwargs["get_sorted_channels"](
-                        guild, (self.settings[setting]["converter"],)
+                        guild, (self.settings[setting]["converter"],),
                     ),
                     **field_kwargs,
                 )
-            elif isinstance(
-                self.settings[setting]["converter"], typing._UnionGenericAlias
-            ) and all(
+            elif isinstance(self.settings[setting]["converter"], typing._UnionGenericAlias) and all(
                 issubclass(c_type, discord.abc.GuildChannel) or c_type is discord.Thread
                 for c_type in self.settings[setting]["converter"].__args__
             ):
                 field: wtforms.SelectField = wtforms.SelectField(
                     choices=kwargs["get_sorted_channels"](
-                        guild, self.settings[setting]["converter"].__args__
+                        guild, self.settings[setting]["converter"].__args__,
                     ),
                     **field_kwargs,
                 )
@@ -1371,14 +1342,14 @@ class Settings:
                             wtforms.validators.NumberRange(
                                 min=self.settings[setting]["converter"].start,
                                 max=self.settings[setting]["converter"].end,
-                            )
+                            ),
                         )
                     elif self.settings[setting]["converter"].annotation is str:
                         field_kwargs["validators"].append(
                             wtforms.validators.Length(
                                 min=self.settings[setting]["converter"].start,
                                 max=self.settings[setting]["converter"].end,
-                            )
+                            ),
                         )
                 field: wtforms.StringField = wtforms.StringField(**field_kwargs)
             if not self.can_edit:
@@ -1388,7 +1359,7 @@ class Settings:
         for setting in self.settings:
             field = getattr(form, setting)
             if str(values[setting]["value"]) != str(values[setting]["default"]) or isinstance(
-                field, wtforms.SelectFieldBase
+                field, wtforms.SelectFieldBase,
             ):
                 default = (
                     str(values[setting]["value"])
@@ -1427,20 +1398,21 @@ class Settings:
                 "notifications": [{"message": "Data successfully saved.", "category": "success"}],
                 "redirect_url": kwargs["request_url"],
             }
-        elif form.submit.data and form.errors:
+        if form.submit.data and form.errors:
             return {
                 "status": 1,
                 "notifications": [
                     {
                         "message": "An error occurred when using the settings converters.",
                         "category": "danger",
-                    }
+                    },
                 ],
             }
 
         source = """{{ form|safe }}"""
 
         if self.use_profiles_system:
+
             class RemoveProfileForm(kwargs["Form"]):
                 def __init__(self) -> None:
                     super().__init__(prefix="remove_profile_form_")
@@ -1464,11 +1436,13 @@ class Settings:
                 return {
                     "status": 0,
                     "notifications": [
-                        {"message": "Profile successfully removed.", "category": "success"}
+                        {"message": "Profile successfully removed.", "category": "success"},
                     ],
                     "redirect_url": kwargs["request_url"].split("?")[0],
                 }
-            remove_profile_form.submit.render_kw = {"onclick": "return confirmRemoveProfile(event);"}
+            remove_profile_form.submit.render_kw = {
+                "onclick": "return confirmRemoveProfile(event);",
+            }
             source += """
 
             <br />
@@ -1508,12 +1482,8 @@ class Settings:
     async def get_raw(
         self,
         key: str,
-        _object: typing.Optional[
-            typing.Union[
-                discord.Guild, discord.Member, discord.abc.Messageable, discord.Role, discord.User
-            ]
-        ] = None,
-        profile: typing.Optional[str] = None,
+        _object: discord.Guild | discord.Member | discord.abc.Messageable | discord.Role | discord.User | None = None,
+        profile: str | None = None,
     ) -> typing.Any:
         if key not in self.settings:
             raise KeyError(key)
@@ -1535,12 +1505,8 @@ class Settings:
         self,
         key: str,
         value: typing.Any,
-        _object: typing.Optional[
-            typing.Union[
-                discord.Guild, discord.Member, discord.abc.Messageable, discord.Role, discord.User
-            ]
-        ] = None,
-        profile: typing.Optional[str] = None,
+        _object: discord.Guild | discord.Member | discord.abc.Messageable | discord.Role | discord.User | None = None,
+        profile: str | None = None,
     ) -> None:
         if key not in self.settings:
             raise KeyError(key)
@@ -1562,12 +1528,8 @@ class Settings:
     async def clear_raw(
         self,
         key: str,
-        _object: typing.Optional[
-            typing.Union[
-                discord.Guild, discord.Member, discord.abc.Messageable, discord.Role, discord.User
-            ]
-        ] = None,
-        profile: typing.Optional[str] = None,
+        _object: discord.Guild | discord.Member | discord.abc.Messageable | discord.Role | discord.User | None = None,
+        profile: str | None = None,
     ) -> None:
         if key not in self.settings:
             raise KeyError(key)
@@ -1591,21 +1553,15 @@ class Settings:
 
     def get_data(
         self,
-        _object: typing.Optional[
-            typing.Union[
-                discord.Guild, discord.Member, discord.abc.Messageable, discord.Role, discord.User
-            ]
-        ] = None,
-        ctx: typing.Optional[commands.Context] = None,
+        _object: discord.Guild | discord.Member | discord.abc.Messageable | discord.Role | discord.User | None = None,
+        ctx: commands.Context | None = None,
     ) -> redbot.core.config.Group:
         if _object is None and ctx is not None:
             if self.group == Config.GLOBAL:
                 _object = None
             elif self.group == Config.GUILD:
                 _object = ctx.guild
-            elif self.group == Config.MEMBER:
-                _object = ctx.author
-            elif self.group == Config.CHANNEL:
+            elif self.group == Config.MEMBER or self.group == Config.CHANNEL:
                 _object = ctx.author
             elif self.group == Config.ROLE:
                 _object = ctx.author.top_role
@@ -1622,7 +1578,7 @@ class Settings:
         elif self.group == Config.MEMBER:
             if isinstance(_object, discord.Member):
                 data = self.config.member(_object)
-            elif isinstance(_object, typing.List) and len(_object) == 2:
+            elif isinstance(_object, list) and len(_object) == 2:
                 data = self.config.member_from_ids(*_object)
         elif self.group == Config.CHANNEL:
             if isinstance(_object, discord.abc.Messageable):
@@ -1645,13 +1601,9 @@ class Settings:
 
     async def get_values(
         self,
-        _object: typing.Optional[
-            typing.Union[
-                discord.Guild, discord.Member, discord.abc.Messageable, discord.Role, discord.User
-            ]
-        ] = None,
-        profile: typing.Optional[str] = None,
-    ) -> typing.Dict[str, typing.Dict[str, typing.Any]]:
+        _object: discord.Guild | discord.Member | discord.abc.Messageable | discord.Role | discord.User | None = None,
+        profile: str | None = None,
+    ) -> dict[str, dict[str, typing.Any]]:
         result = {}
         data = self.get_data(_object)
         for setting in self.settings:
@@ -1678,7 +1630,7 @@ class Settings:
                     except KeyError:
                         raise self.NotExistingPanel(profile)
                     value = await data.get_raw(
-                        *self.global_path, profile, *self.settings[setting]["path"]
+                        *self.global_path, profile, *self.settings[setting]["path"],
                     )
             except KeyError:
                 value = default

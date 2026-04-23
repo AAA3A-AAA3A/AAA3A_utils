@@ -9,6 +9,7 @@ import re
 from uuid import uuid4
 
 import sentry_sdk
+
 from redbot.core import __version__ as red_version
 from redbot.core.utils.common_filters import INVITE_URL_RE
 
@@ -66,7 +67,7 @@ SENTRY_MASTER_MSG = _(
     " <https://aaa3a-cogs.readthedocs.io/en/latest/repo_telemetry.html>\n\n**If you would like to"
     " opt-in to telemetry and error reporting, and help me develop my cogs, run the command"
     " `[p]AAA3A_utils telemetrywithsentry True`. `[p]` is your prefix.**\nNo data is collected"
-    " relating to command usage."
+    " relating to command usage.",
 )
 SENTRY_REMINDER_ON = _(
     "Hey there! You just installed AAA3A's {} cog. This is a reminder that you previously enabled"
@@ -74,7 +75,7 @@ SENTRY_REMINDER_ON = _(
     " different.\n\nI would like to emphasise again that a best effort it made to remove sensitive"
     " data. You can see <https://aaa3a-cogs.readthedocs.io/en/latest/repo_telemetry.html> for more"
     " details and change your choice at any time with the `[p]AAA3A_utils telemetrywithsentry"
-    " False` command, applying to all my cogs."
+    " False` command, applying to all my cogs.",
 )
 SENTRY_REMINDER_OFF = _(
     "Hey there! You just installed AAA3A's {} cog. This is a reminder that you previously chose"
@@ -83,7 +84,7 @@ SENTRY_REMINDER_OFF = _(
     " remove sensitive data. You can see"
     " <https://aaa3a-cogs.readthedocs.io/en/latest/repo_telemetry.html> for more details and"
     " change your choice at any time with the `[p]AAA3A_utils telemetrywithsentry True` command,"
-    " applying to all my cogs."
+    " applying to all my cogs.",
 )
 
 __all__ = ["SentryHelper"]
@@ -96,19 +97,19 @@ class SentryHelper:
         self.bot: Red = bot
         self.cog: commands.Cog = cog
 
-        self.last_errors: typing.Dict[
-            str, typing.Dict[str, typing.Union[commands.Context, Exception]]
+        self.last_errors: dict[
+            str, dict[str, commands.Context | Exception],
         ] = {}
 
         self.sentry_enabled: bool = None
         self.display_sentry_manual_command: bool = None
         self.send_reminders: bool = True
-        self.uuid: typing.Optional[str] = None
-        self.hubs: typing.Dict[str, sentry_sdk.Hub] = {}
+        self.uuid: str | None = None
+        self.hubs: dict[str, sentry_sdk.Hub] = {}
 
         self.config: Config = cog.config
-        self.sentry_global: typing.Dict[
-            str, typing.Dict[str, typing.Union[int, bool, typing.Optional[str], typing.List[str]]]
+        self.sentry_global: dict[
+            str, dict[str, int | bool | str | None | list[str]],
         ] = {
             "sentry": {
                 "version": 1,
@@ -117,7 +118,7 @@ class SentryHelper:
                 "master_msg_sent": False,
                 "uuid": None,
                 "cogs_notified": [],
-            }
+            },
         }
         self.config.register_global(**self.sentry_global)
 
@@ -128,7 +129,7 @@ class SentryHelper:
                 name="Sentry Helper",
                 function=self.periodic_session_restart,
                 hours=1,
-            )
+            ),
         )
 
         self.dont_send_reminders: bool = False
@@ -158,16 +159,16 @@ class SentryHelper:
         self,
         ctx: commands.Context,
         error: commands.CommandError,
-        manually: typing.Optional[bool] = False,
-    ) -> typing.Optional[typing.Union[str, bool]]:
+        manually: bool | None = False,
+    ) -> str | bool | None:
         try:
             if ctx.cog is None:
-                return
+                return None
             if not manually and not self.sentry_enabled:
                 return False
             hub = await self.get_sentry_hub(ctx.cog)
             if hub is None:
-                return
+                return None
             if isinstance(error, commands.CommandInvokeError):
                 if isinstance(ctx.command, discord.ext.commands.HybridCommand):
                     _type = "[hybrid|text]"
@@ -197,7 +198,7 @@ class SentryHelper:
             self.cog.logger.error("Sending an error to Sentry failed.", exc_info=e)
             return False
 
-    def remove_sensitive_data(self, event: dict, hint: typing.Optional[dict] = {}) -> typing.Dict:
+    def remove_sensitive_data(self, event: dict, hint: dict | None = {}) -> dict:
         """Remove sensitive data from the event. This should only be used by the Sentry SDK.
         This has two main parts:
         1) Remove any mentions of the bot's token
@@ -239,8 +240,8 @@ class SentryHelper:
             return re.sub(INVITE_URL_RE, "[DISCORD-INVITE-LINK]", s)
 
         def recursive_replace(
-            d: typing.Union[typing.Dict[str, typing.Any], typing.List, str], token: str
-        ) -> typing.Union[dict, str]:
+            d: dict[str, typing.Any] | list | str, token: str,
+        ) -> dict | str:
             """Recursively replace text in keys and values of a dictionary.
             Parameters
             ----------
@@ -253,7 +254,7 @@ class SentryHelper:
             dict
                 Safe dict
             """
-            if isinstance(d, typing.Dict):
+            if isinstance(d, dict):
                 return {
                     (
                         CogsUtils.replace_var_paths(regex_stuff(k.replace(token, "[BOT-TOKEN]")))
@@ -262,7 +263,7 @@ class SentryHelper:
                     ): recursive_replace(v, token)
                     for k, v in d.items()
                 }
-            elif isinstance(d, typing.List):
+            if isinstance(d, list):
                 return [
                     (
                         CogsUtils.replace_var_paths(regex_stuff(recursive_replace(i, token)))
@@ -299,7 +300,7 @@ class SentryHelper:
             hub.end_session()
 
     async def get_sentry_hub(
-        self, cog: commands.Cog, force: typing.Optional[bool] = False
+        self, cog: commands.Cog, force: bool | None = False,
     ) -> sentry_sdk.Hub:
         """Get a Sentry Hub and Client for a DSN. Each cog should have it's own hub.
         Returns
@@ -314,7 +315,7 @@ class SentryHelper:
         if getattr(cog, "__version__", None) is None and getattr(cog, "__commit__", None) is None:
             try:
                 nb_commits, version, commit = await CogsUtils.get_cog_version(
-                    bot=self.bot, cog=self.cog
+                    bot=self.bot, cog=self.cog,
                 )
                 cog.__version__ = version
                 cog.__commit__ = commit

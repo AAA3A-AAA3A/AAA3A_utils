@@ -4,22 +4,26 @@ import discord  # isort:skip
 import typing  # isort:skip
 
 import asyncio
-import datetime
-import logging
 import re
 import traceback
-from pathlib import Path
 from uuid import uuid4
 
 import aiohttp
+
 from redbot.core.data_manager import cog_data_path
 from redbot.core.utils.chat_formatting import humanize_list, inline, warning
 
 from .__version__ import __version__ as __utils_version__
 from .cogsutils import CogsUtils
 from .context import Context, is_dev
-from .loop import Loop
 from .settings import Settings
+
+if typing.TYPE_CHECKING:
+    import datetime
+    import logging
+    from pathlib import Path
+
+    from .loop import Loop
 
 SharedCog: commands.Cog = None
 tick_after_command_execution: bool = True
@@ -69,11 +73,11 @@ def _(untranslated: str) -> str:
 async def unsupported(ctx: commands.Context) -> None:
     """Thanks to Vexed for this (https://github.com/Vexed01/Vex-Cogs/blob/master/status/commands/statusdev_com.py#L33-L56)."""
     if is_dev(ctx.bot, ctx.author):
-        return
+        return None
     content = warning(
         "\nTHIS COMMAND IS INTENDED FOR DEVELOPMENT PURPOSES ONLY.\n\nUnintended "
         "things can happen.\n\nRepeat: THIS COMMAND IS NOT SUPPORTED.\nAre you sure "
-        "you want to continue?"
+        "you want to continue?",
     )
     try:
         result = await CogsUtils.ConfirmationAsk(ctx, content=content)
@@ -87,7 +91,7 @@ async def unsupported(ctx: commands.Context) -> None:
 
 
 class Cog(commands.Cog):
-    __authors__: typing.List[str] = ["AAA3A"]
+    __authors__: list[str] = ["AAA3A"]
     __version__: float = 1.0
     __commit__: str = ""
     __repo_name__: str = "AAA3A-cogs"
@@ -114,20 +118,18 @@ class Cog(commands.Cog):
         self.bot: Red = bot
         self.data_path: Path = cog_data_path(cog_instance=self)
 
-        self.logs: typing.Dict[
+        self.logs: dict[
             str,
-            typing.List[
-                typing.Dict[
+            list[
+                dict[
                     str,
-                    typing.Optional[
-                        typing.Union[datetime.datetime, int, str, typing.Tuple[typing.Any]]
-                    ],
+                    datetime.datetime | int | str | tuple[typing.Any] | None,
                 ]
             ],
         ] = {}
-        self.loops: typing.List[Loop] = []
-        self.views: typing.Dict[
-            typing.Union[discord.Message, discord.PartialMessage, str], discord.ui.View
+        self.loops: list[Loop] = []
+        self.views: dict[
+            discord.Message | discord.PartialMessage | str, discord.ui.View,
         ] = {}  # `str` is for Views not linked to a message (in TicketTool for example).
 
     async def cog_load(self) -> None:
@@ -144,12 +146,7 @@ class Cog(commands.Cog):
             nb_commits, version, commit = await CogsUtils.get_cog_version(bot=self.bot, cog=self)
             self.__version__: float = version
             self.__commit__: str = commit
-        except (
-            RuntimeError,
-            asyncio.TimeoutError,
-            ValueError,
-            TypeError,  # `TypeError: <class 'extension.extension.Cog'> is a built-in class` is when the cog failed to load.
-        ):
+        except (TimeoutError, RuntimeError, ValueError, TypeError):
             pass
         except Exception as e:  # Really doesn't matter if this fails, so fine with debug level.
             self.logger.debug(
@@ -167,16 +164,11 @@ class Cog(commands.Cog):
             if to_update:
                 self.logger.warning(
                     f"Your `{self.qualified_name}` cog, from `{self.__repo_name__}`, is out of date."
-                    " You can update your cogs with the '[p]cog update' command in Discord."
+                    " You can update your cogs with the '[p]cog update' command in Discord.",
                 )
             else:
                 self.logger.debug(f"{self.qualified_name} cog is up to date.")
-        except (
-            RuntimeError,
-            asyncio.TimeoutError,
-            ValueError,
-            asyncio.LimitOverrunError,
-        ):
+        except (TimeoutError, RuntimeError, ValueError, asyncio.LimitOverrunError):
             pass
         except Exception as e:  # Really doesn't matter if this fails, so fine with debug level.
             self.logger.debug(
@@ -196,7 +188,7 @@ class Cog(commands.Cog):
                 except AttributeError:
                     pass
                 await self.bot.add_cog(
-                    AAA3A_utils, override=True
+                    AAA3A_utils, override=True,
                 )  # `override` shouldn't be required...
             except discord.ClientException:  # Cog already loaded.
                 pass
@@ -211,10 +203,10 @@ class Cog(commands.Cog):
             try:
                 async with aiohttp.ClientSession(raise_for_status=True) as session:
                     async with session.get(
-                        f"https://api.counterapi.dev/v1/AAA3A-cogs/{self.qualified_name}/up"
+                        f"https://api.counterapi.dev/v1/AAA3A-cogs/{self.qualified_name}/up",
                     ):
                         pass
-            except Exception as e:
+            except Exception:
                 pass
             else:
                 counted_cogs.append(self.qualified_name)
@@ -229,7 +221,9 @@ class Cog(commands.Cog):
         for loop in self.loops.copy():
             if self.qualified_name == "AAA3A_utils" and loop.name == "Sentry Helper":
                 continue
-            await loop.execute()  # Maybe is it a loop who save data... Might execute it a last time.
+            await (
+                loop.execute()
+            )  # Maybe is it a loop who save data... Might execute it a last time.
             loop.stop_all()
         # Stop views.
         for view in self.views.values():
@@ -277,7 +271,7 @@ class Cog(commands.Cog):
         """Nothing to delete."""
         return
 
-    async def red_get_data_for_user(self, *args, **kwargs) -> typing.Dict[str, typing.Any]:
+    async def red_get_data_for_user(self, *args, **kwargs) -> dict[str, typing.Any]:
         """Nothing to get."""
         return {}
 
@@ -290,7 +284,7 @@ class Cog(commands.Cog):
             invoked_subcommand = ctx.command.all_commands.get(trigger, None)
             view.index = previous
             if invoked_subcommand is not None or not ctx.command.invoke_without_command:
-                return
+                return None
         context: commands.Context = await Context.from_context(ctx)
         if getattr(ctx.command, "__is_dev__", False):
             await unsupported(ctx)
@@ -334,7 +328,7 @@ class Cog(commands.Cog):
         if isinstance(ctx.command, commands.Group) and (
             ctx.invoked_subcommand is not None or not ctx.command.invoke_without_command
         ):
-            return
+            return None
         context: commands.Context = await Context.from_context(ctx)
         if (
             hasattr(context, "_typing")
@@ -359,10 +353,10 @@ class Cog(commands.Cog):
     async def cog_command_error(self, ctx: commands.Context, error: Exception) -> None:
         AAA3A_utils = ctx.bot.get_cog("AAA3A_utils")
         is_command_error = isinstance(
-            error, (commands.CommandInvokeError, commands.HybridCommandError)
+            error, (commands.CommandInvokeError, commands.HybridCommandError),
         )
         if is_command_error and isinstance(
-            error.original, discord.Forbidden
+            error.original, discord.Forbidden,
         ):  # Error can be changed into `commands.BotMissingPermissions` or not.
             e = verbose_forbidden_exception(ctx, error.original)
             if e is not None and isinstance(e, commands.BotMissingPermissions):
@@ -399,7 +393,7 @@ class Cog(commands.Cog):
             ):
                 message += "\n" + inline(
                     "You can send this error to the developer by running the following"
-                    f" command:\n{ctx.prefix}AAA3A_utils senderrorwithsentry {uuid}"
+                    f" command:\n{ctx.prefix}AAA3A_utils senderrorwithsentry {uuid}",
                 )
             await ctx.send(message)
             asyncio.create_task(ctx.bot._delete_delay(ctx))
@@ -409,7 +403,7 @@ class Cog(commands.Cog):
             )
             exception_log = f"Exception in {_type} command '{ctx.command.qualified_name}':\n"
             exception_log += "".join(
-                traceback.format_exception(type(error), error, error.__traceback__)
+                traceback.format_exception(type(error), error, error.__traceback__),
             )
             exception_log = CogsUtils.replace_var_paths(exception_log)
             ctx.bot._last_exception = exception_log
@@ -423,14 +417,19 @@ class Cog(commands.Cog):
                     delete_after=3 if "delete_after" in error.args else None,
                     allowed_mentions=discord.AllowedMentions.none(),
                 )
-        elif isinstance(error, commands.BadArgument) and error.args and isinstance(error.args[0], str) and ctx.interaction is not None:
+        elif (
+            isinstance(error, commands.BadArgument)
+            and error.args
+            and isinstance(error.args[0], str)
+            and ctx.interaction is not None
+        ):
             await ctx.send(
                 error.args[0],
                 delete_after=3 if "delete_after" in error.args else None,
                 allowed_mentions=discord.AllowedMentions.none(),
             )
         elif isinstance(error, commands.CheckFailure) and not isinstance(
-            error, commands.BotMissingPermissions
+            error, commands.BotMissingPermissions,
         ):
             if ctx.interaction is not None:
                 await ctx.send(
@@ -442,7 +441,7 @@ class Cog(commands.Cog):
 
 
 def verbose_forbidden_exception(
-    ctx: commands.Context, error: discord.Forbidden
+    ctx: commands.Context, error: discord.Forbidden,
 ) -> commands.BotMissingPermissions:  # A little useless now.
     if not isinstance(error, discord.Forbidden):
         return ValueError(error)
@@ -458,10 +457,10 @@ def verbose_forbidden_exception(
         "GET /guilds/{guild.id}/auto-moderation/rules/{auto_moderation_rule.id}": ["MANAGE_GUILD"],
         "POST /guilds/{guild.id}/auto-moderation/rules": ["MANAGE_GUILD"],
         "PATCH /guilds/{guild.id}/auto-moderation/rules/{auto_moderation_rule.id}": [
-            "MANAGE_GUILD"
+            "MANAGE_GUILD",
         ],
         "DELETE /guilds/{guild.id}/auto-moderation/rules/{auto_moderation_rule.id}": [
-            "MANAGE_GUILD"
+            "MANAGE_GUILD",
         ],
         "PATCH /channels/{channel.id}": ["MANAGE_CHANNELS"],  # &! MANAGE_THREADS
         "DELETE /channels/{channel.id}": ["MANAGE_CHANNELS"],  # &! MANAGE_THREADS
@@ -478,19 +477,17 @@ def verbose_forbidden_exception(
             "SEND_MESSAGES",
         ],  # [SEND_TTS_MESSAGES (tts), READ_MESSAGE_HISTORY (reply)]
         "POST /channels/{channel.id}/messages/{message.id}/crosspost": [
-            "MANAGE_MESSAGES"
+            "MANAGE_MESSAGES",
         ],  # not own message
-        "PUT /channels/{channel.id}/messages/{message.id}/reactions/{emoji}/@me": [
-            "ADD_REACTIONS"
-        ],
+        "PUT /channels/{channel.id}/messages/{message.id}/reactions/{emoji}/@me": ["ADD_REACTIONS"],
         "DELETE /channels/{channel.id}/messages/{message.id}/reactions/{emoji}/@me": [],
         "DELETE /channels/{channel.id}/messages/{message.id}/reactions/{emoji}/{user.id}": [
-            "MANAGE_MESSAGES"
+            "MANAGE_MESSAGES",
         ],
         "GET /channels/{channel.id}/messages/{message.id}/reactions/{emoji}": [],
         "DELETE /channels/{channel.id}/messages/{message.id}/reactions": ["MANAGE_MESSAGES"],
         "DELETE /channels/{channel.id}/messages/{message.id}/reactions/{emoji}": [
-            "MANAGE_MESSAGES"
+            "MANAGE_MESSAGES",
         ],
         "PATCH /channels/{channel.id}/messages/{message.id}": [],
         "DELETE /channels/{channel.id}/messages/{message.id}": ["MANAGE_MESSAGES"],

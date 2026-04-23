@@ -15,6 +15,9 @@ from io import StringIO
 from pathlib import Path
 
 import pip
+from rich.console import Console
+from rich.table import Table
+
 from AAA3A_utils.cog import Cog
 from redbot import version_info as red_version_info
 from redbot.cogs.downloader.converters import InstalledCog
@@ -28,10 +31,8 @@ from redbot.core.utils.chat_formatting import (
     pagify,
     text_to_file,
 )  # NOQA
-from rich.console import Console
-from rich.table import Table
 
-from . import cogsutils, cog
+from . import cog, cogsutils
 from .cogsutils import CogsUtils
 from .menus import Menu
 from .sentry import SentryHelper
@@ -44,7 +45,7 @@ def _(untranslated: str) -> str:
 
 
 def no_colour_rich_markup(
-    *objects: typing.Any, lang: str = "", no_box: typing.Optional[bool] = False
+    *objects: typing.Any, lang: str = "", no_box: bool | None = False,
 ) -> str:
     """
     Slimmed down version of rich_markup which ensure no colours (/ANSI) can exist
@@ -104,7 +105,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
         """Nothing to delete."""
         return
 
-    async def red_get_data_for_user(self, *args, **kwargs) -> typing.Dict[str, typing.Any]:
+    async def red_get_data_for_user(self, *args, **kwargs) -> dict[str, typing.Any]:
         """Nothing to get."""
         return {}
 
@@ -134,7 +135,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
             cog.logs.get(level, None) is None or cog.logs.get(level, None) == []
         ):
             raise commands.UserFeedbackCheckFailure(
-                _("This cog does not have any log saved for this level.")
+                _("This cog does not have any log saved for this level."),
             )
         if level == "all":
             data = []
@@ -155,15 +156,15 @@ class SharedCog(Cog, name="AAA3A_utils"):
                 exc_info = ""
             else:
                 exc_info = "".join(
-                    traceback.format_exception(type(exc_info), exc_info, exc_info.__traceback__)
+                    traceback.format_exception(type(exc_info), exc_info, exc_info.__traceback__),
                 )
             result.append(
                 box(
                     CogsUtils.replace_var_paths(
-                        f"[{asctime}] {levelname} [{name}] {message}\n{exc_info}"
+                        f"[{asctime}] {levelname} [{name}] {message}\n{exc_info}",
                     )[: 2000 - 10],
                     lang="py",
-                )
+                ),
             )
         await Menu(pages=result).start(ctx)
 
@@ -180,7 +181,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
 
     @AAA3A_utils.command(aliases=["clearconfig"])
     async def resetconfig(
-        self, ctx: commands.Context, cog: str, confirmation: bool = False
+        self, ctx: commands.Context, cog: str, confirmation: bool = False,
     ) -> None:
         """Reset Config for a cog from AAA3A-cogs."""
         cog = ctx.bot.get_cog(cog)
@@ -235,8 +236,8 @@ class SharedCog(Cog, name="AAA3A_utils"):
             _(
                 "The error was successfully sent with the event id `{event_id}`. With this way of"
                 " sending errors, I can not contact you, even if this error can not be solved"
-                " without specific instructions."
-            ).format(event_id=event_id)
+                " without specific instructions.",
+            ).format(event_id=event_id),
         )
 
     @AAA3A_utils.command()
@@ -306,7 +307,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
             delimiter = FlagsConverter.__commands_flag_delimiter__
             regex_flags = re.IGNORECASE
             pattern = re.compile(
-                f"(({re.escape(prefix)})(?P<flag>{joined}){re.escape(delimiter)})", regex_flags
+                f"(({re.escape(prefix)})(?P<flag>{joined}){re.escape(delimiter)})", regex_flags,
             )
             FlagsConverter.__commands_flag_regex__ = pattern
 
@@ -317,15 +318,15 @@ class SharedCog(Cog, name="AAA3A_utils"):
                 annotation=converter,
             )
             result1 = await discord.ext.commands.converter.run_converters(
-                context, converter, context.message.content[len(context.prefix) :], param
+                context, converter, context.message.content[len(context.prefix) :], param,
             )
             result2 = result1.get_flags()
             context.kwargs = {
-                name: getattr(result1, name, params[name].default) for name in result2.keys()
+                name: getattr(result1, name, params[name].default) for name in result2
             }
             if not command.ignore_extra and not view.eof:
                 raise commands.TooManyArguments(
-                    f"Too many arguments passed to {command.qualified_name}"
+                    f"Too many arguments passed to {command.qualified_name}",
                 )
 
         # Copied from dpy.
@@ -333,7 +334,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
             raise commands.DisabledCommand(f"{command.name} command is disabled.")
         if not await self.can_run(context, change_permission_state=True):
             raise commands.CheckFailure(
-                f"The check functions for command {command.qualified_name} failed."
+                f"The check functions for command {command.qualified_name} failed.",
             )
         if command._max_concurrency is not None:
             await command._max_concurrency.acquire(ctx)
@@ -351,12 +352,14 @@ class SharedCog(Cog, name="AAA3A_utils"):
             raise
         context.invoked_subcommand = None
         context.subcommand_passed = None
-        injected = discord.ext.commands.core.hooked_wrapped_callback(command, context, command.callback)  # type: ignore
+        injected = discord.ext.commands.core.hooked_wrapped_callback(
+            command, context, command.callback,
+        )  # type: ignore
         await injected(*context.args, **context.kwargs)
 
     @commands.Cog.listener()
     async def on_command_error(
-        self, ctx: commands.Context, error: commands.CommandError, unhandled_by_cog: bool = False
+        self, ctx: commands.Context, error: commands.CommandError, unhandled_by_cog: bool = False,
     ) -> None:
         """
         Record all exceptions generated by commands by cog and by command in `bot.last_exceptions_cogs`.
@@ -388,7 +391,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
             self.bot.last_exceptions_cogs["global"].append(error)
             if isinstance(error, commands.CommandError):
                 traceback_error = "".join(
-                    traceback.format_exception(type(error), error, error.__traceback__)
+                    traceback.format_exception(type(error), error, error.__traceback__),
                 )
             else:
                 traceback_error = f"Traceback (most recent call last): {error}"
@@ -405,12 +408,12 @@ class SharedCog(Cog, name="AAA3A_utils"):
     async def getallfor(
         self,
         ctx: commands.Context,
-        all: typing.Optional[typing.Literal["all", "ALL"]] = None,
-        page: typing.Optional[int] = None,
+        all: typing.Literal["all", "ALL"] | None = None,
+        page: int | None = None,
         repo: str = None,
-        check_updates: typing.Optional[bool] = False,
-        cog: typing.Optional[InstalledCog] = None,
-        command: typing.Optional[str] = None,
+        check_updates: bool | None = False,
+        cog: InstalledCog | None = None,
+        command: str | None = None,
     ) -> None:
         """Get all the necessary information to get support on a bot/repo/cog/command.
         With a html file.
@@ -421,7 +424,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
             command = None
             check_updates = False
         if repo is not None:
-            if not repo.lower() == "AAA3A".lower():
+            if repo.lower() != "AAA3A".lower():
                 try:
                     repo = await Repo.convert(ctx, repo)
                 except commands.CommandError as e:
@@ -430,19 +433,13 @@ class SharedCog(Cog, name="AAA3A_utils"):
             _repos = [repo]
         else:
             _repos = []
-        if cog is not None:
-            _cogs = [cog]
-        else:
-            _cogs = []
-        if command is not None:
-            _commands = [command]
-        else:
-            _commands = []
+        _cogs = [cog] if cog is not None else []
+        _commands = [command] if command is not None else []
         if command is not None:
             object_command = ctx.bot.get_command(_commands[0])
             if object_command is None:
                 raise commands.UserFeedbackCheckFailure(
-                    _("The command `{command}` does not exist.").format(command=command)
+                    _("The command `{command}` does not exist.").format(command=command),
                 )
             _commands = [object_command]
         downloader_cog = ctx.bot.get_cog("Downloader")
@@ -451,7 +448,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
                 ctx,
                 _(
                     "The Downloader cog cog is not loaded. I can't continue. Do you want me to"
-                    " do it?"
+                    " do it?",
                 ),
             ):
                 await ctx.invoke(ctx.bot.get_command("load"), "downloader")
@@ -462,9 +459,9 @@ class SharedCog(Cog, name="AAA3A_utils"):
         loaded_cogs = [c.lower() for c in ctx.bot.cogs]
         if repo is not None:
             rp = _repos[0]
-            if not isinstance(rp, Repo) and not "AAA3A".lower() in rp.lower():
+            if not isinstance(rp, Repo) and "AAA3A".lower() not in rp.lower():
                 raise commands.UserFeedbackCheckFailure(
-                    _("Repo by the name `{rp}` does not exist.").format(rp=rp)
+                    _("Repo by the name `{rp}` does not exist.").format(rp=rp),
                 )
             if not isinstance(repo, Repo):
                 found = False
@@ -475,15 +472,15 @@ class SharedCog(Cog, name="AAA3A_utils"):
                         break
                 if not found:
                     raise commands.UserFeedbackCheckFailure(
-                        _("Repo by the name `{rp}` does not exist.").format(rp=rp)
+                        _("Repo by the name `{rp}` does not exist.").format(rp=rp),
                     )
             if check_updates:
                 cogs_to_check, failed = await downloader_cog._get_cogs_to_check(repos={_repos[0]})
                 cogs_to_update, libs_to_update = await downloader_cog._available_updates(
-                    cogs_to_check
+                    cogs_to_check,
                 )
                 cogs_to_update, filter_message = downloader_cog._filter_incorrect_cogs(
-                    cogs_to_update
+                    cogs_to_update,
                 )
                 to_update_cogs = [c.name.lower() for c in cogs_to_update]
 
@@ -555,6 +552,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
                     alias.remove(original)
                     alias.append(command.name)
                 return alias
+            return None
 
         def get_perms(command):
             final_perms = ""
@@ -565,9 +563,8 @@ class SharedCog(Cog, name="AAA3A_utils"):
             user_perms = []
             if perms := getattr(command.requires, "user_perms"):
                 user_perms.extend(neat_format(i) for i, j in perms if j)
-            if perms := command.requires.privilege_level:
-                if perms.name != "NONE":
-                    user_perms.append(neat_format(perms.name))
+            if (perms := command.requires.privilege_level) and perms.name != "NONE":
+                user_perms.append(neat_format(perms.name))
             if user_perms:
                 final_perms += "User Permission(s): " + ", ".join(user_perms) + "\n"
             if perms := getattr(command.requires, "bot_perms"):
@@ -579,7 +576,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
             cooldowns = []
             if s := command._buckets._cooldown:
                 txt = (
-                    f"{s.rate} time{'s' if s.rate>1 else ''} in"
+                    f"{s.rate} time{'s' if s.rate > 1 else ''} in"
                     f" {humanize_timedelta(seconds=s.per)}"
                 )
                 try:
@@ -657,13 +654,11 @@ class SharedCog(Cog, name="AAA3A_utils"):
             str(await ctx.bot.get_valid_prefixes()).replace(f"{ctx.bot.user.id}", "{bot_id}"),
         )
         if ctx.guild is not None:
-            if not await ctx.bot.get_valid_prefixes() == await ctx.bot.get_valid_prefixes(
-                ctx.guild
-            ):
+            if await ctx.bot.get_valid_prefixes() != await ctx.bot.get_valid_prefixes(ctx.guild):
                 red_table.add_row(
                     "Guild prefixe(s)",
                     str(await ctx.bot.get_valid_prefixes(ctx.guild)).replace(
-                        f"{ctx.bot.user.id}", "{bot_id}"
+                        f"{ctx.bot.user.id}", "{bot_id}",
                     ),
                 )
         raw_red_table_str = no_colour_rich_markup(red_table)
@@ -673,9 +668,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
         context_table.add_row(
             "Bot permissions value (guild)",
             str(
-                ctx.guild.me.guild_permissions.value
-                if ctx.guild is not None
-                else "Not in a guild."
+                ctx.guild.me.guild_permissions.value if ctx.guild is not None else "Not in a guild.",
             ),
         )
         context_table.add_row(
@@ -683,17 +676,15 @@ class SharedCog(Cog, name="AAA3A_utils"):
             str(
                 ctx.channel.permissions_for(ctx.guild.me).value
                 if ctx.guild is not None
-                else ctx.channel.permissions_for(ctx.bot.user).value
+                else ctx.channel.permissions_for(ctx.bot.user).value,
             ),
         )
         context_table.add_row(
             "User permissions value (guild)",
-            str(
-                ctx.author.guild_permissions.value if ctx.guild is not None else "Not in a guild."
-            ),
+            str(ctx.author.guild_permissions.value if ctx.guild is not None else "Not in a guild."),
         )
         context_table.add_row(
-            "User permissions value (channel)", str(ctx.channel.permissions_for(ctx.author).value)
+            "User permissions value (channel)", str(ctx.channel.permissions_for(ctx.author).value),
         )
         raw_context_table_str = no_colour_rich_markup(context_table)
         ##################################################
@@ -746,13 +737,13 @@ class SharedCog(Cog, name="AAA3A_utils"):
                 cog_table.add_row("Repo name", str(cog.repo_name))
                 cog_table.add_row("Hidden", str(check_emoji if cog.hidden else cross_emoji))
                 cog_table.add_row("Disabled", str(check_emoji if cog.disabled else cross_emoji))
-                cog_table.add_row("Required cogs", str([r for r in cog.required_cogs]))
-                cog_table.add_row("Requirements", str([r for r in cog.requirements]))
+                cog_table.add_row("Required cogs", str(list(cog.required_cogs)))
+                cog_table.add_row("Requirements", str(list(cog.requirements)))
                 cog_table.add_row("Short", str(cog.short))
                 cog_table.add_row("Min bot version", str(cog.min_bot_version))
                 cog_table.add_row("Max bot version", str(cog.max_bot_version))
                 cog_table.add_row("Min python version", str(cog.min_python_version))
-                cog_table.add_row("Author", str([a for a in cog.author]))
+                cog_table.add_row("Author", str(list(cog.author)))
                 cog_table.add_row("Commit", str(cog.commit))
                 raw_cog_table_str = no_colour_rich_markup(cog_table)
                 raw_cogs_table_str.append(raw_cog_table_str)
@@ -773,7 +764,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
                 command_table.add_row("Hidden", str(command.hidden))
                 command_table.add_row(
                     "Parents",
-                    str(command.full_parent_name if not command.full_parent_name == "" else None),
+                    str(command.full_parent_name if command.full_parent_name != "" else None),
                 )
                 command_table.add_row("Can see", str(await command.can_see(ctx)))
                 command_table.add_row("Can run", str(await can_run(command)))
@@ -805,8 +796,8 @@ class SharedCog(Cog, name="AAA3A_utils"):
                         str(
                             ctx.bot.last_exceptions_cogs[cog][command.qualified_name][
                                 len(ctx.bot.last_exceptions_cogs[cog][command.qualified_name]) - 1
-                            ]
-                        )
+                            ],
+                        ),
                     )
                     raw_errors_table.append(no_colour_rich_markup(error_table))
                 else:
@@ -840,7 +831,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
             raw_config_table_str,
         ]:
             if x is not None:
-                if isinstance(x, typing.List):
+                if isinstance(x, list):
                     for y in x:
                         response.append(y)
                 elif isinstance(x, str):
@@ -848,9 +839,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
         to_html = (
             to_html_getallfor.replace("{AVATAR_URL}", str(ctx.bot.user.display_avatar))
             .replace("{BOT_NAME}", str(ctx.bot.user.name))
-            .replace(
-                "{REPO_NAME}", str(getattr(_repos[0], "name", None) if all is None else "All")
-            )
+            .replace("{REPO_NAME}", str(getattr(_repos[0], "name", None) if all is None else "All"))
             .replace("{COG_NAME}", str(getattr(_cogs[0], "name", None) if all is None else "All"))
             .replace(
                 "{COMMAND_NAME}",
@@ -871,7 +860,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
                         "{MESSAGE_CONTENT}",
                         str(page).replace("```", "").replace("<", "&lt;").replace("\n", "<br>"),
                     ).replace(
-                        "{TIMESTAMP}", str(ctx.message.created_at.strftime("%b %d, %Y %I:%M %p"))
+                        "{TIMESTAMP}", str(ctx.message.created_at.strftime("%b %d, %Y %I:%M %p")),
                     )
                 else:
                     to_html += (
@@ -881,13 +870,10 @@ class SharedCog(Cog, name="AAA3A_utils"):
                         )
                         .replace(
                             "{MESSAGE_CONTENT}",
-                            str(page)
-                            .replace("```", "")
-                            .replace("<", "&lt;")
-                            .replace("\n", "<br>"),
+                            str(page).replace("```", "").replace("<", "&lt;").replace("\n", "<br>"),
                         )
                         .replace(
-                            '<span class="chatlog__timestamp">{TIMESTAMP}</span>            ', ""
+                            '<span class="chatlog__timestamp">{TIMESTAMP}</span>            ', "",
                         )
                     )
                 if all is None and "Config" not in page:

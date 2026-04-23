@@ -34,13 +34,11 @@ __all__ = ["Context"]
 
 def is_dev(
     bot: Red,
-    user: typing.Optional[typing.Union[discord.User, discord.Member, discord.Object, int]] = None,
+    user: discord.User | discord.Member | discord.Object | int | None = None,
 ) -> bool:
     developers_ids = [829612600059887649]
     Sudo = bot.get_cog("Sudo")
-    if Sudo is None:
-        owner_ids = bot.owner_ids
-    elif (
+    if Sudo is None or (
         hasattr(Sudo, "all_owner_ids")
         and len(Sudo.all_owner_ids) == 0
         or not hasattr(Sudo, "all_owner_ids")
@@ -50,8 +48,7 @@ def is_dev(
         owner_ids = bot.owner_ids | Sudo.all_owner_ids
     if user is not None:
         return int(getattr(user, "id", user)) in developers_ids
-    else:
-        return any(dev in owner_ids for dev in developers_ids)
+    return any(dev in owner_ids for dev in developers_ids)
 
 
 class Context:
@@ -81,8 +78,8 @@ class Context:
     async def tick(
         self,
         *,
-        message: typing.Optional[str] = None,
-        reaction: typing.Optional[str] = (
+        message: str | None = None,
+        reaction: str | None = (
             commands.context.TICK
             if not hasattr(commands.context, "MORE_TICKS")
             else random.choice(list(commands.context.MORE_TICKS))
@@ -102,9 +99,7 @@ class Context:
 
         """
         if reaction == commands.context.TICK:
-            if self.interaction is not None and self.len_messages == 0:
-                message = "Done."
-            elif not can_user_react_in(self.me, self.channel) and self.len_messages == 0:
+            if self.interaction is not None and self.len_messages == 0 or not can_user_react_in(self.me, self.channel) and self.len_messages == 0:
                 message = "Done."
             if getattr(self, "__is_mocked__", False):
                 message = None
@@ -153,8 +148,8 @@ class Context:
         return await self.original_context.send(content=content, **kwargs)
 
     async def send_interactive(
-        self, messages: typing.Iterable[str], box_lang: str = None, timeout: int = 15
-    ) -> typing.List[discord.Message]:
+        self, messages: typing.Iterable[str], box_lang: str = None, timeout: int = 15,
+    ) -> list[discord.Message]:
         """Send multiple messages interactively.
 
         The user will be prompted for whether or not they would like to view
@@ -175,7 +170,7 @@ class Context:
         """
         messages = list(messages)
         if not messages:
-            return
+            return None
         # if len(messages) <= 1 and getattr(self.cog, "qualified_name") != "Dev":
         #     return await self.original_context.send_interactive(
         #         messages=messages, box_lang=box_lang, timeout=timeout
