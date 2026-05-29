@@ -24,7 +24,9 @@ def _(untranslated: str) -> str:
 
 
 def no_colour_rich_markup(
-    *objects: typing.Any, lang: str = "", no_box: bool | None = False,
+    *objects: typing.Any,
+    lang: str = "",
+    no_box: bool | None = False,
 ) -> str:
     """
     Slimmed down version of rich_markup which ensures no colours (/ANSI) can exist.
@@ -67,7 +69,10 @@ class Loop:
         self.function: typing.Callable = function
         self.function_kwargs: dict[str, typing.Any] = function_kwargs or {}
         self.interval: float = datetime.timedelta(
-            days=days, hours=hours, minutes=minutes, seconds=seconds,
+            days=days,
+            hours=hours,
+            minutes=minutes,
+            seconds=seconds,
         ).total_seconds()
         self.wait_raw: bool = wait_raw
         self.limit_count: int | None = limit_count
@@ -75,7 +80,7 @@ class Loop:
         self.limit_exception: int | None = limit_exception
         self.stop_manually: bool = False
 
-        self.start_datetime: datetime.datetime = datetime.datetime.now(tz=datetime.UTC)
+        self.start_datetime: datetime.datetime = datetime.datetime.now(tz=datetime.timezone.utc)
         self.expected_interval: datetime.timedelta = datetime.timedelta(seconds=self.interval)
         self.last_iteration: datetime.datetime | None = None
         self.next_iteration: datetime.datetime | None = None
@@ -100,7 +105,7 @@ class Loop:
     def integrity(self) -> bool:
         """Check if the loop is running on time."""
         return self.next_iteration and self.next_iteration > datetime.datetime.now(
-            tz=datetime.UTC,
+            tz=datetime.timezone.utc,
         )
 
     @property
@@ -109,7 +114,7 @@ class Loop:
         if not self.next_iteration:
             return 0.0
         raw_until_next = (
-            self.next_iteration - datetime.datetime.now(tz=datetime.UTC)
+            self.next_iteration - datetime.datetime.now(tz=datetime.timezone.utc)
         ).total_seconds()
         return max(0.0, min(raw_until_next, self.expected_interval.total_seconds()))
 
@@ -155,7 +160,7 @@ class Loop:
         if self.limit_count and self.iteration_count >= self.limit_count:
             self.stop_all()
             return True
-        if self.limit_date and datetime.datetime.now(tz=datetime.UTC) >= self.limit_date:
+        if self.limit_date and datetime.datetime.now(tz=datetime.timezone.utc) >= self.limit_date:
             self.stop_all()
             return True
         if self.limit_exception and self.iteration_exception >= self.limit_exception:
@@ -205,7 +210,8 @@ class Loop:
         """Handle errors during an iteration."""
         if hasattr(self.cog, "logger"):
             self.cog.logger.exception(
-                f"Error in {self.name} loop iteration ({self.iteration_count}).", exc_info=error,
+                f"Error in {self.name} loop iteration ({self.iteration_count}).",
+                exc_info=error,
             )
         self.iteration_error(error)
 
@@ -220,7 +226,7 @@ class Loop:
         """Register an iteration as starting."""
         self.iteration_count += 1
         self.currently_running = True
-        now = datetime.datetime.now(tz=datetime.UTC)
+        now = datetime.datetime.now(tz=datetime.timezone.utc)
         self.last_iteration = now
         self.next_iteration = now + self.expected_interval
 
@@ -236,7 +242,7 @@ class Loop:
 
     def get_debug_embed(self) -> discord.Embed:
         """Get an embed with detailed information about this loop."""
-        now = datetime.datetime.now(tz=datetime.UTC)
+        now = datetime.datetime.now(tz=datetime.timezone.utc)
 
         def create_table(data: list[tuple[str, str]]) -> str:
             table = Table("Key", "Value")

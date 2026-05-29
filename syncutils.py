@@ -8,7 +8,7 @@ import shutil
 from pathlib import Path
 
 # git -C %USERPROFILE%\Documents\GitHub\AAA3A_utils rev-list HEAD --count AAA3A_utils
-VERSION = 7.4
+VERSION = 7.6
 BASE_PATH = Path(os.environ["USERPROFILE"]) / "Documents" / "GitHub"
 
 if VERSION is None:
@@ -17,7 +17,8 @@ if VERSION is None:
 
     utils_repo_clone_location = BASE_PATH / "AAA3A_utils_clone_for_sync"
     utils_repo = Repo.clone_from(
-        "https://github.com/AAA3A-AAA3A/AAA3A_utils.git", utils_repo_clone_location,
+        "https://github.com/AAA3A-AAA3A/AAA3A_utils.git",
+        utils_repo_clone_location,
     )
 
     utils_location = utils_repo_clone_location / "AAA3A_utils"
@@ -35,7 +36,7 @@ if VERSION is None:
     Commit: [`{commit}`](https://github.com/AAA3A-AAA3A/AAA3A_utils/commit/{commit})
     """
     readme = README_MD_TEXT.format(
-        time=datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d %H:%M:%S %Z"),
+        time=datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z"),
         commit=commit,
     )
 
