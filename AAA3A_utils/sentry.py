@@ -98,7 +98,8 @@ class SentryHelper:
         self.cog: commands.Cog = cog
 
         self.last_errors: dict[
-            str, dict[str, commands.Context | Exception],
+            str,
+            dict[str, commands.Context | Exception],
         ] = {}
 
         self.sentry_enabled: bool = None
@@ -109,7 +110,8 @@ class SentryHelper:
 
         self.config: Config = cog.config
         self.sentry_global: dict[
-            str, dict[str, int | bool | str | None | list[str]],
+            str,
+            dict[str, int | bool | str | None | list[str]],
         ] = {
             "sentry": {
                 "version": 1,
@@ -240,7 +242,8 @@ class SentryHelper:
             return re.sub(INVITE_URL_RE, "[DISCORD-INVITE-LINK]", s)
 
         def recursive_replace(
-            d: dict[str, typing.Any] | list | str, token: str,
+            d: dict[str, typing.Any] | list | str,
+            token: str,
         ) -> dict | str:
             """Recursively replace text in keys and values of a dictionary.
             Parameters
@@ -300,7 +303,9 @@ class SentryHelper:
             hub.end_session()
 
     async def get_sentry_hub(
-        self, cog: commands.Cog, force: bool | None = False,
+        self,
+        cog: commands.Cog,
+        force: bool | None = False,
     ) -> sentry_sdk.Hub:
         """Get a Sentry Hub and Client for a DSN. Each cog should have it's own hub.
         Returns
@@ -315,7 +320,8 @@ class SentryHelper:
         if getattr(cog, "__version__", None) is None and getattr(cog, "__commit__", None) is None:
             try:
                 nb_commits, version, commit = await CogsUtils.get_cog_version(
-                    bot=self.bot, cog=self.cog,
+                    bot=self.bot,
+                    cog=self.cog,
                 )
                 cog.__version__ = version
                 cog.__commit__ = commit

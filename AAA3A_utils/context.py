@@ -99,7 +99,12 @@ class Context:
 
         """
         if reaction == commands.context.TICK:
-            if self.interaction is not None and self.len_messages == 0 or not can_user_react_in(self.me, self.channel) and self.len_messages == 0:
+            if (
+                self.interaction is not None
+                and self.len_messages == 0
+                or not can_user_react_in(self.me, self.channel)
+                and self.len_messages == 0
+            ):
                 message = "Done."
             if getattr(self, "__is_mocked__", False):
                 message = None
@@ -148,7 +153,10 @@ class Context:
         return await self.original_context.send(content=content, **kwargs)
 
     async def send_interactive(
-        self, messages: typing.Iterable[str], box_lang: str = None, timeout: int = 15,
+        self,
+        messages: typing.Iterable[str],
+        box_lang: str = None,
+        timeout: int = 15,
     ) -> list[discord.Message]:
         """Send multiple messages interactively.
 
