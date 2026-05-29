@@ -35,9 +35,7 @@ class Menu(discord.ui.View):
 
     def __init__(
         self,
-        pages: list[
-            dict[str, str | typing.Any] | discord.Embed | str
-        ],
+        pages: list[dict[str, str | typing.Any] | discord.Embed | str],
         timeout: int | None = 180,
         delete_after_timeout: bool | None = False,
         page_start: int | None = 0,
@@ -50,9 +48,7 @@ class Menu(discord.ui.View):
             members = []
         super().__init__(timeout=timeout)
         self.ctx: commands.Context = None
-        self.pages: list[str | discord.Embed | dict[str, typing.Any]] = (
-            pages
-        )
+        self.pages: list[str | discord.Embed | dict[str, typing.Any]] = pages
         self.delete_after_timeout: bool = delete_after_timeout
         controls: dict[str, str] = {
             "⏮️": "left_page",
@@ -176,7 +172,8 @@ class Menu(discord.ui.View):
             self.ctx.bot.owner_ids,
         ):
             await interaction.response.send_message(
-                "You are not allowed to use this interaction.", ephemeral=True,
+                "You are not allowed to use this interaction.",
+                ephemeral=True,
             )
             return False
         return True
@@ -202,7 +199,8 @@ class Menu(discord.ui.View):
         self._is_done.set()
 
     async def get_page(
-        self, page_num: int,
+        self,
+        page_num: int,
     ) -> dict[str, str | discord.Embed | typing.Any]:
         try:
             page = await self._source.get_page(page_num)
@@ -275,7 +273,9 @@ class Menu(discord.ui.View):
 
     @discord.ui.button(emoji="📩", custom_id="send_interactive")
     async def send_interactive(
-        self, interaction: discord.Interaction, button: discord.ui.Button,
+        self,
+        interaction: discord.Interaction,
+        button: discord.ui.Button,
     ) -> None:
         await interaction.response.defer()
         ret = []
@@ -323,7 +323,9 @@ class Menu(discord.ui.View):
 
     @discord.ui.button(emoji="💾", custom_id="send_as_file")
     async def send_as_file(
-        self, interaction: discord.Interaction, button: discord.ui.Button,
+        self,
+        interaction: discord.Interaction,
+        button: discord.ui.Button,
     ) -> None:
         await interaction.response.defer(ephemeral=True, thinking=True)
 
@@ -336,7 +338,8 @@ class Menu(discord.ui.View):
 
         if not self.ctx.channel.permissions_for(self.ctx.me).attach_files:
             await interaction.response.send_message(
-                _("I don't have the permission to attach files in this channel."), ephemeral=True,
+                _("I don't have the permission to attach files in this channel."),
+                ephemeral=True,
             )
             return
         pages = self.pages.copy()
@@ -355,7 +358,9 @@ class Menu(discord.ui.View):
 
     @discord.ui.button(label="Page 1/1", custom_id="choose_page")
     async def choose_page(
-        self, interaction: discord.Interaction, button: discord.ui.Button,
+        self,
+        interaction: discord.Interaction,
+        button: discord.ui.Button,
     ) -> None:
         class ChoosePageModal(discord.ui.Modal):
             def __init__(_self):
@@ -404,9 +409,7 @@ class Menu(discord.ui.View):
     class _SimplePageSource(menus.ListPageSource):
         def __init__(
             self,
-            items: list[
-                dict[str, str | discord.Embed] | discord.Embed | str
-            ],
+            items: list[dict[str, str | discord.Embed] | discord.Embed | str],
         ) -> None:
             super().__init__(items, per_page=1)
 
@@ -468,7 +471,8 @@ class Reactions:
         asyncio.create_task(self.wait())
 
     def to_dict_cogsutils(
-        self, for_Config: bool | None = False,
+        self,
+        for_Config: bool | None = False,
     ) -> dict[str, typing.Any]:
         reactions_dict_instance = self.reactions_dict_instance
         if for_Config:
@@ -481,7 +485,8 @@ class Reactions:
 
     @classmethod
     def from_dict_cogsutils(
-        cls, reactions_dict_instance: dict,
+        cls,
+        reactions_dict_instance: dict,
     ) -> typing.Any:  # typing_extensions.Self
         return cls(**reactions_dict_instance)
 
@@ -495,7 +500,9 @@ class Reactions:
             while running:
                 tasks = [asyncio.create_task(self.bot.wait_for("reaction_add", check=predicates))]
                 done, pending = await asyncio.wait(
-                    tasks, timeout=self.timeout, return_when=asyncio.FIRST_COMPLETED,
+                    tasks,
+                    timeout=self.timeout,
+                    return_when=asyncio.FIRST_COMPLETED,
                 )
                 for task in pending:
                     task.cancel()
@@ -542,7 +549,9 @@ class Reactions:
     async def wait_result(
         self,
     ) -> tuple[
-        discord.PartialEmoji | str, discord.User, typing.Any | None,
+        discord.PartialEmoji | str,
+        discord.User,
+        typing.Any | None,
     ]:
         self.done = asyncio.Event()
         await self.done.wait()
@@ -555,6 +564,8 @@ class Reactions:
     def get_result(
         self,
     ) -> tuple[
-        discord.PartialEmoji | str, discord.User, typing.Any | None,
+        discord.PartialEmoji | str,
+        discord.User,
+        typing.Any | None,
     ]:
         return self.reaction_result, self.user_result, self.function_result

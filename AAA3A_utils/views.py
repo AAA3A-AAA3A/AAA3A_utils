@@ -72,7 +72,8 @@ class ConfirmationAskView(discord.ui.View):
             self.ctx.bot.owner_ids,
         ):
             await interaction.response.send_message(
-                "You are not allowed to use this interaction.", ephemeral=True,
+                "You are not allowed to use this interaction.",
+                ephemeral=True,
             )
             return False
         return True
@@ -97,7 +98,10 @@ class ConfirmationAskView(discord.ui.View):
         self.stop()
 
     @discord.ui.button(
-        label=_("No"), emoji="✖️", style=discord.ButtonStyle.danger, custom_id="false_button",
+        label=_("No"),
+        emoji="✖️",
+        style=discord.ButtonStyle.danger,
+        custom_id="false_button",
     )
     async def false_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
@@ -110,7 +114,10 @@ class ConfirmationAskView(discord.ui.View):
         self.stop()
 
     @discord.ui.button(
-        label=_("Yes"), emoji="✅", style=discord.ButtonStyle.success, custom_id="true_button",
+        label=_("Yes"),
+        emoji="✅",
+        style=discord.ButtonStyle.success,
+        custom_id="true_button",
     )
     async def true_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
@@ -185,7 +192,8 @@ class Buttons(discord.ui.View):
         self.done: asyncio.Event = asyncio.Event()
 
     def to_dict_cogsutils(
-        self, for_Config: bool | None = False,
+        self,
+        for_Config: bool | None = False,
     ) -> dict[str, typing.Any]:
         buttons_dict_instance = self.buttons_dict_instance
         if for_Config:
@@ -195,7 +203,8 @@ class Buttons(discord.ui.View):
 
     @classmethod
     def from_dict_cogsutils(
-        cls, buttons_dict_instance: dict,
+        cls,
+        buttons_dict_instance: dict,
     ) -> typing.Any:  # typing_extensions.Self
         if "function_args" in buttons_dict_instance:
             buttons_dict_instance["function_kwargs"] = buttons_dict_instance["function_args"]
@@ -205,12 +214,14 @@ class Buttons(discord.ui.View):
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if self.members is not None and interaction.user.id not in self.members:
             await interaction.response.send_message(
-                "You are not allowed to use this interaction.", ephemeral=True,
+                "You are not allowed to use this interaction.",
+                ephemeral=True,
             )
             return False
         if self.check is not None and not self.check(interaction):
             await interaction.response.send_message(
-                "You are not allowed to use this interaction.", ephemeral=True,
+                "You are not allowed to use this interaction.",
+                ephemeral=True,
             )
             return False
         self.interaction_result = interaction
@@ -230,7 +241,10 @@ class Buttons(discord.ui.View):
             await interaction.response.defer(ephemeral=True)
         await interaction.followup.send("Sorry. An error has occurred.", ephemeral=True)
         discord.ui.view._log.error(
-            "Ignoring exception in view %r for item %r.", self, item, exc_info=error,
+            "Ignoring exception in view %r for item %r.",
+            self,
+            item,
+            exc_info=error,
         )
 
     async def wait_result(self) -> tuple[discord.Interaction, typing.Any | None]:
@@ -371,7 +385,8 @@ class Dropdown(discord.ui.View):
         self.done: asyncio.Event = asyncio.Event()
 
     def to_dict_cogsutils(
-        self, for_Config: bool | None = False,
+        self,
+        for_Config: bool | None = False,
     ) -> dict[str, typing.Any]:
         dropdown_dict_instance = self.dropdown_dict_instance
         if for_Config:
@@ -382,7 +397,8 @@ class Dropdown(discord.ui.View):
 
     @classmethod
     def from_dict_cogsutils(
-        cls, dropdown_dict_instance: dict,
+        cls,
+        dropdown_dict_instance: dict,
     ) -> typing.Any:  # typing_extensions.Self
         if "function_args" in dropdown_dict_instance:
             dropdown_dict_instance["function_kwargs"] = dropdown_dict_instance["function_args"]
@@ -398,7 +414,10 @@ class Dropdown(discord.ui.View):
             await interaction.response.defer(ephemeral=True)
         await interaction.followup.send("Sorry. An error has occurred.", ephemeral=True)
         discord.ui.view._log.error(
-            "Ignoring exception in view %r for item %r.", self, item, exc_info=error,
+            "Ignoring exception in view %r for item %r.",
+            self,
+            item,
+            exc_info=error,
         )
 
     async def wait_result(
@@ -420,19 +439,24 @@ class Dropdown(discord.ui.View):
     async def callback(self, interaction: discord.Interaction) -> None:
         if self.members is not None and interaction.user.id not in self.members:
             await interaction.response.send_message(
-                "You are not allowed to use this interaction.", ephemeral=True,
+                "You are not allowed to use this interaction.",
+                ephemeral=True,
             )
             return False
         if self.check is not None and not self.check(interaction):
             await interaction.response.send_message(
-                "You are not allowed to use this interaction.", ephemeral=True,
+                "You are not allowed to use this interaction.",
+                ephemeral=True,
             )
             return False
         self.interaction_result = interaction
         self.options_result = self.dropdown.values
         if self.function is not None:
             self.function_result = await self.function(
-                self, interaction, self.dropdown.values, **self.function_kwargs,
+                self,
+                interaction,
+                self.dropdown.values,
+                **self.function_kwargs,
             )
         self.done.set()
         if not self.infinity:
@@ -618,7 +642,8 @@ class Modal(discord.ui.Modal):
         self.done: asyncio.Event = asyncio.Event()
 
     def to_dict_cogsutils(
-        self, for_Config: bool | None = False,
+        self,
+        for_Config: bool | None = False,
     ) -> dict[str, typing.Any]:
         modal_dict_instance = self.modal_dict_instance
         if for_Config:
@@ -629,7 +654,8 @@ class Modal(discord.ui.Modal):
 
     @classmethod
     def from_dict_cogsutils(
-        cls, modal_dict_instance: dict,
+        cls,
+        modal_dict_instance: dict,
     ) -> typing.Any:  # typing_extensions.Self
         if "function_args" in modal_dict_instance:
             modal_dict_instance["function_kwargs"] = modal_dict_instance["function_args"]
@@ -639,19 +665,24 @@ class Modal(discord.ui.Modal):
     async def on_submit(self, interaction: discord.Interaction) -> None:
         if self.members is not None and interaction.user.id not in self.members:
             await interaction.response.send_message(
-                "You are not allowed to use this interaction.", ephemeral=True,
+                "You are not allowed to use this interaction.",
+                ephemeral=True,
             )
             return False
         if self.check is not None and not self.check(interaction):
             await interaction.response.send_message(
-                "You are not allowed to use this interaction.", ephemeral=True,
+                "You are not allowed to use this interaction.",
+                ephemeral=True,
             )
             return False
         self.interaction_result = interaction
         self.inputs_result = self.inputs
         if self.function is not None:
             self.function_result = await self.function(
-                self, self.interaction_result, self.inputs_result, **self.function_kwargs,
+                self,
+                self.interaction_result,
+                self.inputs_result,
+                **self.function_kwargs,
             )
         self.done.set()
         self.stop()
@@ -664,7 +695,9 @@ class Modal(discord.ui.Modal):
     async def wait_result(
         self,
     ) -> tuple[
-        discord.Interaction, list[discord.ui.TextInput], typing.Any | None,
+        discord.Interaction,
+        list[discord.ui.TextInput],
+        typing.Any | None,
     ]:
         self.done = asyncio.Event()
         await self.done.wait()
@@ -677,6 +710,8 @@ class Modal(discord.ui.Modal):
     def get_result(
         self,
     ) -> tuple[
-        discord.Interaction, list[discord.ui.TextInput], typing.Any | None,
+        discord.Interaction,
+        list[discord.ui.TextInput],
+        typing.Any | None,
     ]:
         return self.interaction_result, self.inputs_result, self.function_result
