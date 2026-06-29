@@ -40,7 +40,9 @@ def dashboard_page(*args, **kwargs):
 
 
 def no_colour_rich_markup(
-    *objects: typing.Any, lang: str = "", no_box: bool | None = False,
+    *objects: typing.Any,
+    lang: str = "",
+    no_box: bool | None = False,
 ) -> str:
     """
     Slimmed down version of rich_markup which ensure no colours (/ANSI) can exist
@@ -86,7 +88,9 @@ class CustomMessageConverter(commands.Converter, dict):
         self.__dict__.update(**kwargs)
 
     async def convert(
-        self, ctx: commands.Context, argument: str,
+        self,
+        ctx: commands.Context,
+        argument: str,
     ) -> typing.Any:  # typing_extensions.Self
         if not argument.startswith("{"):
             # If argument is not a JSON, convert it with MessageConverter.
@@ -274,7 +278,8 @@ class CustomMessageConverter(commands.Converter, dict):
         return self.__dict__.popitem()
 
     def _update_with_defaults(
-        self, defaults: typing.Iterable[tuple[str, typing.Any]],
+        self,
+        defaults: typing.Iterable[tuple[str, typing.Any]],
     ) -> None:
         for key, value in defaults:
             self.__dict__.setdefault(key, value)
@@ -425,13 +430,17 @@ class Settings:
                 await self.command(ctx, key=key, value=discord.utils.MISSING)
 
             async def show_settings(
-                _self, ctx: commands.Context, with_dev: bool | None = False,
+                _self,
+                ctx: commands.Context,
+                with_dev: bool | None = False,
             ):
                 """Show all settings for the cog with defaults and values."""
                 await self.show_settings(ctx, with_dev=with_dev)
 
             async def modal_config(
-                _self, ctx: commands.Context, confirmation: bool | None = False,
+                _self,
+                ctx: commands.Context,
+                confirmation: bool | None = False,
             ):
                 """Set all settings for the cog with a Discord Modal."""
                 await self.send_modal(ctx, confirmation=confirmation)
@@ -444,7 +453,10 @@ class Settings:
         else:
 
             async def reset_setting(
-                _self, ctx: commands.Context, profile: ProfileConverter, setting: str,
+                _self,
+                ctx: commands.Context,
+                profile: ProfileConverter,
+                setting: str,
             ):
                 """Reset a setting."""
                 for _setting in self.settings:
@@ -478,7 +490,10 @@ class Settings:
                 await self.add_profile(ctx, profile=profile)
 
             async def clone_profile(
-                _self, ctx: commands.Context, old_profile: ProfileConverter, profile: str,
+                _self,
+                ctx: commands.Context,
+                old_profile: ProfileConverter,
+                profile: str,
             ):
                 """Clone an existing profile with his settings."""
                 await self.clone_profile(ctx, old_profile=old_profile, profile=profile)
@@ -493,7 +508,10 @@ class Settings:
                 await self.remove_profile(ctx, profile=profile, confirmation=confirmation)
 
             async def rename_profile(
-                _self, ctx: commands.Context, old_profile: ProfileConverter, profile: str,
+                _self,
+                ctx: commands.Context,
+                old_profile: ProfileConverter,
+                profile: str,
             ):
                 """Rename an existing profile."""
                 await self.rename_profile(ctx, old_profile=old_profile, profile=profile)
@@ -535,9 +553,9 @@ class Settings:
                     pass
         for name, command in to_add.items():
             command.__qualname__ = f"{self.cog.qualified_name}.settings_{name}"
-            command: commands.Command | commands.HybridCommand = (
-                self.commands_group.command(name=name, aliases=aliases.get(name, []))(command)
-            )
+            command: commands.Command | commands.HybridCommand = self.commands_group.command(
+                name=name, aliases=aliases.get(name, [])
+            )(command)
             command.name = name
             command.cog = self.cog
             self.bot.dispatch("command_add", command)
@@ -608,7 +626,8 @@ class Settings:
 
                 command.__qualname__ = f"{self.cog.qualified_name}.settings_{name}"
                 if self.settings[setting]["no_slash"] and isinstance(
-                    self.commands_group, commands.HybridGroup,
+                    self.commands_group,
+                    commands.HybridGroup,
                 ):
                     command: commands.Command | commands.HybridCommand = (
                         self.commands_group.command(
@@ -670,7 +689,12 @@ class Settings:
         ctx: commands.Context,
         key: str | None = None,
         value: typing.Any | None = None,
-        _object: discord.Guild | discord.Member | discord.abc.Messageable | discord.Role | discord.User | None = None,
+        _object: discord.Guild
+        | discord.Member
+        | discord.abc.Messageable
+        | discord.Role
+        | discord.User
+        | None = None,
         profile: str | None = None,
     ) -> None:
         if key is None:
@@ -740,13 +764,18 @@ class Settings:
         if profile in profiles:
             raise commands.UserFeedbackCheckFailure(_("This profile already exists."))
         await data.set_raw(
-            *self.global_path, profile, value=await data.get_raw(*self.global_path, old_profile),
+            *self.global_path,
+            profile,
+            value=await data.get_raw(*self.global_path, old_profile),
         )
         if self.cog.qualified_name == "TicketTool":
             await data.set_raw(*self.global_path, profile, "last_nb", value=0)
 
     async def remove_profile(
-        self, ctx: commands.Context, profile: str, confirmation: bool | None = False,
+        self,
+        ctx: commands.Context,
+        profile: str,
+        confirmation: bool | None = False,
     ) -> None:
         if not confirmation:
             embed: discord.Embed = discord.Embed()
@@ -785,7 +814,9 @@ class Settings:
         if profile in profiles:
             raise commands.UserFeedbackCheckFailure(_("A panel with this name already exists."))
         await data.set_raw(
-            *self.global_path, profile, value=await data.get_raw(*self.global_path, old_profile),
+            *self.global_path,
+            profile,
+            value=await data.get_raw(*self.global_path, old_profile),
         )
         await data.clear_raw(*self.global_path, old_profile)
         if self.cog.qualified_name == "TicketTool":
@@ -829,7 +860,12 @@ class Settings:
     async def show_settings(
         self,
         ctx: commands.Context,
-        _object: discord.Guild | discord.Member | discord.abc.Messageable | discord.Role | discord.User | None = None,
+        _object: discord.Guild
+        | discord.Member
+        | discord.abc.Messageable
+        | discord.Role
+        | discord.User
+        | None = None,
         profile: str | None = None,
         with_dev: bool | None = False,
     ) -> None:
@@ -903,7 +939,12 @@ class Settings:
     async def send_modal(
         self,
         ctx: commands.Context,
-        _object: discord.Guild | discord.Member | discord.abc.Messageable | discord.Role | discord.User | None = None,
+        _object: discord.Guild
+        | discord.Member
+        | discord.abc.Messageable
+        | discord.Role
+        | discord.User
+        | None = None,
         profile: str | None = None,
         confirmation: bool | None = False,
     ) -> None:
@@ -932,7 +973,10 @@ class Settings:
             three_l[i] = l
 
         async def on_modal(
-            view: Modal, interaction: discord.Interaction, inputs: list, config: dict,
+            view: Modal,
+            interaction: discord.Interaction,
+            inputs: list,
+            config: dict,
         ):
             if not interaction.response.is_done():
                 await interaction.response.defer()
@@ -1236,7 +1280,8 @@ class Settings:
                 }
 
         values = await self.get_values(
-            _object=_object, profile=profile if self.use_profiles_system else None,
+            _object=_object,
+            profile=profile if self.use_profiles_system else None,
         )
         config = (
             await data.get_raw(*self.global_path, profile)
@@ -1277,7 +1322,8 @@ class Settings:
                 "validators": [
                     wtforms.validators.Optional(),
                     kwargs["DpyObjectConverter"](
-                        self.settings[setting]["converter"], self.settings[setting]["param"],
+                        self.settings[setting]["converter"],
+                        self.settings[setting]["param"],
                     ),
                 ],
             }
@@ -1308,7 +1354,8 @@ class Settings:
             ):
                 field: wtforms.SelectField = wtforms.SelectField(
                     choices=kwargs["get_sorted_channels"](
-                        guild, (self.settings[setting]["converter"],),
+                        guild,
+                        (self.settings[setting]["converter"],),
                     ),
                     **field_kwargs,
                 )
@@ -1318,7 +1365,8 @@ class Settings:
             ):
                 field: wtforms.SelectField = wtforms.SelectField(
                     choices=kwargs["get_sorted_channels"](
-                        guild, self.settings[setting]["converter"].__args__,
+                        guild,
+                        self.settings[setting]["converter"].__args__,
                     ),
                     **field_kwargs,
                 )
@@ -1359,7 +1407,8 @@ class Settings:
         for setting in self.settings:
             field = getattr(form, setting)
             if str(values[setting]["value"]) != str(values[setting]["default"]) or isinstance(
-                field, wtforms.SelectFieldBase,
+                field,
+                wtforms.SelectFieldBase,
             ):
                 default = (
                     str(values[setting]["value"])
@@ -1482,7 +1531,12 @@ class Settings:
     async def get_raw(
         self,
         key: str,
-        _object: discord.Guild | discord.Member | discord.abc.Messageable | discord.Role | discord.User | None = None,
+        _object: discord.Guild
+        | discord.Member
+        | discord.abc.Messageable
+        | discord.Role
+        | discord.User
+        | None = None,
         profile: str | None = None,
     ) -> typing.Any:
         if key not in self.settings:
@@ -1505,7 +1559,12 @@ class Settings:
         self,
         key: str,
         value: typing.Any,
-        _object: discord.Guild | discord.Member | discord.abc.Messageable | discord.Role | discord.User | None = None,
+        _object: discord.Guild
+        | discord.Member
+        | discord.abc.Messageable
+        | discord.Role
+        | discord.User
+        | None = None,
         profile: str | None = None,
     ) -> None:
         if key not in self.settings:
@@ -1528,7 +1587,12 @@ class Settings:
     async def clear_raw(
         self,
         key: str,
-        _object: discord.Guild | discord.Member | discord.abc.Messageable | discord.Role | discord.User | None = None,
+        _object: discord.Guild
+        | discord.Member
+        | discord.abc.Messageable
+        | discord.Role
+        | discord.User
+        | None = None,
         profile: str | None = None,
     ) -> None:
         if key not in self.settings:
@@ -1553,7 +1617,12 @@ class Settings:
 
     def get_data(
         self,
-        _object: discord.Guild | discord.Member | discord.abc.Messageable | discord.Role | discord.User | None = None,
+        _object: discord.Guild
+        | discord.Member
+        | discord.abc.Messageable
+        | discord.Role
+        | discord.User
+        | None = None,
         ctx: commands.Context | None = None,
     ) -> redbot.core.config.Group:
         if _object is None and ctx is not None:
@@ -1601,7 +1670,12 @@ class Settings:
 
     async def get_values(
         self,
-        _object: discord.Guild | discord.Member | discord.abc.Messageable | discord.Role | discord.User | None = None,
+        _object: discord.Guild
+        | discord.Member
+        | discord.abc.Messageable
+        | discord.Role
+        | discord.User
+        | None = None,
         profile: str | None = None,
     ) -> dict[str, dict[str, typing.Any]]:
         result = {}
@@ -1630,7 +1704,9 @@ class Settings:
                     except KeyError:
                         raise self.NotExistingPanel(profile)
                     value = await data.get_raw(
-                        *self.global_path, profile, *self.settings[setting]["path"],
+                        *self.global_path,
+                        profile,
+                        *self.settings[setting]["path"],
                     )
             except KeyError:
                 value = default

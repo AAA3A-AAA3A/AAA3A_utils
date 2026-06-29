@@ -106,7 +106,9 @@ class CogsUtils:
 
     @classmethod
     def get_logger(
-        cls, name: str | None = None, cog: commands.Cog | None = None,
+        cls,
+        name: str | None = None,
+        cog: commands.Cog | None = None,
     ) -> logging.Logger:
         """
         Get a logger for a provided name or a provided cog.
@@ -206,7 +208,9 @@ class CogsUtils:
 
     @classmethod
     async def get_cog_version(
-        cls, bot: Red, cog: commands.Cog | str,
+        cls,
+        bot: Red,
+        cog: commands.Cog | str,
     ) -> tuple[int, float, str]:
         cog_name = cog.lower() if isinstance(cog, str) else cog.qualified_name.lower()
         downloader_cog = bot.get_cog("Downloader")
@@ -241,7 +245,8 @@ class CogsUtils:
         p = await repo._run(git_command)
         if p.returncode != 0:
             raise asyncio.IncompleteReadError(
-                "No results could be retrieved from the git command.", None,
+                "No results could be retrieved from the git command.",
+                None,
             )
         nb_commits = p.stdout.decode(encoding="utf-8").strip()
         nb_commits = int(nb_commits)
@@ -252,12 +257,15 @@ class CogsUtils:
             commit = local.commit
         else:
             git_command = ProcessFormatter().format(
-                "git -C {path} log HEAD -1 {cog_name}", path=repo.folder_path, cog_name=cog_name,
+                "git -C {path} log HEAD -1 {cog_name}",
+                path=repo.folder_path,
+                cog_name=cog_name,
             )
             p = await repo._run(git_command)
             if p.returncode != 0:
                 raise asyncio.IncompleteReadError(
-                    "No results could be retrieved from the git command.", None,
+                    "No results could be retrieved from the git command.",
+                    None,
                 )
             commit = p.stdout.decode(encoding="utf-8").strip()
             commit = commit.split("\n")[0][7:]
@@ -320,13 +328,17 @@ class CogsUtils:
             raise asyncio.LimitOverrunError("API rate limit exceeded.", 47)
         if online is None or not isinstance(online, list) or len(online) == 0:
             raise asyncio.IncompleteReadError(
-                "No results could be retrieved from the git API.", None,
+                "No results could be retrieved from the git API.",
+                None,
             )
         online_commit = online[0]["sha"]
 
         async def compare_commit_dates(repo_owner, repo_name, commit_sha1, commit_sha2):
             async def get_commit_date(
-                repo_owner: str, repo_name: str, commit_sha: str, session: aiohttp.ClientSession,
+                repo_owner: str,
+                repo_name: str,
+                commit_sha: str,
+                session: aiohttp.ClientSession,
             ):
                 url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/commits/{commit_sha}"
                 headers = {"Accept": "application/vnd.github+json"}
@@ -495,7 +507,9 @@ class CogsUtils:
 
     @classmethod
     async def delete_message(
-        cls, message: discord.Message, delay: float | None = None,
+        cls,
+        message: discord.Message,
+        delay: float | None = None,
     ) -> bool:
         """
         Delete a message, ignoring any exceptions.
@@ -531,7 +545,7 @@ class CogsUtils:
         Invoke the specified command with the specified user in the specified channel.
         """
         if created_at is None:
-            created_at = datetime.datetime.now(tz=datetime.UTC)
+            created_at = datetime.datetime.now(tz=datetime.timezone.utc)
         message_id = discord.utils.time_snowflake(created_at)
         if prefix == "/":  # For hybrid and slash commands.
             prefix = None
@@ -574,7 +588,9 @@ class CogsUtils:
                 "referenced_message": None,
             }
             message: discord.Message = discord.Message(
-                channel=channel, state=bot._connection, data=data,
+                channel=channel,
+                state=bot._connection,
+                data=data,
             )
         else:
             message = copy(message)
@@ -609,7 +625,8 @@ class CogsUtils:
             ):
                 try:
                     raw_response, cooldowns = await CustomCommands.commandobj.get(
-                        message=message, command=context.invoked_with,
+                        message=message,
+                        command=context.invoked_with,
                     )
                     if isinstance(raw_response, list):
                         raw_response = random.choice(raw_response)
@@ -624,13 +641,17 @@ class CogsUtils:
                         try:
                             if cooldowns:
                                 CustomCommands.test_cooldowns(
-                                    context, context.invoked_with, cooldowns,
+                                    context,
+                                    context.invoked_with,
+                                    cooldowns,
                                 )
                         except Exception:
                             return
                         del ctx.args[0]
                         await CustomCommands.cc_command(
-                            *ctx.args, **ctx.kwargs, raw_response=raw_response,
+                            *ctx.args,
+                            **ctx.kwargs,
+                            raw_response=raw_response,
                         )
 
                     context.command = commands.command(name="customcom")(command_callback)
@@ -678,7 +699,8 @@ class CogsUtils:
 
     @classmethod
     def get_embed(
-        cls, embed_dict: dict,
+        cls,
+        embed_dict: dict,
     ) -> dict[str, discord.Embed | str]:
         data = embed_dict
         if data.get("embed"):
@@ -754,10 +776,10 @@ class CogsUtils:
         if expires is None:
             return "No future occurrence."
         if use_timestamp:
-            expires = expires.replace(tzinfo=datetime.UTC)
+            expires = expires.replace(tzinfo=datetime.timezone.utc)
             return f"<t:{int(expires.timestamp())}:R>"
         if utc_now is None:
-            utc_now = datetime.datetime.now(datetime.UTC)
+            utc_now = datetime.datetime.now(datetime.timezone.utc)
         if isinstance(expires, datetime.datetime):
             delta = utc_now - expires
             # delta.seconds = 0
