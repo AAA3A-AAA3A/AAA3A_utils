@@ -9,7 +9,6 @@ import traceback
 from uuid import uuid4
 
 import aiohttp
-
 from redbot.core.data_manager import cog_data_path
 from redbot.core.utils.chat_formatting import humanize_list, inline, warning
 
@@ -129,7 +128,8 @@ class Cog(commands.Cog):
         ] = {}
         self.loops: list[Loop] = []
         self.views: dict[
-            discord.Message | discord.PartialMessage | str, discord.ui.View,
+            discord.Message | discord.PartialMessage | str,
+            discord.ui.View,
         ] = {}  # `str` is for Views not linked to a message (in TicketTool for example).
 
     async def cog_load(self) -> None:
@@ -188,7 +188,8 @@ class Cog(commands.Cog):
                 except AttributeError:
                     pass
                 await self.bot.add_cog(
-                    AAA3A_utils, override=True,
+                    AAA3A_utils,
+                    override=True,
                 )  # `override` shouldn't be required...
             except discord.ClientException:  # Cog already loaded.
                 pass
@@ -353,15 +354,23 @@ class Cog(commands.Cog):
     async def cog_command_error(self, ctx: commands.Context, error: Exception) -> None:
         AAA3A_utils = ctx.bot.get_cog("AAA3A_utils")
         is_command_error = isinstance(
-            error, (commands.CommandInvokeError, commands.HybridCommandError),
+            error,
+            (commands.CommandInvokeError, commands.HybridCommandError),
         )
         if is_command_error and isinstance(
-            error.original, discord.Forbidden,
+            error.original,
+            discord.Forbidden,
         ):  # Error can be changed into `commands.BotMissingPermissions` or not.
             e = verbose_forbidden_exception(ctx, error.original)
             if e is not None and isinstance(e, commands.BotMissingPermissions):
                 error = e
                 is_command_error = False
+        if (
+            ctx.command is not None
+            and isinstance(ctx.command, commands.HybridCommand)
+            and ctx.interaction is not None
+        ):  # Dpy doesn't call `cog_after_invoke` for hybrid commands with errors...
+            await self.cog_after_invoke(ctx)
 
         if is_command_error:
             uuid = uuid4().hex
@@ -429,7 +438,8 @@ class Cog(commands.Cog):
                 allowed_mentions=discord.AllowedMentions.none(),
             )
         elif isinstance(error, commands.CheckFailure) and not isinstance(
-            error, commands.BotMissingPermissions,
+            error,
+            commands.BotMissingPermissions,
         ):
             if ctx.interaction is not None:
                 await ctx.send(
@@ -441,7 +451,8 @@ class Cog(commands.Cog):
 
 
 def verbose_forbidden_exception(
-    ctx: commands.Context, error: discord.Forbidden,
+    ctx: commands.Context,
+    error: discord.Forbidden,
 ) -> commands.BotMissingPermissions:  # A little useless now.
     if not isinstance(error, discord.Forbidden):
         return ValueError(error)
