@@ -17,7 +17,6 @@ from pathlib import Path
 from random import choice
 
 import aiohttp
-
 from redbot.core.commands.requires import PrivilegeLevel
 from redbot.core.utils.chat_formatting import humanize_list
 from redbot.logging import RotatingFileHandler
@@ -407,7 +406,7 @@ class CogsUtils:
         ctx: commands.Context,
         *args,
         timeout: int | None = 60,
-        timeout_message: str | None = _("Timed out, please try again"),
+        timeout_message: str | None = _("Timed out, please try again."),
         way: typing.Literal["buttons", "message"] | None = "buttons",  # , "reactions"
         delete_message: bool | None = True,
         members_authored: typing.Iterable[discord.Member] | None = [],
