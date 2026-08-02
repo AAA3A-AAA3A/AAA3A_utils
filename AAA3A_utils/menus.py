@@ -7,7 +7,6 @@ import asyncio
 import re
 
 from colorama import Fore
-
 from redbot.core.utils.chat_formatting import box, pagify, text_to_file
 from redbot.core.utils.menus import start_adding_reactions
 from redbot.core.utils.predicates import MessagePredicate, ReactionPredicate
@@ -35,7 +34,7 @@ class Menu(discord.ui.View):
 
     def __init__(
         self,
-        pages: list[dict[str, str | typing.Any] | discord.Embed | str],
+        pages: list[dict[str, str | typing.Any] | discord.Embed | str] | str,
         timeout: int | None = 180,
         delete_after_timeout: bool | None = False,
         page_start: int | None = 0,
@@ -48,7 +47,7 @@ class Menu(discord.ui.View):
             members = []
         super().__init__(timeout=timeout)
         self.ctx: commands.Context = None
-        self.pages: list[str | discord.Embed | dict[str, typing.Any]] = pages
+        self.pages: list[str | discord.Embed | dict[str, typing.Any]] | str = pages
         self.delete_after_timeout: bool = delete_after_timeout
         controls: dict[str, str] = {
             "⏮️": "left_page",
@@ -127,7 +126,7 @@ class Menu(discord.ui.View):
         self._current_page: int = page_start
         self._is_done = asyncio.Event()
 
-    async def start(self, ctx: commands.Context, wait: bool = True) -> None:
+    async def start(self, ctx: commands.Context, wait: bool = False) -> None:
         """
         Used to start the menu displaying the first page requested.
         Parameters
