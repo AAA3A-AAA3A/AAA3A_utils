@@ -786,6 +786,11 @@ class Settings:
                     " the channels will still exist. Commands related to the tickets will no"
                     " longer work.",
                 )
+            elif self.cog.qualified_name == "Tickets":
+                embed.description = _(
+                    "The tickets associated with this profile will be kept, but they will use the"
+                    " settings of the `main` profile.",
+                )
             embed.color = 0xF00020
             response = await CogsUtils.ConfirmationAsk(ctx, embed=embed)
             if not response:
@@ -819,6 +824,9 @@ class Settings:
             value=await data.get_raw(*self.global_path, old_profile),
         )
         await data.clear_raw(*self.global_path, old_profile)
+        # Let the cog update the data linked to the profile (tickets of the Tickets cog...).
+        if (hook := getattr(self.cog, "on_settings_profile_rename", None)) is not None:
+            await hook(ctx, old_profile, profile)
         if self.cog.qualified_name == "TicketTool":
             guild_group = self.config._get_base_group(self.config.GUILD)
             async with guild_group.all() as guilds_data:
