@@ -12,25 +12,6 @@ from .menus import Menu
 
 __all__ = ["Context"]
 
-# class Context(commands.Context):
-#     def __init__(self, *args, **kwargs):
-#         self.original_context: commands.Context = kwargs.pop("original_context", None)
-#         self.len_messages = 0
-#         super().__init__(*args, **kwargs)
-
-#     @classmethod
-#     async def from_context(cls, ctx: commands.Context):
-#         """
-#         Adding additional functionality to the context.
-#         """
-#         context = await ctx.bot.get_context(
-#             ctx.message if ctx.interaction is None else ctx.interaction, cls=cls
-#         )
-#         context.original_context = ctx
-#         delattr(ctx, "original_context")
-#         context.__dict__.update(**ctx.__dict__)
-#         return context
-
 
 def is_dev(
     bot: Red,
@@ -64,16 +45,13 @@ class Context:
         """
         return cls(ctx)
 
-    def __getattr__(self, __name) -> typing.Any:
-        return getattr(self.original_context, __name)
+    def __getattr__(self, name, /) -> typing.Any:
+        return getattr(self.original_context, name)
 
-    def __setattr__(self, __name, __value) -> None:
-        if __name == "original_context":
-            return super().__setattr__(__name, __value)
-        return self.original_context.__setattr__(__name, __value)
-        # super().__setattr__(__name, __value)
-        # if getattr(self, "original_context", None) is not None:
-        #     self.original_context.__setattr__(__name, __value)
+    def __setattr__(self, name, value, /) -> None:
+        if name == "original_context":
+            return super().__setattr__(name, value)
+        return self.original_context.__setattr__(name, value)
 
     async def tick(
         self,
@@ -155,7 +133,7 @@ class Context:
     async def send_interactive(
         self,
         messages: typing.Iterable[str],
-        box_lang: str = None,
+        box_lang: str | None = None,
         timeout: int = 15,
     ) -> list[discord.Message]:
         """Send multiple messages interactively.
@@ -179,10 +157,6 @@ class Context:
         messages = list(messages)
         if not messages:
             return None
-        # if len(messages) <= 1 and getattr(self.cog, "qualified_name") != "Dev":
-        #     return await self.original_context.send_interactive(
-        #         messages=messages, box_lang=box_lang, timeout=timeout
-        #     )
         menu = Menu(pages=messages, lang=box_lang)
         await menu.start(self)
         return [menu._message]

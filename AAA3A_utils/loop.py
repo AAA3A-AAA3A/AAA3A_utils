@@ -7,9 +7,7 @@ import datetime
 import inspect
 import time
 import traceback
-from io import StringIO
 
-from rich.console import Console
 from rich.table import Table
 
 from redbot.core.utils.chat_formatting import box, pagify
@@ -21,25 +19,6 @@ __all__ = ["Loop"]
 
 def _(untranslated: str) -> str:
     return untranslated
-
-
-def no_colour_rich_markup(
-    *objects: typing.Any,
-    lang: str = "",
-    no_box: bool | None = False,
-) -> str:
-    """
-    Slimmed down version of rich_markup which ensures no colours (/ANSI) can exist.
-    """
-    temp_console = Console(
-        color_system=None,
-        file=StringIO(),
-        force_terminal=True,
-        width=80,
-    )
-    temp_console.print(*objects)
-    content = temp_console.file.getvalue()
-    return content if no_box else box(content, lang=lang)  # type: ignore
 
 
 class Loop:
@@ -147,7 +126,7 @@ class Loop:
         self.iteration_start()
         try:
             self.last_result = await self.function(**self.function_kwargs)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (The loop must continue.)
             self.handle_iteration_error(e)
         self.iteration_finish()
         self.log_iteration_time(start)
@@ -248,7 +227,7 @@ class Loop:
             table = Table("Key", "Value")
             for key, value in data:
                 table.add_row(key, value)
-            return no_colour_rich_markup(table, lang="py")
+            return CogsUtils.no_colour_rich_markup(table, lang="py")
 
         raw_data = [
             ("expected_interval", str(self.expected_interval)),
@@ -297,7 +276,7 @@ class Loop:
 
         exc = CogsUtils.replace_var_paths(self.last_exc)
         if len(exc) > 1024:
-            exc = list(pagify(exc, page_length=1024))[0] + "\n..."
+            exc = next(iter(pagify(exc, page_length=1024))) + "\n..."
         embed.add_field(name="Exception:", value=box(exc), inline=False)
 
         return embed

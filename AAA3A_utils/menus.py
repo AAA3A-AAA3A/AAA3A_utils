@@ -7,6 +7,7 @@ import asyncio
 import re
 
 from colorama import Fore
+
 from redbot.core.utils.chat_formatting import box, pagify, text_to_file
 from redbot.core.utils.menus import start_adding_reactions
 from redbot.core.utils.predicates import MessagePredicate, ReactionPredicate
@@ -94,7 +95,7 @@ class Menu(discord.ui.View):
                 for page in self.pages
             ]
         if not isinstance(self.pages[0], (dict, discord.Embed, str)):
-            raise RuntimeError("Pages must be of type typing.Dict, discord.Embed or str.")
+            raise TypeError("Pages must be of type typing.Dict, discord.Embed or str.")
         if len(self.pages) > 1:
             self.disabled_controls: list[str] = []
         else:
@@ -160,7 +161,6 @@ class Menu(discord.ui.View):
             await self.change_page()
         for page in self.pages:
             if isinstance(page, dict) and "file" in page:
-                # del page["file"]  # ValueError: I/O operation on closed file.
                 page["attachments"] = [page.pop("file")]
         if wait:
             await self._is_done.wait()
@@ -303,7 +303,7 @@ class Menu(discord.ui.View):
                     check=MessagePredicate.lower_equal_to("more", self.ctx),
                     timeout=15,
                 )
-            except TimeoutError:
+            except (TimeoutError, asyncio.TimeoutError):
                 try:
                     await query.delete()
                 except discord.HTTPException:
@@ -467,7 +467,7 @@ class Reactions:
         self.reactions: list[str] = reactions
         self.r: bool = False
         self.done: asyncio.Event = asyncio.Event()
-        asyncio.create_task(self.wait())
+        CogsUtils.create_task(self.wait())
 
     def to_dict_cogsutils(
         self,
@@ -509,7 +509,7 @@ class Reactions:
                     raise TimeoutError()
                 reaction, user = done.pop().result()
                 running = await self.reaction_check(reaction, user)
-        except TimeoutError:
+        except (TimeoutError, asyncio.TimeoutError):
             await self.on_timeout()
 
     async def reaction_check(self, reaction: discord.Reaction, user: discord.User) -> bool:

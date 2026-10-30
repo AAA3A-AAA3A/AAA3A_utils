@@ -1,3 +1,36 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "AAA3A_utils"
+dynamic = ["version"]
+description = "Utils for AAA3A-cogs."
+readme = "README.md"
+authors = [{ name = "AAA3A" }]
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "aiohttp",
+    "colorama",
+    "rich",
+    "sentry_sdk",
+]
+
+[project.urls]
+Homepage = "https://github.com/AAA3A-AAA3A/AAA3A_utils"
+
+[tool.setuptools]
+packages = ["AAA3A_utils"]
+
+[tool.setuptools.dynamic]
+version = { attr = "AAA3A_utils.__version__.__version__" }
+
 [tool.ruff]
 line-length = 100
 indent-width = 4
@@ -56,6 +89,7 @@ extend-select = [
 ]
 ignore = [
     "SIM105",   # Do not replace `try/except/pass` with `contextlib.suppress()`
+    "COM812",   # Conflicts with the formatter (trailing commas are handled by `ruff format`)
     "D100",     # Docstring rule
     "D101",     # Docstring rule
     "D102",     # Docstring rule

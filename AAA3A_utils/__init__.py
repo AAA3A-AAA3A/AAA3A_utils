@@ -1,4 +1,5 @@
 from . import cog
+from .__version__ import __version__ as __version__
 from .cog import Cog
 from .cogsutils import CogsUtils
 from .context import Context
@@ -17,31 +18,28 @@ from .views import (
     RoleSelect,
     Select,
     UserSelect,
-)  # NOQA
+)
 
 cog.SharedCog = SharedCog
 
-from .__version__ import __version__
-
 __author__ = "AAA3A"
-__version__ = __version__
 __all__ = [
-    "CogsUtils",
-    "Loop",
-    "SharedCog",
-    "Cog",
-    "Menu",
-    "Context",
-    "Settings",
-    "SentryHelper",
-    "ConfirmationAskView",
     "Buttons",
-    "Dropdown",
-    "Select",
     "ChannelSelect",
+    "Cog",
+    "CogsUtils",
+    "ConfirmationAskView",
+    "Context",
+    "Dropdown",
+    "Loop",
     "MentionableSelect",
-    "RoleSelect",
-    "UserSelect",
+    "Menu",
     "Modal",
     "Reactions",
+    "RoleSelect",
+    "Select",
+    "SentryHelper",
+    "Settings",
+    "SharedCog",
+    "UserSelect",
 ]

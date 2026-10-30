@@ -11,14 +11,18 @@ import os
 import random
 import re
 import string
+import time
 from copy import copy
 from functools import partial
+from io import StringIO
 from pathlib import Path
 from random import choice
 
 import aiohttp
+from rich.console import Console
+
 from redbot.core.commands.requires import PrivilegeLevel
-from redbot.core.utils.chat_formatting import humanize_list
+from redbot.core.utils.chat_formatting import box, humanize_list
 from redbot.logging import RotatingFileHandler
 
 from .views import ConfirmationAskView
@@ -31,33 +35,15 @@ def _(untranslated: str) -> str:
 
 
 replacement_var_paths: bool = True
+# Strong references to the tasks created with `CogsUtils.create_task`, to avoid garbage collection.
+_background_tasks: set[asyncio.Task] = set()
+# Cache of the GitHub API responses, to avoid reaching the rate limit (60 requests per hour per IP).
+_github_api_cache: dict[str, tuple[float, typing.Any]] = {}
+GITHUB_API_CACHE_TTL: int = 60 * 60
 
 
 class CogsUtils:
     """Utils for AAA3A-cogs!"""
-
-    # def __init__(
-    #     self, cog: typing.Optional[commands.Cog] = None, bot: typing.Optional[Red] = None
-    # ) -> None:
-    #     if cog is not None:
-    #         if isinstance(cog, str):
-    #             cog = bot.get_cog(cog)
-    #         self.cog: commands.Cog = cog
-    #         self.bot: Red = self.cog.bot if hasattr(self.cog, "bot") else bot
-
-    #     elif bot is not None:
-    #         self.cog: typing.Optional[commands.Cog] = None
-    #         self.bot: Red = bot
-    #     else:
-    #         self.cog: typing.Optional[commands.Cog] = None
-    #         self.bot: typing.Optional[Red] = None
-
-    @property
-    def is_dpy2(self) -> bool:
-        """
-        Returns `True` if the current redbot instance is running under dpy2.
-        """
-        return discord.version_info.major >= 2
 
     @classmethod
     def replace_var_paths(cls, text: str, reverse: bool | None = False) -> str:
@@ -66,11 +52,17 @@ class CogsUtils:
                 return text
             for env_var in ("USERPROFILE", "HOME", "USERNAME", "COMPUTERNAME"):
                 if env_var in os.environ:
-                    regex = re.compile(re.escape(os.environ[env_var]), re.I)
+                    regex = re.compile(re.escape(os.environ[env_var]), re.IGNORECASE)
                     text = regex.sub(f"{{{env_var}}}", text)
-                    regex = re.compile(re.escape(os.environ[env_var].replace("\\", "\\\\")), re.I)
+                    regex = re.compile(
+                        re.escape(os.environ[env_var].replace("\\", "\\\\")),
+                        re.IGNORECASE,
+                    )
                     text = regex.sub(f"{{{env_var}}}", text)
-                    regex = re.compile(re.escape(os.environ[env_var].replace("\\", "/")), re.I)
+                    regex = re.compile(
+                        re.escape(os.environ[env_var].replace("\\", "/")),
+                        re.IGNORECASE,
+                    )
                     text = regex.sub(f"{{{env_var}}}", text)
         else:
 
@@ -86,22 +78,42 @@ class CogsUtils:
             text = text.format_map(FakeDict())
         return text
 
-    # async def add_cog(
-    #     self, bot: typing.Optional[Red] = None, cog: typing.Optional[commands.Cog] = None, **kwargs
-    # ) -> commands.Cog:
-    #     """
-    #     Load a cog by checking whether the required function is awaitable or not.
-    #     """
-    #     if bot is None:
-    #         bot = self.bot
-    #     if cog is None:
-    #         cog = self.cog
-    #         await self.change_config_unique_identifier(cog=cog)
-    #         self._setup()
-    #     value = bot.add_cog(cog, **kwargs)
-    #     if inspect.isawaitable(value):
-    #         await value
-    #     return cog
+    @classmethod
+    def create_task(
+        cls,
+        coro: typing.Coroutine,
+        *,
+        name: str | None = None,
+    ) -> asyncio.Task:
+        """
+        Create a task and keep a strong reference to it until it is done (no garbage collection).
+        """
+        task = asyncio.create_task(coro, name=name)
+        _background_tasks.add(task)
+        task.add_done_callback(_background_tasks.discard)
+        return task
+
+    @classmethod
+    def no_colour_rich_markup(
+        cls,
+        *objects: typing.Any,
+        lang: str = "",
+        no_box: bool | None = False,
+    ) -> str:
+        """
+        Slimmed down version of rich_markup which ensure no colours (/ANSI) can exist
+        https://github.com/Cog-Creators/Red-DiscordBot/pull/5538/files (Kowlin)
+        """
+        temp_console = Console(  # Prevent messing with STDOUT's console
+            color_system=None,
+            file=StringIO(),
+            force_terminal=True,
+            width=80,
+        )
+        temp_console.print(*objects)
+        if no_box:
+            return temp_console.file.getvalue()
+        return box(temp_console.file.getvalue(), lang=lang)  # type: ignore
 
     @classmethod
     def get_logger(
@@ -131,7 +143,7 @@ class CogsUtils:
         __log = partial(logging.Logger._log, logger)
 
         def _log(level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=1):
-            from logging import CRITICAL, DEBUG, ERROR, FATAL, INFO, WARN, WARNING
+            from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
 
             VERBOSE = DEBUG - 3
             TRACE = DEBUG - 5
@@ -139,9 +151,7 @@ class CogsUtils:
                 CRITICAL: "CRITICAL",
                 DEBUG: "DEBUG",
                 ERROR: "ERROR",
-                FATAL: "FATAL",
                 INFO: "INFO",
-                WARN: "WARN",
                 WARNING: "WARNING",
                 VERBOSE: "VERBOSE",
                 TRACE: "TRACE",
@@ -151,7 +161,7 @@ class CogsUtils:
                 cog.logs[_level] = []
             cog.logs[_level].append(
                 {
-                    "time": datetime.datetime.now(),
+                    "time": datetime.datetime.now().astimezone(),
                     "level": level,
                     "message": msg,
                     "args": args,
@@ -169,7 +179,7 @@ class CogsUtils:
                 stacklevel=stacklevel,
             )
 
-        setattr(logger, "_log", _log)
+        logger._log = _log
 
         # Logging in a log file.
         # (File is automatically created by the module, if the parent foler exists.)
@@ -183,11 +193,10 @@ class CogsUtils:
                 file_handler = RotatingFileHandler(
                     stem=cog.qualified_name,
                     directory=cog.data_path,
-                    maxBytes=1_000_0,
+                    maxBytes=1_000_000,
                     backupCount=0,
                     encoding="utf-8",
                 )
-                # file_handler.doRollover()
                 file_handler.setLevel(logging.DEBUG)
                 file_handler.setFormatter(formatter)
                 logger.addHandler(file_handler)
@@ -300,82 +309,80 @@ class CogsUtils:
         if isinstance(repo_url, str):
             repo_owner, repo_name, repo_branch = (
                 re.compile(
-                    r"(?:https?:\/\/)?git(?:hub|lab).com\/(?P<repo_owner>[A-z0-9-_.]*)\/(?P<repo>[A-z0-9-_.]*)(?:\/tree\/(?P<repo_branch>[A-z0-9-_.]*))?",
-                    re.I,
+                    r"(?:https?:\/\/)?git(?:hub|lab)\.com\/(?P<repo_owner>[A-Za-z0-9_.-]*)\/(?P<repo>[A-Za-z0-9_.-]*)(?:\/tree\/(?P<repo_branch>[A-Za-z0-9_.-]*))?",
+                    re.IGNORECASE,
                 ).findall(repo_url)
             )[0]
         else:
             repo_owner, repo_name, repo_branch = repo_url
             repo_branch = repo_branch or repo.branch
+
         async with aiohttp.ClientSession() as session:
-            async with (
-                session.get(
-                    (
-                        f"https://api.github.com/repos/{repo_owner}/{repo_name}/commits?sha={repo_branch}&path={cog_name}"  # Thanks Jack!
-                        if repo_branch
-                        else f"https://api.github.com/repos/{repo_owner}/{repo_name}/commits?path={cog_name}"
-                    ),  # f"https://api.github.com/repos/{repo_owner}/{repo_name}/git/refs/heads/{repo_branch}" & f"https://api.github.com/repos/{repo_owner}/{repo_name}/contents?path={cog_name}"
-                    timeout=3,
-                ) as r
-            ):
-                online = await r.json()
-        if (
-            isinstance(online, dict)
-            and "message" in online
-            and "API rate limit exceeded" in online["message"]
-        ):
-            raise asyncio.LimitOverrunError("API rate limit exceeded.", 47)
-        if online is None or not isinstance(online, list) or len(online) == 0:
-            raise asyncio.IncompleteReadError(
-                "No results could be retrieved from the git API.",
-                None,
+            online = await cls._get_github_api(
+                session,
+                (
+                    f"https://api.github.com/repos/{repo_owner}/{repo_name}/commits?sha={repo_branch}&path={cog_name}"  # Thanks Jack!
+                    if repo_branch
+                    else f"https://api.github.com/repos/{repo_owner}/{repo_name}/commits?path={cog_name}"
+                ),
             )
-        online_commit = online[0]["sha"]
-
-        async def compare_commit_dates(repo_owner, repo_name, commit_sha1, commit_sha2):
-            async def get_commit_date(
-                repo_owner: str,
-                repo_name: str,
-                commit_sha: str,
-                session: aiohttp.ClientSession,
+            if (
+                isinstance(online, dict)
+                and "message" in online
+                and "API rate limit exceeded" in online["message"]
             ):
-                url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/commits/{commit_sha}"
-                headers = {"Accept": "application/vnd.github+json"}
-                async with session.get(url, headers=headers) as response:
-                    data = await response.json()
-                    if "commit" not in data:
-                        raise TimeoutError(
-                            "No results could be retrieved from the git API.",
-                        )
-                    return data["commit"]["committer"]["date"]
+                raise asyncio.LimitOverrunError("API rate limit exceeded.", 47)
+            if online is None or not isinstance(online, list) or len(online) == 0:
+                raise asyncio.IncompleteReadError(
+                    "No results could be retrieved from the git API.",
+                    None,
+                )
+            online_commit = online[0]["sha"]
+            if online_commit == local_commit:
+                return False, local_commit, online_commit
 
-            async with aiohttp.ClientSession() as session:
-                commit_date1 = await get_commit_date(repo_owner, repo_name, commit_sha1, session)
-                commit_date2 = await get_commit_date(repo_owner, repo_name, commit_sha2, session)
-                if commit_date1 > commit_date2:
-                    # Commit `{commit_sha1}` is newer than commit `{commit_sha2}`.
-                    return False
-                if commit_date1 < commit_date2:
-                    # Commit `{commit_sha2}` is newer than commit `{commit_sha1}`.
-                    return True
-                # Commits `{commit_sha1}` and `{commit_sha2}`are the same date.
-                return None
+            async def get_commit_date(commit_sha: str) -> str:
+                data = await cls._get_github_api(
+                    session,
+                    f"https://api.github.com/repos/{repo_owner}/{repo_name}/commits/{commit_sha}",
+                )
+                if not isinstance(data, dict) or "commit" not in data:
+                    raise ValueError("No results could be retrieved from the git API.")
+                return data["commit"]["committer"]["date"]
 
-        try:
-            to_update = await compare_commit_dates(
-                repo_owner=repo_owner,
-                repo_name=repo_name,
-                commit_sha1=local_commit,
-                commit_sha2=online_commit,
-            )
-        except ValueError:  # Failed API request (temporary).
-            to_update = False
-        else:
-            path = Path(inspect.getsourcefile(cog.__class__))
-            if path.parent.parent != (await bot._cog_mgr.install_path()):
+            try:
+                # The cog has to be updated if the online commit is newer than the local one.
+                to_update = await get_commit_date(local_commit) < await get_commit_date(
+                    online_commit,
+                )
+            except ValueError:  # Failed API request (temporary).
                 to_update = False
+            else:
+                path = Path(inspect.getsourcefile(cog.__class__))
+                if path.parent.parent != (await bot._cog_mgr.install_path()):
+                    to_update = False
 
-        return to_update, local_commit, online_commit  # , online_commit_for_each_files
+        return to_update, local_commit, online_commit
+
+    @classmethod
+    async def _get_github_api(cls, session: aiohttp.ClientSession, url: str) -> typing.Any:
+        """
+        Get a GitHub API endpoint, with a cache to avoid reaching the rate limit.
+        """
+        now = time.monotonic()
+        if (cached := _github_api_cache.get(url)) is not None and now - cached[0] < (
+            GITHUB_API_CACHE_TTL
+        ):
+            return cached[1]
+        async with session.get(
+            url,
+            headers={"Accept": "application/vnd.github+json"},
+            timeout=aiohttp.ClientTimeout(total=3),
+        ) as r:
+            data = await r.json()
+        if r.status == 200:  # Don't cache errors (rate limit...).
+            _github_api_cache[url] = (now, data)
+        return data
 
     @classmethod
     async def add_hybrid_commands(cls, bot: Red, cog: commands.Cog) -> None:
@@ -426,41 +433,6 @@ class CogsUtils:
                 members=members_authored,
             ).start(*args, **kwargs)
 
-        # elif way == "reactions":
-        #     message = await ctx.send(*args, **kwargs)
-        #     try:
-        #         start_adding_reactions(message, reactions)
-        #     except discord.HTTPException:
-        #         way = "message"
-        #     view = Reactions(
-        #         bot=ctx.bot,
-        #         message=message,
-        #         remove_reaction=False,
-        #         timeout=timeout,
-        #         reactions=reactions,
-        #         members=[ctx.author.id] + list(ctx.bot.owner_ids)
-        #         if check_owner
-        #         else [] + [x.id for x in members_authored],
-        #     )
-        #     try:
-        #         reaction, user, function_result = await view.wait_result()
-        #         if str(reaction.emoji) == reactions[0]:
-        #             end_reaction = True
-        #             if delete_message:
-        #                 await cls.delete_message(message)
-        #             return True
-        #         elif str(reaction.emoji) == reactions[1]:
-        #             end_reaction = True
-        #             if delete_message:
-        #                 await cls.delete_message(message)
-        #             return False
-        #     except TimeoutError:
-        #         if delete_message:
-        #             await cls.delete_message(message)
-        #         if timeout_message is not None:
-        #             await ctx.send(timeout_message)
-        #         return None
-
         if way == "message":
             message = await ctx.send(*args, **kwargs)
 
@@ -495,7 +467,7 @@ class CogsUtils:
                         await cls.delete_message(message)
                     await cls.delete_message(msg)
                     return False
-            except TimeoutError:
+            except (TimeoutError, asyncio.TimeoutError):
                 if not end_reaction:
                     if delete_message:
                         await cls.delete_message(message)
@@ -622,6 +594,8 @@ class CogsUtils:
                 (CustomCommands := bot.get_cog("CustomCommands")) is not None
                 and not await bot.cog_disabled_in_guild(CustomCommands, context.guild)
             ):
+                from redbot.cogs.customcom.customcom import CCError
+
                 try:
                     raw_response, cooldowns = await CustomCommands.commandobj.get(
                         message=message,
@@ -629,14 +603,11 @@ class CogsUtils:
                     )
                     if isinstance(raw_response, list):
                         raw_response = random.choice(raw_response)
-                    elif isinstance(raw_response, str):
-                        pass
-                except Exception:
+                except CCError:  # `NotFound`.
                     pass
                 else:
 
                     async def command_callback(__, ctx: commands.Context):
-                        # await CustomCommands.cc_callback(ctx)  # fake callback
                         try:
                             if cooldowns:
                                 CustomCommands.test_cooldowns(
@@ -644,7 +615,7 @@ class CogsUtils:
                                     context.invoked_with,
                                     cooldowns,
                                 )
-                        except Exception:
+                        except CCError:  # `OnCooldown`.
                             return
                         del ctx.args[0]
                         await CustomCommands.cc_command(
@@ -693,80 +664,14 @@ class CogsUtils:
             None,
         )
         if hook is None:
-            hook = await channel.create_webhook(name=f"red_bot_hook_{str(channel.id)}")
+            hook = await channel.create_webhook(name=f"red_bot_hook_{channel.id!s}")
         return hook
-
-    @classmethod
-    def get_embed(
-        cls,
-        embed_dict: dict,
-    ) -> dict[str, discord.Embed | str]:
-        data = embed_dict
-        if data.get("embed"):
-            data = data["embed"]
-        elif data.get("embeds"):
-            data = data.get("embeds")[0]
-        if timestamp := data.get("timestamp"):
-            data["timestamp"] = timestamp.strip("Z")
-        if data.get("content"):
-            content = data["content"]
-            del data["content"]
-        else:
-            content = ""
-        for x in data:
-            if data[x] is None:
-                del data[x]
-            elif isinstance(data[x], dict):
-                for y in data[x]:
-                    if data[x][y] is None:
-                        del data[x][y]
-        try:
-            embed = discord.Embed.from_dict(data)
-            length = len(embed)
-            if length > 6000:
-                raise commands.BadArgument(
-                    f"Embed size exceeds Discord limit of 6000 characters ({length}).",
-                )
-        except Exception as e:
-            raise commands.BadArgument(f"An error has occurred.\n{e}).")
-        return {"embed": embed, "content": content}
-
-    @classmethod
-    def datetime_to_timestamp(
-        cls,
-        dt: datetime.datetime,
-        format: typing.Literal["f", "F", "d", "D", "t", "T", "R"] = "f",
-    ) -> str:
-        """
-        Generate a Discord timestamp from a datetime object.
-        <t:TIMESTAMP:FORMAT>
-        Parameters
-        ----------
-        dt : datetime.datetime
-            The datetime object to use
-        format : TimestampFormat, by default `f`
-            The format to pass to Discord.
-            - `f` short date time | `18 June 2021 02:50`
-            - `F` long date time  | `Friday, 18 June 2021 02:50`
-            - `d` short date      | `18/06/2021`
-            - `D` long date       | `18 June 2021`
-            - `t` short time      | `02:50`
-            - `T` long time       | `02:50:15`
-            - `R` relative time   | `8 days ago`
-        Returns
-        -------
-        str
-            Formatted timestamp
-        Thanks to vexutils from Vexed01 in GitHub! (https://github.com/Vexed01/Vex-Cogs/blob/master/timechannel/vexutils/chat.py)
-        """
-        t = str(int(dt.timestamp()))
-        return f"<t:{t}:{format}>"
 
     @classmethod
     def get_interval_string(
         cls,
         expires: datetime.datetime | datetime.timedelta | None,
-        utc_now: datetime.datetime = None,
+        utc_now: datetime.datetime | None = None,
         use_timestamp: bool = False,
     ) -> str:
         """
@@ -781,7 +686,6 @@ class CogsUtils:
             utc_now = datetime.datetime.now(datetime.timezone.utc)
         if isinstance(expires, datetime.datetime):
             delta = utc_now - expires
-            # delta.seconds = 0
         elif isinstance(expires, datetime.timedelta):
             delta = expires
         else:
@@ -818,80 +722,6 @@ class CogsUtils:
         if seconds > 0:
             result.append(f"{seconds} second" + ("s" if seconds > 1 else ""))
         return humanize_list(result) if result else "just now"  # "0 minute"
-
-    @classmethod
-    def check_permissions_for(
-        cls,
-        channel: discord.TextChannel | discord.VoiceChannel | discord.DMChannel,
-        user: discord.User,
-        check: list | dict,
-    ) -> bool:
-        """
-        Check all permissions specified as an argument.
-        """
-        if getattr(channel, "guild", None) is None:
-            return True
-        permissions = channel.permissions_for(user)
-        if isinstance(check, list):
-            new_check = dict.fromkeys(check, True)
-            check = new_check
-        return not any(
-            getattr(permissions, p, None) is not None  # Explicitly check whether the value is None.
-            and (
-                (check[p] and not getattr(permissions, p))
-                or (not check[p] and getattr(permissions, p))
-            )
-            for p in check
-        )
-
-    # @classmethod
-    # def create_loop(
-    #     cls,
-    #     cog: commands.Cog,
-    #     function,
-    #     name: typing.Optional[str] = None,
-    #     days: typing.Optional[int] = 0,
-    #     hours: typing.Optional[int] = 0,
-    #     minutes: typing.Optional[int] = 0,
-    #     seconds: typing.Optional[int] = 0,
-    #     function_kwargs: typing.Optional[typing.Dict] = None,
-    #     wait_raw: typing.Optional[bool] = False,
-    #     limit_count: typing.Optional[int] = None,
-    #     limit_date: typing.Optional[datetime.datetime] = None,
-    #     limit_exception: typing.Optional[int] = None,
-    # ) -> Loop:
-    #     """
-    #     Create a `Loop` class instance, with default values and loop object recording functionality.
-    #     """
-    #     if function_kwargs is None:
-    #         function_kwargs = {}
-    #     if name is None:
-    #         name = cog.qualified_name
-    #     if (
-    #         datetime.timedelta(
-    #             days=days, hours=hours, minutes=minutes, seconds=seconds
-    #         ).total_seconds()
-    #         == 0
-    #     ):
-    #         seconds = 900  # 15 minutes
-    #     loop = Loop(
-    #         cog=cog,
-    #         name=name,
-    #         function=function,
-    #         days=days,
-    #         hours=hours,
-    #         minutes=minutes,
-    #         seconds=seconds,
-    #         function_kwargs=function_kwargs,
-    #         wait_raw=wait_raw,
-    #         limit_count=limit_count,
-    #         limit_date=limit_date,
-    #         limit_exception=limit_exception,
-    #     )
-    #     # if (existing_loop := discord.utils.get(self.cog.loops, name=name)) is not None:
-    #     #     existing_loop.stop_all()
-    #     cog.loops.append(loop)
-    #     return loop
 
     @classmethod
     def get_all_repo_cogs_objects(cls, bot: Red) -> dict[str, commands.Cog]:
@@ -934,13 +764,13 @@ class CogsUtils:
                 "others": [],
             }
         strings = []
-        if "ascii_lowercase" in strings_used and strings_used["ascii_lowercase"]:
+        if strings_used.get("ascii_lowercase"):
             strings += string.ascii_lowercase
-        if "ascii_uppercase" in strings_used and strings_used["ascii_uppercase"]:
+        if strings_used.get("ascii_uppercase"):
             strings += string.ascii_uppercase
-        if "digits" in strings_used and strings_used["digits"]:
+        if strings_used.get("digits"):
             strings += string.digits
-        if "punctuation" in strings_used and strings_used["punctuation"]:
+        if strings_used.get("punctuation"):
             strings += string.punctuation
         if "others" in strings_used and isinstance(strings_used["others"], list):
             strings += strings_used["others"]
@@ -949,103 +779,3 @@ class CogsUtils:
             key = "".join(choice(strings) for _ in range(length))
             if key not in existing_keys:
                 return key
-
-    @classmethod
-    async def check_in_listener(
-        cls,
-        bot: Red,
-        arg: discord.Message | discord.RawReactionActionEvent | discord.Interaction,
-        allowed_by_whitelist_blacklist: bool = True,
-    ) -> bool:
-        """
-        Check all parameters for the output of any listener.
-        Thanks to Jack! (https://discord.com/channels/133049272517001216/160386989819035648/825373605000511518)
-        """
-        try:
-            if isinstance(arg, discord.Message):
-                # check whether the message was sent by a webhook
-                if arg.webhook_id is not None:
-                    raise discord.ext.commands.BadArgument()
-                # check whether the message was sent in a guild
-                if arg.guild is None:
-                    raise discord.ext.commands.BadArgument()
-                # check whether the message author isn't a bot
-                if arg.author is None:
-                    raise discord.ext.commands.BadArgument()
-                if arg.author.bot:
-                    raise discord.ext.commands.BadArgument()
-                # check whether the bot can send messages in the given channel
-                if arg.channel is None:
-                    raise discord.ext.commands.BadArgument()
-                if not arg.channel.permissions_for(arg.guild.me).send_messages:
-                    raise discord.ext.commands.BadArgument()
-                # check whether the cog isn't disabled
-                # if self.cog is not None and await self.bot.cog_disabled_in_guild(
-                #     self.cog, output.guild
-                # ):
-                #     raise discord.ext.commands.BadArgument()
-                # check whether the channel isn't on the ignore list
-                if not await bot.ignored_channel_or_guild(arg):
-                    raise discord.ext.commands.BadArgument()
-                # check whether the message author isn't on allowlist/blocklist
-                if allowed_by_whitelist_blacklist and not await bot.allowed_by_whitelist_blacklist(
-                    arg.author,
-                ):
-                    raise discord.ext.commands.BadArgument()
-            elif isinstance(arg, discord.RawReactionActionEvent):
-                # check whether the message was sent in a guild
-                arg.guild = bot.get_guild(arg.guild_id)
-                if arg.guild is None:
-                    raise discord.ext.commands.BadArgument()
-                # check whether the message author isn't a bot
-                arg.author = arg.guild.get_member(arg.user_id)
-                if arg.author is None:
-                    raise discord.ext.commands.BadArgument()
-                if arg.author.bot:
-                    raise discord.ext.commands.BadArgument()
-                # check whether the bot can send message in the given channel
-                arg.channel = arg.guild.get_channel(arg.channel_id)
-                if arg.channel is None:
-                    raise discord.ext.commands.BadArgument()
-                if not arg.channel.permissions_for(arg.guild.me).send_messages:
-                    raise discord.ext.commands.BadArgument()
-                # check whether the cog isn't disabled
-                # if self.cog is not None and await self.bot.cog_disabled_in_guild(
-                #     self.cog, output.guild
-                # ):
-                #     raise discord.ext.commands.BadArgument()
-                # check whether the channel isn't on the ignore list
-                if not await bot.ignored_channel_or_guild(arg):
-                    raise discord.ext.commands.BadArgument()
-                # check whether the message author isn't on allowlist/blocklist
-                if allowed_by_whitelist_blacklist and not await bot.allowed_by_whitelist_blacklist(
-                    arg.author,
-                ):
-                    raise discord.ext.commands.BadArgument()
-            elif isinstance(arg, discord.Interaction):
-                # check whether the message was sent in a guild
-                if arg.guild is None:
-                    raise discord.ext.commands.BadArgument()
-                # check whether the message author isn't a bot
-                if arg.author is None:
-                    raise discord.ext.commands.BadArgument()
-                if arg.author.bot:
-                    raise discord.ext.commands.BadArgument()
-                # check whether the bot can send message in the given channel
-                if arg.channel is None:
-                    raise discord.ext.commands.BadArgument()
-                if not arg.channel.permissions_for(arg.guild.me).send_messages:
-                    raise discord.ext.commands.BadArgument()
-                # check whether the cog isn't disabled
-                # if self.cog is not None and await self.bot.cog_disabled_in_guild(
-                #     self.cog, output.guild
-                # ):
-                #     raise discord.ext.commands.BadArgument()
-                # check whether the message author isn't on allowlist/blocklist
-                if allowed_by_whitelist_blacklist and not await bot.allowed_by_whitelist_blacklist(
-                    arg.author,
-                ):
-                    raise discord.ext.commands.BadArgument()
-        except commands.BadArgument:
-            return False
-        return True

@@ -9,6 +9,7 @@ import traceback
 from uuid import uuid4
 
 import aiohttp
+
 from redbot.core.data_manager import cog_data_path
 from redbot.core.utils.chat_formatting import humanize_list, inline, warning
 
@@ -34,41 +35,6 @@ def _(untranslated: str) -> str:
     return untranslated
 
 
-# class Cog:
-#     def __init__(self, bot: Red) -> None:
-#         self.bot: Red = bot
-#         self.cog: commands.Cog = None
-
-#     @classmethod
-#     def _setup(cls, bot: Red, cog: commands.Cog) -> None:
-#         """
-#         Adding additional functionality to the cog.
-#         """
-#         # for command in self.cog.walk_commands():
-#         #     setattr(command, 'format_text_for_context', self.format_text_for_context)
-#         #     setattr(command, 'format_shortdoc_for_context', self.format_shortdoc_for_context)
-#         specials = [
-#             "_setup",
-#             "get_formatted_text",
-#             "format_text_for_context",
-#             "format_shortdoc_for_context",
-#             "unsupported",
-#             "verbose_forbidden_exception",
-#         ]
-#         self = cls(bot=bot)
-#         self.cog = cog
-#         for attr in dir(self):
-#             if attr.startswith("__") and attr.endswith("__"):
-#                 continue
-#             if attr in specials:
-#                 continue
-#             if getattr(getattr(cog, attr, None), "__func__", "None1") != getattr(
-#                 commands.Cog, attr, "None2"
-#             ):
-#                 continue
-#             setattr(cog, attr, getattr(self, attr))
-
-
 async def unsupported(ctx: commands.Context) -> None:
     """Thanks to Vexed for this (https://github.com/Vexed01/Vex-Cogs/blob/master/status/commands/statusdev_com.py#L33-L56)."""
     if is_dev(ctx.bot, ctx.author):
@@ -80,7 +46,7 @@ async def unsupported(ctx: commands.Context) -> None:
     )
     try:
         result = await CogsUtils.ConfirmationAsk(ctx, content=content)
-    except TimeoutError:
+    except (TimeoutError, asyncio.TimeoutError):
         await ctx.send("Timeout, aborting.")
         raise commands.CheckFailure("Confirmation timed out.")
     if result:
@@ -90,28 +56,11 @@ async def unsupported(ctx: commands.Context) -> None:
 
 
 class Cog(commands.Cog):
-    __authors__: list[str] = ["AAA3A"]
+    __authors__: typing.ClassVar[list[str]] = ["AAA3A"]
     __version__: float = 1.0
     __commit__: str = ""
     __repo_name__: str = "AAA3A-cogs"
-    __utils_version__: float = __utils_version__
-
-    # bot: Red
-    # data_path: Path
-    # logger: logging.Logger
-    # logs: typing.Dict[
-    #     str,
-    #     typing.List[
-    #         typing.Dict[
-    #             str,
-    #             typing.Optional[
-    #                 typing.Union[datetime.datetime, int, str, typing.Tuple[typing.Any]]
-    #             ],
-    #         ]
-    #     ],
-    # ]
-    # loops: typing.List[Loop]
-    # views: typing.Dict[typing.Union[discord.Message, discord.PartialMessage, str], discord.ui.View]
+    __utils_version__: str = __utils_version__
 
     def __init__(self, bot: Red) -> None:
         self.bot: Red = bot
@@ -136,17 +85,17 @@ class Cog(commands.Cog):
         # Init logger.
         self.logger: logging.Logger = CogsUtils.get_logger(cog=self)
         # Prevent Red `(timeout)` error.
-        asyncio.create_task(self.cog_load_new_task())
+        CogsUtils.create_task(self.cog_load_new_task())
 
     async def cog_load_new_task(self) -> None:
         # Wait until Red ready. But `(timeout)` when cog loading when bot starting...
         await self.bot.wait_until_red_ready()
         # Get cog version.
         try:
-            nb_commits, version, commit = await CogsUtils.get_cog_version(bot=self.bot, cog=self)
+            _nb_commits, version, commit = await CogsUtils.get_cog_version(bot=self.bot, cog=self)
             self.__version__: float = version
             self.__commit__: str = commit
-        except (TimeoutError, RuntimeError, ValueError, TypeError):
+        except (TimeoutError, asyncio.TimeoutError, RuntimeError, ValueError, TypeError):
             pass
         except Exception as e:  # Really doesn't matter if this fails, so fine with debug level.
             self.logger.debug(
@@ -155,12 +104,7 @@ class Cog(commands.Cog):
             )
         # Check updates.
         try:
-            (
-                to_update,
-                local_commit,
-                online_commit,
-                online_commit_for_each_files,
-            ) = await CogsUtils.check_if_to_update(bot=self.bot, cog=self)
+            to_update, __, __ = await CogsUtils.check_if_to_update(bot=self.bot, cog=self)
             if to_update:
                 self.logger.warning(
                     f"Your `{self.qualified_name}` cog, from `{self.__repo_name__}`, is out of date."
@@ -168,7 +112,13 @@ class Cog(commands.Cog):
                 )
             else:
                 self.logger.debug(f"{self.qualified_name} cog is up to date.")
-        except (TimeoutError, RuntimeError, ValueError, asyncio.LimitOverrunError):
+        except (
+            TimeoutError,
+            asyncio.TimeoutError,
+            RuntimeError,
+            ValueError,
+            asyncio.LimitOverrunError,
+        ):
             pass
         except Exception as e:  # Really doesn't matter if this fails, so fine with debug level.
             self.logger.debug(
@@ -202,12 +152,14 @@ class Cog(commands.Cog):
         counted_cogs = await AAA3A_utils.config.counted_cogs()
         if self.qualified_name not in counted_cogs:
             try:
-                async with aiohttp.ClientSession(raise_for_status=True) as session:
-                    async with session.get(
+                async with (
+                    aiohttp.ClientSession(raise_for_status=True) as session,
+                    session.get(
                         f"https://api.counterapi.dev/v1/AAA3A-cogs/{self.qualified_name}/up",
-                    ):
-                        pass
-            except Exception:
+                    ),
+                ):
+                    pass
+            except (aiohttp.ClientError, asyncio.TimeoutError):
                 pass
             else:
                 counted_cogs.append(self.qualified_name)
@@ -295,13 +247,13 @@ class Cog(commands.Cog):
                     ctx.args[index] = context
         else:
             if context.command.__commands_is_hybrid__ and hasattr(context.command, "app_command"):
-                __do_call = getattr(context.command.app_command, "_do_call")
+                __do_call = context.command.app_command._do_call
 
                 async def _do_call(interaction, params):
                     context: commands.Context = await Context.from_context(interaction)
                     await __do_call(interaction=context, params=params)
 
-                setattr(context.command.app_command, "_do_call", _do_call)
+                context.command.app_command._do_call = _do_call
             try:
                 await context.interaction.response.defer(ephemeral=False, thinking=True)
             except (discord.InteractionResponded, discord.NotFound):
@@ -347,8 +299,6 @@ class Cog(commands.Cog):
             or not tick_after_command_execution
         ):
             await context.tick()
-        # from .menus import Menu
-        # await Menu(pages=str("\n".join([str((x.function, x.frame)) for x in __import__("inspect").stack(30)])), lang="py").start(context)
         return context
 
     async def cog_command_error(self, ctx: commands.Context, error: Exception) -> None:
@@ -405,7 +355,7 @@ class Cog(commands.Cog):
                     f" command:\n{ctx.prefix}AAA3A_utils senderrorwithsentry {uuid}",
                 )
             await ctx.send(message)
-            asyncio.create_task(ctx.bot._delete_delay(ctx))
+            CogsUtils.create_task(ctx.bot._delete_delay(ctx))
             self.logger.exception(
                 f"Exception in {_type} command '{ctx.command.qualified_name}'.",
                 exc_info=error.original,

@@ -3,15 +3,12 @@ import redbot  # isort:skip
 import discord  # isort:skip
 import typing  # isort:skip
 
-# import typing_extensions  # isort:skip
 
 import asyncio
 import inspect
 import json
 from copy import deepcopy
-from io import StringIO
 
-from rich.console import Console
 from rich.table import Table
 
 from redbot.core import Config
@@ -22,9 +19,7 @@ from .cogsutils import CogsUtils
 from .menus import Menu
 from .views import Buttons, Modal
 
-setattr(commands, "Literal", typing.Literal)
-
-__all__ = ["Settings", "CustomMessageConverter"]
+__all__ = ["CustomMessageConverter", "Settings"]
 
 
 def _(untranslated: str) -> str:
@@ -37,27 +32,6 @@ def dashboard_page(*args, **kwargs):
         return func
 
     return decorator
-
-
-def no_colour_rich_markup(
-    *objects: typing.Any,
-    lang: str = "",
-    no_box: bool | None = False,
-) -> str:
-    """
-    Slimmed down version of rich_markup which ensure no colours (/ANSI) can exist
-    https://github.com/Cog-Creators/Red-DiscordBot/pull/5538/files (Kowlin)
-    """
-    temp_console = Console(  # Prevent messing with STDOUT's console
-        color_system=None,
-        file=StringIO(),
-        force_terminal=True,
-        width=80,
-    )
-    temp_console.print(*objects)
-    if no_box:
-        return temp_console.file.getvalue()
-    return box(temp_console.file.getvalue(), lang=lang)  # type: ignore
 
 
 if not hasattr(discord.utils, "MISSING"):
@@ -94,10 +68,7 @@ class CustomMessageConverter(commands.Converter, dict):
     ) -> typing.Any:  # typing_extensions.Self
         if not argument.startswith("{"):
             # If argument is not a JSON, convert it with MessageConverter.
-            try:
-                message = await commands.MessageConverter().convert(ctx, argument)
-            except commands.BadArgument:
-                raise
+            message = await commands.MessageConverter().convert(ctx, argument)
             kwargs = {
                 key: getattr(message, key) for key in ("content", "embeds") if getattr(message, key)
             }
@@ -128,17 +99,19 @@ class CustomMessageConverter(commands.Converter, dict):
             if not isinstance(embed, discord.Embed):
                 if not isinstance(embed, (dict)):
                     raise commands.BadArgument(_("Invalid type for `embed`, expected `dict`."))
-                for x in embed:
-                    if embed[x] is None:
-                        del embed[x]
-                    elif isinstance(embed[x], dict):
-                        for y in embed[x]:
-                            if embed[x][y] is None:
-                                del embed[x][y]
+                embed = {
+                    x: (
+                        {y: v for y, v in value.items() if v is not None}
+                        if isinstance(value, dict)
+                        else value
+                    )
+                    for x, value in embed.items()
+                    if value is not None
+                }
                 try:
                     embed = discord.Embed.from_dict(embed)
-                except Exception:
-                    pass
+                except (TypeError, ValueError, KeyError, AttributeError) as e:
+                    raise commands.BadArgument(_("Invalid `embed` field.")) from e
             if not embed:
                 raise commands.BadArgument(_("Missing fields in `embed` field."))
             length = len(embed)
@@ -293,7 +266,7 @@ class Settings:
         config: Config,
         group: str,
         settings: dict[str, dict[str, typing.Any]],
-        global_path: list = None,
+        global_path: list | None = None,
         use_profiles_system: bool | None = False,
         can_edit: bool = True,
         commands_group: commands.Group | commands.HybridGroup | str | None = None,
@@ -311,48 +284,48 @@ class Settings:
         self.commands_group: commands.Group | commands.HybridGroup = commands_group
         self.commands: dict[str, commands.Command | commands.HybridCommand] = {}
         self.commands_added: asyncio.Event = asyncio.Event()
-        for setting in settings:
-            if "path" not in settings[setting]:
-                settings[setting]["path"] = [setting]
-            if "converter" not in settings[setting]:
-                settings[setting]["converter"] = bool
-            if "command_name" not in settings[setting]:
-                settings[setting]["command_name"] = setting.replace("_", "").lower()
-            if "label" not in settings[setting]:
-                settings[setting]["label"] = setting.replace("_", " ").title()
-            if "description" not in settings[setting]:
-                label = settings[setting]["label"]
-                settings[setting]["description"] = f"Set `{label}`."
-            if "usage" not in settings[setting]:
+        for setting, setting_data in settings.items():
+            if "path" not in setting_data:
+                setting_data["path"] = [setting]
+            if "converter" not in setting_data:
+                setting_data["converter"] = bool
+            if "command_name" not in setting_data:
+                setting_data["command_name"] = setting.replace("_", "").lower()
+            if "label" not in setting_data:
+                setting_data["label"] = setting.replace("_", " ").title()
+            if "description" not in setting_data:
+                label = setting_data["label"]
+                setting_data["description"] = f"Set `{label}`."
+            if "usage" not in setting_data:
                 if (
-                    not isinstance(settings[setting]["converter"], commands.Greedy)
-                    and settings[setting]["converter"]
+                    not isinstance(setting_data["converter"], commands.Greedy)
+                    and setting_data["converter"]
                     in discord.ext.commands.converter.CONVERTER_MAPPING
                 ):
-                    x = settings[setting]["converter"].__name__.replace(" ", "_")
+                    x = setting_data["converter"].__name__.replace(" ", "_")
                     usage = x[0]
                     for y in x[1:]:
                         if y.isupper():
                             usage += " "
                         usage += y
-                    settings[setting]["usage"] = usage.lower()
+                    setting_data["usage"] = usage.lower()
                 else:
-                    settings[setting]["usage"] = setting.replace(" ", "_").lower()
-            if "aliases" not in settings[setting]:
-                settings[setting]["aliases"] = []
-            if "hidden" not in settings[setting]:
-                settings[setting]["hidden"] = False
-            if "no_slash" not in settings[setting]:
-                settings[setting]["no_slash"] = False
-            settings[setting]["param"] = discord.ext.commands.parameters.Parameter(
+                    setting_data["usage"] = setting.replace(" ", "_").lower()
+            if "aliases" not in setting_data:
+                setting_data["aliases"] = []
+            if "hidden" not in setting_data:
+                setting_data["hidden"] = False
+            if "no_slash" not in setting_data:
+                setting_data["no_slash"] = False
+            setting_data["param"] = discord.ext.commands.parameters.Parameter(
                 name=setting,
                 kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                annotation=settings[setting]["converter"],
+                annotation=setting_data["converter"],
             )
-            if "style" not in settings[setting]:
-                settings[setting]["style"] = discord.TextStyle.short
-            elif isinstance(settings[setting]["style"], int):
-                settings[setting]["style"] = discord.TextStyle(settings[setting]["style"])
+            if "style" not in setting_data:
+                setting_data["style"] = discord.TextStyle.short
+            elif isinstance(setting_data["style"], int):
+                settings[setting]["style"] = discord.TextStyle(setting_data["style"])
         self.settings: dict[str, dict[str, typing.Any]] = settings
 
     async def add_commands(self, force: bool | None = False) -> None:
@@ -384,8 +357,6 @@ class Settings:
                 commands.hybrid_group(name=name, aliases=aliases, help=_help)(commands_group),
             )
             commands_group.name = name
-            # commands_group.brief = _help
-            # commands_group.description = _help
             commands_group.callback.__doc__ = _help
             commands_group.cog = self.cog
             if "ctx" in commands_group.params:
@@ -554,7 +525,8 @@ class Settings:
         for name, command in to_add.items():
             command.__qualname__ = f"{self.cog.qualified_name}.settings_{name}"
             command: commands.Command | commands.HybridCommand = self.commands_group.command(
-                name=name, aliases=aliases.get(name, [])
+                name=name,
+                aliases=aliases.get(name, []),
             )(command)
             command.name = name
             command.cog = self.cog
@@ -588,7 +560,7 @@ class Settings:
                     default_value = default_value.get(x, {})
                 if default_value == {}:
                     default_value = discord.utils.MISSING
-                _help += f"\n\nDefault value: `{default_value}`\nDev: `{repr(_converter)}`"
+                _help += f"\n\nDefault value: `{default_value}`\nDev: `{_converter!r}`"
                 _usage = self.settings[setting]["usage"]
 
                 if not self.use_profiles_system:
@@ -659,8 +631,6 @@ class Settings:
                     )
 
                 command.name = name
-                # command.brief = _help
-                # command.description = _help
                 command.callback.__doc__ = _help
                 command.cog = self.cog
                 self.bot.dispatch("command_add", command)
@@ -681,7 +651,7 @@ class Settings:
                 "guild_id",
                 f"{self.group.lower()}_id",
             ]
-        setattr(self.cog, "rpc_callback_settings", self.rpc_callback_settings)
+        self.cog.rpc_callback_settings = self.rpc_callback_settings
         self.commands_added.set()
 
     async def command(
@@ -940,7 +910,7 @@ class Settings:
                         else str([self.group] + self.global_path + self.settings[value]["path"])
                     ),
                 )
-        raw_table_str = no_colour_rich_markup(raw_table, no_box=True)
+        raw_table_str = CogsUtils.no_colour_rich_markup(raw_table, no_box=True)
         message += raw_table_str
         await Menu(pages=message, lang="py").start(ctx)
 
@@ -977,8 +947,8 @@ class Settings:
         one_l = list(self.settings)
         two_l = discord.utils.as_chunks(one_l, max_size=5)
         three_l = {}
-        for i, l in enumerate(two_l, start=1):
-            three_l[i] = l
+        for i, chunk in enumerate(two_l, start=1):
+            three_l[i] = chunk
 
         async def on_modal(
             view: Modal,

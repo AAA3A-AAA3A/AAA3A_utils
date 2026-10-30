@@ -124,7 +124,7 @@ class SentryHelper:
         }
         self.config.register_global(**self.sentry_global)
 
-        asyncio.create_task(self._async_init())
+        CogsUtils.create_task(self._async_init())
         self.cog.loops.append(
             Loop(
                 cog=self.cog,
@@ -196,11 +196,11 @@ class SentryHelper:
             return event_id
         except Exception as e:
             if manually:
-                raise e
+                raise
             self.cog.logger.error("Sending an error to Sentry failed.", exc_info=e)
             return False
 
-    def remove_sensitive_data(self, event: dict, hint: dict | None = {}) -> dict:
+    def remove_sensitive_data(self, event: dict, hint: dict | None = None) -> dict:
         """Remove sensitive data from the event. This should only be used by the Sentry SDK.
         This has two main parts:
         1) Remove any mentions of the bot's token
@@ -319,13 +319,20 @@ class SentryHelper:
             return self.hubs[cog.qualified_name]
         if getattr(cog, "__version__", None) is None and getattr(cog, "__commit__", None) is None:
             try:
-                nb_commits, version, commit = await CogsUtils.get_cog_version(
+                _nb_commits, version, commit = await CogsUtils.get_cog_version(
                     bot=self.bot,
-                    cog=self.cog,
+                    cog=cog,
                 )
                 cog.__version__ = version
                 cog.__commit__ = commit
-            except Exception:
+            except (
+                TimeoutError,
+                asyncio.TimeoutError,
+                RuntimeError,
+                ValueError,
+                TypeError,
+                asyncio.IncompleteReadError,
+            ):
                 pass
         # not using sentry_sdk.init so other don't interfear with other CCs/cogs/packages
         # from https://github.com/getsentry/sentry-python/issues/610
@@ -383,10 +390,8 @@ class SentryHelper:
         if not await self.config.sentry.master_msg_sent():
             self.dont_send_reminders = True
             await self.config.sentry.master_msg_sent.set(True)
-            try:
-                await self.bot.send_to_owners(SENTRY_MASTER_MSG.format(cog.qualified_name))
-            except Exception:
-                pass
+            # `send_to_owners` already catches and logs the errors for each destination.
+            await self.bot.send_to_owners(SENTRY_MASTER_MSG.format(cog.qualified_name))
             async with self.config.sentry.cogs_notified() as c_n:
                 c_n.append(cog.qualified_name)
             return
@@ -397,13 +402,10 @@ class SentryHelper:
             async with self.config.sentry.cogs_notified() as c_n:
                 c_n.append(cog.qualified_name)
             return
-        try:
-            if self.sentry_enabled:
-                await self.bot.send_to_owners(SENTRY_REMINDER_ON.format(cog.qualified_name))
-            else:
-                self.dont_send_reminders = True
-                await self.bot.send_to_owners(SENTRY_REMINDER_OFF.format(cog.qualified_name))
-        except Exception:
-            pass
+        if self.sentry_enabled:
+            await self.bot.send_to_owners(SENTRY_REMINDER_ON.format(cog.qualified_name))
+        else:
+            self.dont_send_reminders = True
+            await self.bot.send_to_owners(SENTRY_REMINDER_OFF.format(cog.qualified_name))
         async with self.config.sentry.cogs_notified() as c_n:
             c_n.append(cog.qualified_name)

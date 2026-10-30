@@ -2,7 +2,6 @@ from redbot.core import commands  # isort:skip
 import discord  # isort:skip
 import typing  # isort:skip
 
-# import typing_extensions  # isort:skip
 
 import asyncio
 import inspect
@@ -11,15 +10,15 @@ from functools import partial
 from random import choice
 
 __all__ = [
-    "ConfirmationAskView",
     "Buttons",
-    "Dropdown",
-    "Select",
     "ChannelSelect",
+    "ConfirmationAskView",
+    "Dropdown",
     "MentionableSelect",
-    "RoleSelect",
-    "UserSelect",
     "Modal",
+    "RoleSelect",
+    "Select",
+    "UserSelect",
 ]
 
 
@@ -380,7 +379,7 @@ class Dropdown(discord.ui.View):
                 )
             else:
                 self.dropdown = _type
-            setattr(self.dropdown, "callback", partial(_Select.callback, self.dropdown))
+            self.dropdown.callback = partial(_Select.callback, self.dropdown)
         self.add_item(self.dropdown)
         self.done: asyncio.Event = asyncio.Event()
 
