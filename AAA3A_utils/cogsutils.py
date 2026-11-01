@@ -6,6 +6,8 @@ import typing  # isort:skip
 import asyncio
 import datetime
 import inspect
+import ipaddress
+import json
 import logging
 import os
 import random
@@ -19,9 +21,9 @@ from pathlib import Path
 from random import choice
 
 import aiohttp
+import yarl
 from rich.console import Console
 
-from redbot.core.commands.requires import PrivilegeLevel
 from redbot.core.utils.chat_formatting import box, humanize_list
 from redbot.logging import RotatingFileHandler
 
@@ -385,6 +387,93 @@ class CogsUtils:
         return data
 
     @classmethod
+    def can_manage_role(cls, member: discord.Member, role: discord.Role) -> bool:
+        """
+        Check if a member can manage a role according to the Discord role hierarchy: the guild
+        owner can manage all the roles, and other members only the roles lower than their top
+        role. Pass `guild.me` to check the bot.
+        """
+        return member.id == member.guild.owner_id or role < member.top_role
+
+    @classmethod
+    async def safe_fetch(
+        cls,
+        session: aiohttp.ClientSession,
+        url: str,
+        *,
+        allowed_hosts: typing.Iterable[str] | None = None,
+        response_format: typing.Literal["bytes", "text", "json"] = "text",
+        max_size: int | None = 1024 * 1024,
+        timeout: float = 10,
+        max_redirects: int = 5,
+        headers: dict[str, str] | None = None,
+    ) -> bytes | str | typing.Any:
+        """
+        Fetch an URL which may come from a user, without allowing requests to internal hosts.
+
+        Only HTTPS URLs without credentials are allowed. If `allowed_hosts` is `None`, the host
+        must resolve to public IP addresses. Redirects are followed manually, and each one is
+        validated the same way. The `Authorization` header is never sent to another host.
+
+        Raises `ValueError` if an URL isn't allowed or if the response is too large, and
+        `aiohttp.ClientError` or `asyncio.TimeoutError` if the request fails.
+        """
+        if allowed_hosts is not None:
+            allowed_hosts = set(allowed_hosts)
+        headers = dict(headers or {})
+        first_host = None
+        for __ in range(max_redirects + 1):
+            parsed_url = yarl.URL(url)
+            if parsed_url.scheme != "https" or parsed_url.user is not None or not parsed_url.host:
+                raise ValueError("Only HTTPS URLs without credentials are allowed.")
+            if allowed_hosts is not None:
+                if parsed_url.host not in allowed_hosts:
+                    raise ValueError(f"The host `{parsed_url.host}` isn't allowed.")
+            else:
+                try:
+                    addresses = await asyncio.get_running_loop().getaddrinfo(
+                        parsed_url.host,
+                        parsed_url.port,
+                    )
+                except OSError as e:
+                    raise ValueError(f"Unable to resolve `{parsed_url.host}`.") from e
+                if any(
+                    not ipaddress.ip_address(sockaddr[0]).is_global
+                    for *__, sockaddr in addresses
+                ):
+                    raise ValueError(f"`{parsed_url.host}` doesn't resolve to a public address.")
+            if first_host is None:
+                first_host = parsed_url.host
+            elif parsed_url.host != first_host:
+                headers.pop("Authorization", None)
+            async with session.get(
+                parsed_url,
+                headers=headers,
+                allow_redirects=False,
+                timeout=aiohttp.ClientTimeout(total=timeout),
+            ) as r:
+                if r.status in (301, 302, 303, 307, 308) and "Location" in r.headers:
+                    url = str(parsed_url.join(yarl.URL(r.headers["Location"])))
+                    continue
+                r.raise_for_status()
+                if (
+                    max_size is not None
+                    and r.content_length is not None
+                    and r.content_length > max_size
+                ):
+                    raise ValueError("The response is too large.")
+                data = bytearray()
+                async for chunk in r.content.iter_chunked(64 * 1024):
+                    data += chunk
+                    if max_size is not None and len(data) > max_size:
+                        raise ValueError("The response is too large.")
+                if response_format == "bytes":
+                    return bytes(data)
+                text = data.decode(r.charset or "utf-8", errors="replace")
+                return json.loads(text) if response_format == "json" else text
+        raise ValueError("Too many redirects.")
+
+    @classmethod
     async def add_hybrid_commands(cls, bot: Red, cog: commands.Cog) -> None:
         if hasattr(cog, "settings") and hasattr(cog.settings, "commands_added"):
             await cog.settings.commands_added.wait()
@@ -396,14 +485,7 @@ class CogsUtils:
                     _object.app_command.description = _object.app_command.description.split("\n")[
                         0
                     ][:100]
-                if _object.parent is not None:
-                    _object.checks.extend(_object.parent.checks)
-                    if _object.requires.privilege_level is PrivilegeLevel.NONE:
-                        _object.requires.privilege_level = _object.parent.requires.privilege_level
-                    if _object.requires.user_perms == discord.Permissions(0):
-                        _object.requires.user_perms = _object.parent.requires.user_perms
-                    if _object.requires.bot_perms == discord.Permissions(0):
-                        _object.requires.bot_perms = _object.parent.requires.bot_perms
+                # The checks of the parents are run in `Cog.cog_check` for app commands.
 
         await bot.tree.red_check_enabled()
 
