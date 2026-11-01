@@ -228,6 +228,23 @@ class Cog(commands.Cog):
         """Nothing to get."""
         return {}
 
+    async def cog_check(self, ctx: commands.Context) -> bool:
+        # discord.py doesn't run the parent groups' checks for app commands, so do it here.
+        command = getattr(ctx.command, "wrapped", ctx.command)
+        if (
+            ctx.interaction is None
+            or command is None
+            or command.parent is None
+            or getattr(ctx, "__parents_checked__", False)
+        ):
+            return True
+        ctx.__parents_checked__ = True  # The parents' `can_run` calls this method again.
+        return await command.parent.can_run(
+            ctx,
+            check_all_parents=True,
+            change_permission_state=True,
+        )
+
     async def cog_before_invoke(self, ctx: commands.Context) -> Context:
         if isinstance(ctx.command, commands.Group):
             view = ctx.view
