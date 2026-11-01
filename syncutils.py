@@ -1,7 +1,7 @@
 # Thanks to @Vexed01 on GitHub for this code (https://github.com/Vexed01/Vex-Cogs)!
 # Copy the utils from https://github.com/AAA3A-AAA3A/AAA3A_utils to each cog in this repo.
 
-import datetime
+import datetime as dt
 import json
 import os
 import shutil
@@ -36,7 +36,7 @@ if VERSION is None:
     Commit: [`{commit}`](https://github.com/AAA3A-AAA3A/AAA3A_utils/commit/{commit})
     """
     readme = README_MD_TEXT.format(
-        time=datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z"),
+        time=dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z"),
         commit=commit,
     )
 

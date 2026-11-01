@@ -4,7 +4,7 @@ from redbot.core import Config  # isort:skip
 import discord  # isort:skip
 import typing  # isort:skip
 
-import datetime
+import datetime as dt
 import inspect
 import os
 import platform
@@ -521,7 +521,7 @@ class SharedCog(Cog, name="AAA3A_utils"):
             )
             or "None"
         )
-        now = datetime.datetime.now(tz=datetime.timezone.utc)
+        now = dt.datetime.now(tz=dt.timezone.utc)
         if ctx.bot.uptime.tzinfo is None:  # Red stores a naive UTC datetime.
             now = now.replace(tzinfo=None)
         uptime = humanize_timedelta(timedelta=now - ctx.bot.uptime)

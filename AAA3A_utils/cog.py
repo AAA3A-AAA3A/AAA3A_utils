@@ -19,7 +19,7 @@ from .context import Context, is_dev
 from .settings import Settings
 
 if typing.TYPE_CHECKING:
-    import datetime
+    import datetime as dt
     import logging
     from pathlib import Path
 
@@ -71,7 +71,7 @@ class Cog(commands.Cog):
             list[
                 dict[
                     str,
-                    datetime.datetime | int | str | tuple[typing.Any] | None,
+                    dt.datetime | int | str | tuple[typing.Any] | None,
                 ]
             ],
         ] = {}

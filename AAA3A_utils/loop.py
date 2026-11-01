@@ -3,7 +3,7 @@ import discord  # isort:skip
 import typing  # isort:skip
 
 import asyncio
-import datetime
+import datetime as dt
 import inspect
 import time
 import traceback
@@ -39,7 +39,7 @@ class Loop:
         function_kwargs: dict[str, typing.Any] | None = None,
         wait_raw: bool = False,
         limit_count: int | None = None,
-        limit_date: datetime.datetime | None = None,
+        limit_date: dt.datetime | None = None,
         limit_exception: int | None = None,
         start_now: bool = True,
     ) -> None:
@@ -47,7 +47,7 @@ class Loop:
         self.name: str = name
         self.function: typing.Callable = function
         self.function_kwargs: dict[str, typing.Any] = function_kwargs or {}
-        self.interval: float = datetime.timedelta(
+        self.interval: float = dt.timedelta(
             days=days,
             hours=hours,
             minutes=minutes,
@@ -55,14 +55,14 @@ class Loop:
         ).total_seconds()
         self.wait_raw: bool = wait_raw
         self.limit_count: int | None = limit_count
-        self.limit_date: datetime.datetime | None = limit_date
+        self.limit_date: dt.datetime | None = limit_date
         self.limit_exception: int | None = limit_exception
         self.stop_manually: bool = False
 
-        self.start_datetime: datetime.datetime = datetime.datetime.now(tz=datetime.timezone.utc)
-        self.expected_interval: datetime.timedelta = datetime.timedelta(seconds=self.interval)
-        self.last_iteration: datetime.datetime | None = None
-        self.next_iteration: datetime.datetime | None = None
+        self.start_datetime: dt.datetime = dt.datetime.now(tz=dt.timezone.utc)
+        self.expected_interval: dt.timedelta = dt.timedelta(seconds=self.interval)
+        self.last_iteration: dt.datetime | None = None
+        self.next_iteration: dt.datetime | None = None
         self.currently_running: bool = False
         self.iteration_count: int = 0
         self.last_result: typing.Any = None
@@ -83,8 +83,8 @@ class Loop:
     @property
     def integrity(self) -> bool:
         """Check if the loop is running on time."""
-        return self.next_iteration and self.next_iteration > datetime.datetime.now(
-            tz=datetime.timezone.utc,
+        return self.next_iteration and self.next_iteration > dt.datetime.now(
+            tz=dt.timezone.utc,
         )
 
     @property
@@ -93,7 +93,7 @@ class Loop:
         if not self.next_iteration:
             return 0.0
         raw_until_next = (
-            self.next_iteration - datetime.datetime.now(tz=datetime.timezone.utc)
+            self.next_iteration - dt.datetime.now(tz=dt.timezone.utc)
         ).total_seconds()
         return max(0.0, min(raw_until_next, self.expected_interval.total_seconds()))
 
@@ -139,7 +139,7 @@ class Loop:
         if self.limit_count and self.iteration_count >= self.limit_count:
             self.stop_all()
             return True
-        if self.limit_date and datetime.datetime.now(tz=datetime.timezone.utc) >= self.limit_date:
+        if self.limit_date and dt.datetime.now(tz=dt.timezone.utc) >= self.limit_date:
             self.stop_all()
             return True
         if self.limit_exception and self.iteration_exception >= self.limit_exception:
@@ -205,7 +205,7 @@ class Loop:
         """Register an iteration as starting."""
         self.iteration_count += 1
         self.currently_running = True
-        now = datetime.datetime.now(tz=datetime.timezone.utc)
+        now = dt.datetime.now(tz=dt.timezone.utc)
         self.last_iteration = now
         self.next_iteration = now + self.expected_interval
 
@@ -221,7 +221,7 @@ class Loop:
 
     def get_debug_embed(self) -> discord.Embed:
         """Get an embed with detailed information about this loop."""
-        now = datetime.datetime.now(tz=datetime.timezone.utc)
+        now = dt.datetime.now(tz=dt.timezone.utc)
 
         def create_table(data: list[tuple[str, str]]) -> str:
             table = Table("Key", "Value")

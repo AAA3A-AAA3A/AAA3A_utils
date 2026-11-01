@@ -4,7 +4,7 @@ import discord  # isort:skip
 import typing  # isort:skip
 
 import asyncio
-import datetime
+import datetime as dt
 import inspect
 import ipaddress
 import json
@@ -163,7 +163,7 @@ class CogsUtils:
                 cog.logs[_level] = []
             cog.logs[_level].append(
                 {
-                    "time": datetime.datetime.now().astimezone(),
+                    "time": dt.datetime.now().astimezone(),
                     "level": level,
                     "message": msg,
                     "args": args,
@@ -438,8 +438,7 @@ class CogsUtils:
                 except OSError as e:
                     raise ValueError(f"Unable to resolve `{parsed_url.host}`.") from e
                 if any(
-                    not ipaddress.ip_address(sockaddr[0]).is_global
-                    for *__, sockaddr in addresses
+                    not ipaddress.ip_address(sockaddr[0]).is_global for *__, sockaddr in addresses
                 ):
                     raise ValueError(f"`{parsed_url.host}` doesn't resolve to a public address.")
             if first_host is None:
@@ -591,14 +590,14 @@ class CogsUtils:
         dispatch_message: bool | None = False,
         invoke: bool | None = True,
         __is_mocked__: bool | None = True,
-        created_at: datetime.datetime | None = None,
+        created_at: dt.datetime | None = None,
         **kwargs,
     ) -> commands.Context | discord.Message:
         """
         Invoke the specified command with the specified user in the specified channel.
         """
         if created_at is None:
-            created_at = datetime.datetime.now(tz=datetime.timezone.utc)
+            created_at = dt.datetime.now(tz=dt.timezone.utc)
         message_id = discord.utils.time_snowflake(created_at)
         if prefix == "/":  # For hybrid and slash commands.
             prefix = None
@@ -752,8 +751,8 @@ class CogsUtils:
     @classmethod
     def get_interval_string(
         cls,
-        expires: datetime.datetime | datetime.timedelta | None,
-        utc_now: datetime.datetime | None = None,
+        expires: dt.datetime | dt.timedelta | None,
+        utc_now: dt.datetime | None = None,
         use_timestamp: bool = False,
     ) -> str:
         """
@@ -762,24 +761,24 @@ class CogsUtils:
         if expires is None:
             return "No future occurrence."
         if use_timestamp:
-            expires = expires.replace(tzinfo=datetime.timezone.utc)
+            expires = expires.replace(tzinfo=dt.timezone.utc)
             return f"<t:{int(expires.timestamp())}:R>"
         if utc_now is None:
-            utc_now = datetime.datetime.now(datetime.timezone.utc)
-        if isinstance(expires, datetime.datetime):
+            utc_now = dt.datetime.now(dt.timezone.utc)
+        if isinstance(expires, dt.datetime):
             delta = utc_now - expires
-        elif isinstance(expires, datetime.timedelta):
+        elif isinstance(expires, dt.timedelta):
             delta = expires
         else:
             try:
                 import dateutil
             except ImportError:
-                delta = datetime.timedelta(seconds=expires)
+                delta = dt.timedelta(seconds=expires)
             else:
                 if isinstance(expires, dateutil.relativedelta.relativedelta):
                     delta = (utc_now + expires) - utc_now
                 else:
-                    delta = datetime.timedelta(seconds=expires)
+                    delta = dt.timedelta(seconds=expires)
         result = []
         total_secs = int(max(0, delta.total_seconds()))
         years, rem = divmod(total_secs, 3600 * 24 * 365)
